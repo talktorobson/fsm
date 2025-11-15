@@ -1,14 +1,14 @@
 # CLAUDE.md - AI Assistant Guide
 
 **Last Updated**: 2025-01-15
-**Project**: AHS Field Service Execution Platform
+**Project**: Yellow Grid Platform
 **Status**: Documentation Phase (Pre-Development)
 
 ---
 
 ## 🎯 Quick Start for AI Assistants
 
-This is the **AHS Field Service Execution Platform**, a comprehensive field service management system for multi-country operations. The project is currently in the **documentation and planning phase** with no code implementation yet.
+This is the **Yellow Grid Platform**, a comprehensive field service management system for multi-country operations. The project is currently in the **documentation and planning phase** with no code implementation yet.
 
 ### Critical Context
 - **Current State**: Comprehensive engineering documentation (40+ files, ~39,400 lines)

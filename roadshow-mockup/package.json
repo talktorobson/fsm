@@ -1,8 +1,8 @@
 {
-  "name": "ahs-fsm-platform",
+  "name": "yellow-grid-mockup",
   "version": "0.1.0",
   "private": true,
-  "description": "AHS Field Service Management Platform - Roadshow Mockup",
+  "description": "Yellow Grid Platform - Roadshow Demo Mockup",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -24,10 +24,12 @@
     "npm": ">=10.0.0"
   },
   "keywords": [
+    "yellow-grid",
     "field-service",
     "management",
-    "platform"
+    "platform",
+    "demo"
   ],
-  "author": "AHS Platform Team",
+  "author": "Yellow Grid Team",
   "license": "UNLICENSED"
 }

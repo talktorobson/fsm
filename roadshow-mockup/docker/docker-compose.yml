@@ -4,12 +4,12 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: ahs-fsm-postgres
+    container_name: yellowgrid-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: fsm_user
       POSTGRES_PASSWORD: fsm_password_dev
-      POSTGRES_DB: ahs_fsm_dev
+      POSTGRES_DB: yellowgrid_dev
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
     ports:
       - "5432:5432"
@@ -17,7 +17,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fsm_user -d ahs_fsm_dev"]
+      test: ["CMD-SHELL", "pg_isready -U fsm_user -d yellowgrid_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +27,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: ahs-fsm-redis
+    container_name: yellowgrid-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -45,7 +45,7 @@ services:
   # Adminer - Database Management UI
   adminer:
     image: adminer:latest
-    container_name: ahs-fsm-adminer
+    container_name: yellowgrid-adminer
     restart: unless-stopped
     ports:
       - "8080:8080"

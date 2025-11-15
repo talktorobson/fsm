@@ -15,8 +15,8 @@ export class AppService {
   getVersion() {
     return {
       version: '0.1.0',
-      name: 'AHS Field Service Management API',
-      description: 'Roadshow Demo Platform',
+      name: 'Yellow Grid Platform API',
+      description: 'Roadshow Demo Mockup',
       apiVersion: 'v1',
     };
   }

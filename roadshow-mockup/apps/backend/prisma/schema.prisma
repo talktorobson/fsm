@@ -1,5 +1,6 @@
-// AHS Field Service Management Platform - Database Schema
-// Simplified schema for roadshow demo
+// Yellow Grid Platform - Database Schema
+// Simplified schema for roadshow demo mockup
+// ⚠️ WARNING: This is DEMO code only, not for production use
 
 generator client {
   provider = "prisma-client-js"

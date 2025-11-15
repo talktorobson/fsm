@@ -37,8 +37,8 @@ async function bootstrap() {
 
   // Swagger API Documentation
   const config = new DocumentBuilder()
-    .setTitle('AHS Field Service Management API')
-    .setDescription('API documentation for AHS FSM Platform - Roadshow Demo')
+    .setTitle('Yellow Grid API')
+    .setDescription('Yellow Grid Platform API - Roadshow Demo Mockup')
     .setVersion('0.1.0')
     .addTag('auth', 'Authentication endpoints')
     .addTag('providers', 'Provider management')
@@ -60,12 +60,12 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log('');
-  console.log('🚀 AHS FSM Platform - Backend API Server');
+  console.log('🌟 Yellow Grid Platform - Demo Mockup');
   console.log('=========================================');
   console.log(`📍 Application: http://localhost:${port}/api`);
   console.log(`📚 API Docs: http://localhost:${port}/api/docs`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🎯 Demo Mode: ${process.env.DEMO_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`⚠️  Demo Mode: ${process.env.DEMO_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
   console.log('=========================================');
   console.log('');
 }

@@ -1,7 +1,7 @@
-# AHS Field Service Execution Platform - Engineering Kit Summary
+# Yellow Grid Platform - Engineering Kit Summary
 
 **Created**: 2025-01-14
-**Project**: AHS Field Service Execution Platform
+**Project**: Yellow Grid Platform
 **Documentation Location**: `/product-docs`
 
 ---

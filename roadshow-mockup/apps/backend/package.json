@@ -1,7 +1,7 @@
 {
-  "name": "@ahs-fsm/backend",
+  "name": "@yellow-grid/backend",
   "version": "0.1.0",
-  "description": "AHS FSM Backend API Server",
+  "description": "Yellow Grid Backend API Server (Demo Mockup)",
   "private": true,
   "scripts": {
     "dev": "nest start --watch",
