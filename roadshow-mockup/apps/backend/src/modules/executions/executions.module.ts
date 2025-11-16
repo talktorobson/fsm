@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ExecutionsController } from './executions.controller';
 import { ExecutionsService } from './executions.service';
-import { PrismaModule } from '../../database/prisma.module';
+import { ExecutionsController } from './executions.controller';
 
 @Module({
-  imports: [PrismaModule],
   controllers: [ExecutionsController],
   providers: [ExecutionsService],
   exports: [ExecutionsService],

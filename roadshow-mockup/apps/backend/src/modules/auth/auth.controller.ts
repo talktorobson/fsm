@@ -1,22 +1,27 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 
-@ApiTags('Authentication')
-@Controller('api/v1/auth')
+@ApiTags('auth')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
-  @ApiOperation({ summary: 'Login with email and password' })
-  async login(@Body() loginDto: { email: string; password: string }) {
-    return this.authService.login(loginDto.email, loginDto.password);
+  @Post('register')
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User registered successfully', type: AuthResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.register(dto);
   }
 
-  @Get('me')
-  @ApiOperation({ summary: 'Get current user info' })
-  async getCurrentUser() {
-    // TODO: Implement JWT guard and extract user from token
-    return { message: 'Current user endpoint - to be implemented' };
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'Login successful', type: AuthResponseDto })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(dto);
   }
 }

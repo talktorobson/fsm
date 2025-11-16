@@ -1,39 +1,40 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ExecutionsService } from './executions.service';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@ApiTags('Executions')
-@Controller('api/v1/executions')
+@ApiTags('executions')
+@Controller('executions')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ExecutionsController {
   constructor(private readonly executionsService: ExecutionsService) {}
 
+  @Get()
+  @ApiOperation({ summary: 'Get all executions' })
+  @ApiResponse({ status: 200, description: 'List of executions' })
+  async findAll(@Query('status') status?: string) {
+    return this.executionsService.findAll({ status });
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get execution details' })
+  @ApiOperation({ summary: 'Get execution by ID' })
+  @ApiResponse({ status: 200, description: 'Execution details' })
   async findOne(@Param('id') id: string) {
     return this.executionsService.findOne(id);
   }
 
-  @Post(':id/check-in')
-  @ApiOperation({ summary: 'Technician checks in to start job' })
-  async checkIn(@Param('id') id: string, @Body() checkInDto: any) {
-    return this.executionsService.checkIn(id, checkInDto);
+  @Post()
+  @ApiOperation({ summary: 'Create execution (check-in)' })
+  @ApiResponse({ status: 201, description: 'Execution created' })
+  async create(@Body() data: any) {
+    return this.executionsService.create(data);
   }
 
-  @Post(':id/check-out')
-  @ApiOperation({ summary: 'Technician checks out to complete job' })
-  async checkOut(@Param('id') id: string, @Body() checkOutDto: any) {
-    return this.executionsService.checkOut(id, checkOutDto);
-  }
-
-  @Post(':id/photos')
-  @ApiOperation({ summary: 'Upload execution photos' })
-  async uploadPhoto(@Param('id') id: string, @Body() photoDto: any) {
-    return this.executionsService.uploadPhoto(id, photoDto);
-  }
-
-  @Post(':id/rating')
-  @ApiOperation({ summary: 'Customer rates the service' })
-  async rateService(@Param('id') id: string, @Body() ratingDto: any) {
-    return this.executionsService.rateService(id, ratingDto);
+  @Put(':id')
+  @ApiOperation({ summary: 'Update execution (check-out, complete)' })
+  @ApiResponse({ status: 200, description: 'Execution updated' })
+  async update(@Param('id') id: string, @Body() data: any) {
+    return this.executionsService.update(id, data);
   }
 }

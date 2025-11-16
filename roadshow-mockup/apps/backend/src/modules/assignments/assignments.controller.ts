@@ -1,51 +1,40 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AssignmentsService } from './assignments.service';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@ApiTags('Assignments')
-@Controller('api/v1/assignments')
+@ApiTags('assignments')
+@Controller('assignments')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class AssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}
 
-  @Post('calculate-candidates')
-  @ApiOperation({ summary: 'Execute assignment funnel to find eligible providers' })
-  async calculateCandidates(@Body() funnelInput: any) {
-    return this.assignmentsService.executeFunnel(funnelInput);
-  }
-
-  @Post('create')
-  @ApiOperation({ summary: 'Create assignment' })
-  async create(@Body() createAssignmentDto: any) {
-    return this.assignmentsService.create(createAssignmentDto);
+  @Get()
+  @ApiOperation({ summary: 'Get all assignments' })
+  @ApiResponse({ status: 200, description: 'List of assignments' })
+  async findAll(@Query('status') status?: string) {
+    return this.assignmentsService.findAll({ status });
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get assignment details' })
+  @ApiOperation({ summary: 'Get assignment by ID' })
+  @ApiResponse({ status: 200, description: 'Assignment details with funnel data' })
   async findOne(@Param('id') id: string) {
     return this.assignmentsService.findOne(id);
   }
 
-  @Get(':id/funnel')
-  @ApiOperation({ summary: 'Get assignment transparency funnel data' })
-  async getFunnelTransparency(@Param('id') id: string) {
-    return this.assignmentsService.getFunnelTransparency(id);
+  @Post()
+  @ApiOperation({ summary: 'Create assignment' })
+  @ApiResponse({ status: 201, description: 'Assignment created' })
+  async create(@Body() data: any) {
+    return this.assignmentsService.create(data);
   }
 
-  @Get(':id/logs')
-  @ApiOperation({ summary: 'Get assignment audit logs' })
-  async getLogs(@Param('id') id: string) {
-    return this.assignmentsService.getLogs(id);
-  }
-
-  @Post(':id/accept')
-  @ApiOperation({ summary: 'Provider accepts assignment' })
-  async accept(@Param('id') id: string) {
-    return this.assignmentsService.accept(id);
-  }
-
-  @Post(':id/refuse')
-  @ApiOperation({ summary: 'Provider refuses assignment' })
-  async refuse(@Param('id') id: string, @Body() refusalDto: { reason?: string }) {
-    return this.assignmentsService.refuse(id, refusalDto.reason);
+  @Put(':id')
+  @ApiOperation({ summary: 'Update assignment status' })
+  @ApiResponse({ status: 200, description: 'Assignment updated' })
+  async update(@Param('id') id: string, @Body() data: any) {
+    return this.assignmentsService.update(id, data);
   }
 }

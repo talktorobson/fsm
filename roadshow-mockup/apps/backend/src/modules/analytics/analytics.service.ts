@@ -3,42 +3,77 @@ import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async getDashboard(countryCode?: string) {
-    const where = countryCode ? { countryCode } : {};
+  async getDashboardMetrics(countryCode?: string) {
+    const where: any = countryCode ? { countryCode } : {};
 
-    // TODO: Implement real analytics aggregations
-    const totalOrders = await this.prisma.serviceOrder.count({ where });
-    const activeOrders = await this.prisma.serviceOrder.count({
-      where: { ...where, status: 'IN_PROGRESS' },
-    });
+    const [
+      totalOrders,
+      activeOrders,
+      completedOrders,
+      totalProviders,
+      activeProviders,
+    ] = await Promise.all([
+      this.prisma.serviceOrder.count({ where }),
+      this.prisma.serviceOrder.count({
+        where: { ...where, status: { in: ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'] } },
+      }),
+      this.prisma.serviceOrder.count({
+        where: { ...where, status: 'COMPLETED' },
+      }),
+      this.prisma.provider.count({ where }),
+      this.prisma.provider.count({
+        where: { ...where, active: true },
+      }),
+    ]);
 
     return {
       totalOrders,
       activeOrders,
-      completedOrders: 0, // TODO: Calculate
-      averageRating: 4.5, // TODO: Calculate
-      // More KPIs to be added
+      completedOrders,
+      totalProviders,
+      activeProviders,
     };
   }
 
-  async getProviderScorecards(countryCode?: string) {
-    const where = countryCode ? { countryCode } : {};
-
-    return this.prisma.providerMetrics.findMany({
-      where,
+  async getProviderMetrics(providerId: string) {
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
       include: {
-        provider: true,
+        assignments: {
+          include: {
+            serviceOrder: true,
+          },
+        },
       },
     });
-  }
 
-  async getCapacityHeatmap(countryCode?: string) {
-    // TODO: Implement capacity heatmap calculation
+    if (!provider) {
+      return null;
+    }
+
+    const totalAssignments = provider.assignments.length;
+    const acceptedAssignments = provider.assignments.filter(
+      (a) => a.status === 'ACCEPTED' || a.status === 'ASSIGNED',
+    ).length;
+    const completedJobs = provider.assignments.filter(
+      (a) => a.serviceOrder.status === 'COMPLETED',
+    ).length;
+
     return {
-      country: countryCode || 'ALL',
-      heatmapData: [],
+      provider: {
+        id: provider.id,
+        name: provider.name,
+        rating: provider.rating,
+      },
+      metrics: {
+        totalAssignments,
+        acceptedAssignments,
+        completedJobs,
+        acceptanceRate: totalAssignments > 0 ? (acceptedAssignments / totalAssignments) * 100 : 0,
+        completionRate: acceptedAssignments > 0 ? (completedJobs / acceptedAssignments) * 100 : 0,
+      },
     };
   }
 }

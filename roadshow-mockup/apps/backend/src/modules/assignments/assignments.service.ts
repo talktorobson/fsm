@@ -3,22 +3,22 @@ import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class AssignmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async executeFunnel(funnelInput: any) {
-    // TODO: Implement complete 6-stage assignment funnel
-    // This is the PRIMARY DIFFERENTIATOR - assignment transparency
-    return {
-      message: 'Assignment funnel - to be implemented',
-      totalProviders: 0,
-      eligibleProviders: [],
-      funnelSteps: [],
-    };
-  }
+  async findAll(filters?: any) {
+    const where: any = {};
+    if (filters?.status) {
+      where.status = filters.status;
+    }
 
-  async create(data: any) {
-    return this.prisma.assignment.create({
-      data,
+    return this.prisma.assignment.findMany({
+      where,
+      include: {
+        serviceOrder: true,
+        provider: true,
+        workTeam: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -26,48 +26,32 @@ export class AssignmentsService {
     return this.prisma.assignment.findUnique({
       where: { id },
       include: {
-        provider: true,
         serviceOrder: true,
-        logs: true,
+        provider: {
+          include: {
+            workTeams: true,
+          },
+        },
+        workTeam: true,
       },
     });
   }
 
-  async getFunnelTransparency(id: string) {
-    // TODO: Return complete funnel transparency data
-    const assignment = await this.prisma.assignment.findUnique({
-      where: { id },
-      include: { logs: true },
-    });
-
-    return {
-      assignmentId: id,
-      funnelData: assignment?.funnelData || {},
-      logs: assignment?.logs || [],
-    };
-  }
-
-  async getLogs(id: string) {
-    return this.prisma.assignmentLog.findMany({
-      where: { assignmentId: id },
-      orderBy: { timestamp: 'asc' },
-    });
-  }
-
-  async accept(id: string) {
-    return this.prisma.assignment.update({
-      where: { id },
-      data: { status: 'ACCEPTED' },
-    });
-  }
-
-  async refuse(id: string, reason?: string) {
-    return this.prisma.assignment.update({
-      where: { id },
-      data: {
-        status: 'REFUSED',
-        // Store refusal reason in metadata if needed
+  async create(data: any) {
+    return this.prisma.assignment.create({
+      data,
+      include: {
+        serviceOrder: true,
+        provider: true,
+        workTeam: true,
       },
+    });
+  }
+
+  async update(id: string, data: any) {
+    return this.prisma.assignment.update({
+      where: { id },
+      data,
     });
   }
 }
