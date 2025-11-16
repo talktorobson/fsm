@@ -21,8 +21,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // Log queries in development
     if (process.env.NODE_ENV === 'development') {
-      // @ts-expect-error - Prisma event types
-      this.$on('query', (e) => {
+      this.$on('query' as never, (e: { query: string; duration: number }) => {
         this.logger.debug(`Query: ${e.query}`);
         this.logger.debug(`Duration: ${e.duration}ms`);
       });
@@ -42,8 +41,25 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       throw new Error('Cannot clean database in production');
     }
 
-    const models = Reflect.ownKeys(this).filter((key) => key[0] !== '_');
+    // Delete all records in reverse order of dependencies
+    const tables = [
+      'refresh_tokens',
+      'user_roles',
+      'role_permissions',
+      'technicians',
+      'work_teams',
+      'providers',
+      'permissions',
+      'roles',
+      'users',
+      'event_outbox',
+      'business_unit_config',
+      'country_config',
+      'system_config',
+    ];
 
-    return Promise.all(models.map((modelKey) => this[modelKey as string].deleteMany()));
+    for (const table of tables) {
+      await this.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE;`);
+    }
   }
 }
