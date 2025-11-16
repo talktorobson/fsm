@@ -63,6 +63,15 @@ export enum InvoiceStatus {
   PAID = 'PAID',
 }
 
+export enum ExecutionStatus {
+  PENDING = 'PENDING',
+  BLOCKED = 'BLOCKED',
+  CHECKED_IN = 'CHECKED_IN',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  INCOMPLETE = 'INCOMPLETE',
+}
+
 export enum CompletionStatus {
   COMPLETE = 'COMPLETE',
   INCOMPLETE = 'INCOMPLETE',
