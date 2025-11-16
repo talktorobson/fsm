@@ -1,0 +1,291 @@
+// Yellow Grid Platform - Prisma Schema
+// Architecture: Single schema with application-level multi-tenancy
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// IDENTITY & ACCESS MODULE
+// ============================================================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // bcrypt hashed
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+
+  // Multi-tenancy (application-level)
+  countryCode String @map("country_code") @db.VarChar(3) // ES, FR, IT, PL
+  businessUnit String @map("business_unit") @db.VarChar(50) // LM_ES, BD_FR
+
+  // Account status
+  isActive  Boolean  @default(true) @map("is_active")
+  isVerified Boolean @default(false) @map("is_verified")
+
+  // Roles & Permissions
+  roles     UserRole[]
+
+  // Audit
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  @@index([email])
+  @@index([countryCode, businessUnit])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // OPERATOR, ADMIN, PROVIDER_MANAGER, TECHNICIAN
+  description String?
+  permissions RolePermission[]
+  users       UserRole[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  resource    String   // service_orders, providers, assignments
+  action      String   // create, read, update, delete, assign
+  description String?
+
+  roles       RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+// Junction tables
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// CONFIGURATION MODULE
+// ============================================================================
+
+model SystemConfig {
+  id    String @id @default(uuid())
+  key   String @unique
+  value Json
+
+  description String?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_config")
+}
+
+model CountryConfig {
+  countryCode String @id @map("country_code") @db.VarChar(3) // ES, FR, IT, PL
+
+  // Regional settings
+  timezone    String @db.VarChar(50) // Europe/Madrid, Europe/Paris
+  currency    String @db.VarChar(3) // EUR
+  locale      String @db.VarChar(10) // es-ES, fr-FR
+
+  // Working days
+  workingDays Json // ["MON", "TUE", "WED", "THU", "FRI"]
+
+  // Buffers (global defaults)
+  globalBufferDays  Int @default(2) @map("global_buffer_days")
+  staticBufferDays  Int @default(1) @map("static_buffer_days")
+
+  // Assignment settings
+  autoAccept  Boolean @default(false) @map("auto_accept") // ES/IT = true
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("country_config")
+}
+
+model BusinessUnitConfig {
+  id           String @id @default(uuid())
+  businessUnit String @unique @map("business_unit") @db.VarChar(50) // LM_ES
+  countryCode  String @map("country_code") @db.VarChar(3)
+
+  name         String @db.VarChar(255)
+  isActive     Boolean @default(true) @map("is_active")
+
+  // Contact
+  email        String?
+  phone        String?
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([countryCode])
+  @@map("business_unit_config")
+}
+
+// ============================================================================
+// PROVIDER & CAPACITY MODULE
+// ============================================================================
+
+model Provider {
+  id          String @id @default(uuid())
+  externalId  String? @unique @map("external_id") // SAP ID
+
+  // Multi-tenancy
+  countryCode String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
+
+  // Basic info
+  name        String @db.VarChar(255)
+  legalName   String @map("legal_name") @db.VarChar(255)
+  taxId       String? @map("tax_id") @db.VarChar(50)
+
+  // Contact
+  email       String?
+  phone       String?
+  address     Json? // {street, city, postalCode, country}
+
+  // Status
+  status      ProviderStatus @default(ACTIVE)
+
+  // Work teams
+  workTeams   WorkTeam[]
+
+  // Audit
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([countryCode, businessUnit])
+  @@index([status])
+  @@map("providers")
+}
+
+enum ProviderStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model WorkTeam {
+  id         String @id @default(uuid())
+  providerId String @map("provider_id")
+
+  // Multi-tenancy (inherited from provider)
+  countryCode String @map("country_code") @db.VarChar(3)
+
+  name       String @db.VarChar(255)
+
+  // Capacity
+  maxDailyJobs Int @default(5) @map("max_daily_jobs")
+
+  // Skills
+  skills     Json // ["installation", "repair", "tv"]
+  serviceTypes Json @map("service_types") // ["P1", "P2"]
+
+  // Geographic coverage
+  postalCodes Json @map("postal_codes") // ["28001", "28002", ...]
+
+  // Technicians
+  technicians Technician[]
+
+  // Calendar
+  workingDays Json @map("working_days") // ["MON", "TUE", ...]
+  shifts      Json // [{code:"M", startLocal:"08:00", endLocal:"13:00"}]
+
+  // Relations
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([providerId])
+  @@index([countryCode])
+  @@map("work_teams")
+}
+
+model Technician {
+  id         String @id @default(uuid())
+  workTeamId String @map("work_team_id")
+
+  firstName  String @map("first_name") @db.VarChar(255)
+  lastName   String @map("last_name") @db.VarChar(255)
+
+  email      String?
+  phone      String
+
+  isActive   Boolean @default(true) @map("is_active")
+
+  // Relations
+  workTeam   WorkTeam @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([workTeamId])
+  @@map("technicians")
+}
+
+// ============================================================================
+// EVENT OUTBOX (for exactly-once event publishing)
+// ============================================================================
+
+model EventOutbox {
+  id            String   @id @default(uuid())
+  aggregateType String   @map("aggregate_type") @db.VarChar(50)
+  aggregateId   String   @map("aggregate_id") @db.VarChar(100)
+  eventType     String   @map("event_type") @db.VarChar(100)
+  payload       Json
+  status        EventStatus @default(PENDING)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  publishedAt   DateTime? @map("published_at")
+
+  @@index([status, createdAt])
+  @@map("event_outbox")
+}
+
+enum EventStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
