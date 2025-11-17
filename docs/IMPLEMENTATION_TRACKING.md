@@ -99,10 +99,43 @@
 - [x] **Technician management** (assign to teams) ✅
 - [x] **Provider hierarchy** (provider → teams → technicians) ✅
 - [x] **Basic calendar setup** (work hours, shifts) ✅
-- [ ] **API**: `/api/v1/providers/*`, `/api/v1/work-teams/*`
+- [x] **API**: `/api/v1/providers/*`, `/api/v1/work-teams/*` ✅
 
-**Owner**: [Backend Team C]
-**Progress**: 0/6 complete
+**Owner**: Solo Developer
+**Progress**: 6/6 complete (100%) ✅
+
+---
+
+#### External Authentication System (NEW - 2025-01-17)
+- [x] **Architecture decision** (Option A: Unified auth with multi-tenant RBAC) ✅
+- [x] **Database schema updates** (UserType enum, MFA fields, device registration) ✅
+- [x] **Provider authentication service** (registration, login, MFA support) ✅
+- [x] **Comprehensive documentation** (architecture spec, implementation tracking) ✅
+- [x] **Database migrations** (migration + rollback scripts) ✅
+- [🟡] **Provider auth endpoints** (controller with Swagger docs) - IN PROGRESS
+- [🟡] **User type guards** (decorators for user type isolation) - IN PROGRESS
+- [ ] **Technician biometric auth** (mobile-optimized authentication)
+- [ ] **Comprehensive tests** (unit, integration, E2E)
+- [ ] **API**: `/api/v1/auth/provider/*`, `/api/v1/auth/technician/*`
+
+**Owner**: Solo Developer (AI-assisted)
+**Progress**: 5/10 complete (50%) - Phase 1 complete, Phase 2 in progress
+**Documentation**:
+- `EXTERNAL_AUTH_IMPLEMENTATION.md` (implementation tracking)
+- `product-docs/security/01-unified-authentication-architecture.md` (architecture spec)
+
+**Key Features**:
+- Three user types: INTERNAL, EXTERNAL_PROVIDER, EXTERNAL_TECHNICIAN
+- Single JWT system with multiple auth methods
+- MFA support (TOTP/SMS)
+- Device registration for biometric authentication (technicians)
+- Migration path to Auth0 if needed (>5000 providers)
+- Cost savings: ~$9-20k/year vs Auth0 SaaS
+
+**Recent Updates (2025-01-17)**:
+- ✅ Phase 1 Complete: Schema, migrations, provider auth service, documentation
+- 🟡 Phase 2 In Progress: Creating endpoints, guards, wiring to auth module
+- 📝 Commit: `fa12c90` - feat(auth): implement unified external authentication system (Phase 1)
 
 ---
 

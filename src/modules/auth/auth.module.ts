@@ -5,8 +5,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from '@/common/prisma/prisma.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { ProviderAuthController } from './controllers/provider-auth.controller';
+import { ProviderAuthService } from './services/provider-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { UserTypeGuard } from './guards/user-type.guard';
 
 @Module({
   imports: [
@@ -23,8 +26,14 @@ import { LocalStrategy } from './strategies/local.strategy';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
-  exports: [AuthService],
+  controllers: [AuthController, ProviderAuthController],
+  providers: [
+    AuthService,
+    ProviderAuthService,
+    JwtStrategy,
+    LocalStrategy,
+    UserTypeGuard,
+  ],
+  exports: [AuthService, ProviderAuthService, UserTypeGuard],
 })
 export class AuthModule {}
