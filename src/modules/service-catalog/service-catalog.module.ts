@@ -8,10 +8,11 @@ import { ServiceCatalogEventLogService } from './event-log.service';
 import { ServiceCatalogSyncService } from './sync.service';
 import { ServiceCatalogEventProcessor } from './event-processor.service';
 import { ServiceCatalogController } from './service-catalog.controller';
+import { EventSyncController } from './event-sync.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [ServiceCatalogController],
+  controllers: [ServiceCatalogController, EventSyncController],
   providers: [
     ServiceCatalogService,
     PricingService,
