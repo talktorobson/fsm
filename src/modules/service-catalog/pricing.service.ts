@@ -36,9 +36,9 @@ export interface PricingResult {
   finalRate: number;
   totalCost: number; // For fixed rate = finalRate, for hourly = finalRate * (durationMinutes / 60)
   pricingLevel: 'POSTAL_CODE' | 'COUNTRY_DEFAULT';
-  postalCodeId?: string;
+  postalCodeId?: string | null;
   validFrom: Date;
-  validUntil?: Date;
+  validUntil?: Date | null;
 }
 
 /**
