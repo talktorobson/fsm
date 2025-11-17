@@ -1090,6 +1090,232 @@
 
 ---
 
-**Last Updated**: 2025-01-16
+**Last Updated**: 2025-01-17
+**Document Owner**: Engineering Lead
+**Review Frequency**: Weekly (update after Friday retrospective)
+
+---
+
+## 🆕 Service & Provider Referential Module (Phase 1.5 - ADDED 2025-01-17)
+
+**Team**: Integration + Backend Team
+**Goal**: Implement service catalog sync and provider capability management
+**Status**: 🟡 In Progress (15%)
+**Duration**: 10 weeks (parallel to Phase 2)
+**Priority**: HIGH (foundational for assignment transparency)
+
+### Context
+
+Added new module to support:
+- **Client-owned service catalog** synced from Pyxis/Tempo/SAP
+- **Postal code-based regional pricing** (3-level geographic hierarchy)
+- **Provider specialty management** (structured capabilities vs JSON)
+- **Event-driven sync** (Kafka + daily reconciliation)
+
+### Deliverables
+
+#### Documentation (COMPLETED) ✅
+- [x] **Domain documentation** (`/product-docs/domain/11-service-provider-referential.md`) - 1100 lines ✅
+  - Complete domain models for Service Catalog, Pricing, Provider Specialties
+  - Business rules, state machines, domain events
+  - Repository interfaces
+- [x] **Sync architecture** (`/product-docs/integration/09-service-catalog-sync.md`) - 600 lines ✅
+  - Event-driven sync with Kafka
+  - Daily reconciliation job
+  - Error handling & retry logic
+  - Operational runbooks
+
+**Owner**: AI-assisted development
+**Progress**: 2/2 complete (100%) ✅
+
+---
+
+#### Database Schema & Migrations (IN PROGRESS) 🟡
+- [ ] **Geographic master data** (Country, Province, City, PostalCode)
+  - [ ] Prisma models created
+  - [ ] Migration file generated
+  - [ ] Seed data for ES, FR, IT, PL (~68,000 postal codes)
+- [ ] **Service catalog tables** (ServiceCatalog, ServicePricing, ServiceSkillRequirement)
+  - [ ] Prisma models created
+  - [ ] Indexes optimized
+  - [ ] Sample services seeded
+- [ ] **Provider specialty tables** (ProviderSpecialty, SpecialtyServiceMapping, ProviderSpecialtyAssignment)
+  - [ ] Prisma models created
+  - [ ] Migration from JSON to relational
+  - [ ] 15-20 core specialties seeded
+- [ ] **Contract template table** (ContractTemplate)
+  - [ ] Abstraction over Adobe Sign
+  - [ ] Version support designed
+- [ ] **Sync infrastructure tables** (ServiceCatalogEventLog, ServiceCatalogReconciliation)
+  - [ ] Event log for idempotency
+  - [ ] Reconciliation tracking
+
+**Owner**: Backend Team
+**Progress**: 0/5 complete (0%)
+**Estimated**: 2 weeks (Weeks 5-6)
+
+---
+
+#### Core Services (PENDING) ⚪
+- [ ] **Service Catalog Service**
+  - [ ] CRUD operations
+  - [ ] Pricing lookup with postal code inheritance
+  - [ ] Checksum computation for drift detection
+- [ ] **Provider Specialty Service**
+  - [ ] Assign/revoke specialties
+  - [ ] Performance tracking
+  - [ ] Certification expiry monitoring
+- [ ] **Geographic Service**
+  - [ ] Postal code lookup
+  - [ ] City/Province/Country resolution
+
+**Owner**: Backend Team
+**Progress**: 0/3 complete (0%)
+**Estimated**: 2 weeks (Weeks 7-8)
+
+---
+
+#### Event-Driven Sync (PENDING) ⚪
+- [ ] **Kafka Event Consumer**
+  - [ ] Subscribe to `service-catalog` topic
+  - [ ] Handle `service.created`, `service.updated`, `service.deprecated`
+  - [ ] Idempotency checks
+  - [ ] Error handling with retry
+- [ ] **Sync Service**
+  - [ ] Create service from external event
+  - [ ] Update service with breaking change detection
+  - [ ] Deprecate service with active order checks
+  - [ ] FSM code generation
+- [ ] **Daily Reconciliation Job**
+  - [ ] Download CSV from S3/Blob
+  - [ ] Checksum comparison
+  - [ ] Drift correction
+  - [ ] Alerting on high drift rate (>5%)
+
+**Owner**: Integration Team
+**Progress**: 0/3 complete (0%)
+**Estimated**: 3 weeks (Weeks 9-11)
+
+---
+
+#### API Layer (PENDING) ⚪
+- [ ] **Service Catalog APIs**
+  - [ ] `GET /api/v1/services` - List with filtering
+  - [ ] `GET /api/v1/services/:id` - Get details
+  - [ ] `GET /api/v1/services/:id/pricing` - Pricing lookup
+  - [ ] `POST /api/v1/services/:id/pricing` - Create pricing (country manager)
+- [ ] **Provider Specialty APIs**
+  - [ ] `GET /api/v1/specialties` - List specialties
+  - [ ] `GET /api/v1/providers/:id/specialties` - Get assignments
+  - [ ] `POST /api/v1/providers/:id/specialties` - Assign specialty
+  - [ ] `DELETE /api/v1/providers/:id/specialties/:sid` - Revoke
+- [ ] **Admin/Monitoring APIs**
+  - [ ] `GET /api/v1/admin/service-catalog/sync-status`
+  - [ ] `GET /api/v1/admin/service-catalog/events`
+  - [ ] `POST /api/v1/admin/service-catalog/reconcile` - Manual trigger
+
+**Owner**: Backend Team
+**Progress**: 0/3 complete (0%)
+**Estimated**: 2 weeks (Weeks 12-13)
+
+---
+
+#### Testing & Validation (PENDING) ⚪
+- [ ] **Unit Tests**
+  - [ ] Service catalog service tests
+  - [ ] Pricing lookup tests
+  - [ ] Specialty assignment tests
+  - [ ] Sync service tests
+- [ ] **Integration Tests**
+  - [ ] End-to-end sync flow (Kafka → DB → API)
+  - [ ] Pricing lookup with postal codes
+  - [ ] Breaking change detection
+- [ ] **Performance Tests**
+  - [ ] Pricing lookup (<50ms target)
+  - [ ] Service catalog queries (<200ms target)
+  - [ ] Kafka consumer lag monitoring
+
+**Owner**: QA + Backend Team
+**Progress**: 0/3 complete (0%)
+**Estimated**: 1 week (Week 14)
+
+---
+
+### Success Criteria
+- ✅ Service catalog synced daily from external system (Kafka + CSV)
+- ✅ Postal code-based pricing operational (Madrid ≠ Barcelona)
+- ✅ Providers assigned to structured specialties (no more JSON)
+- ✅ Assignment filtering uses service skill requirements
+- ✅ Sync monitoring dashboard shows health status
+- ✅ <1% event processing failure rate
+- ✅ <5% daily reconciliation drift rate
+
+**Target Completion**: Week 14 (end of Phase 2)
+**Actual Completion**: TBD
+
+---
+
+### Integration with Existing Modules
+
+**Impact on Assignment Module** (Phase 2):
+- Assignment filtering will use `ServiceSkillRequirement` table instead of hardcoded skills
+- Provider matching based on `ProviderSpecialtyAssignment` not JSON
+- Assignment transparency enhanced with service-specific capability scoring
+
+**Impact on Service Order Module** (Phase 2):
+- Service orders reference `ServiceCatalog` table via FK
+- Pricing captured as snapshot at booking time
+- Prerequisites validation from service catalog
+
+**Database Changes**:
+- Add +9 new tables (~45 columns total)
+- Remove JSON columns from `WorkTeam` table (skills, serviceTypes)
+- Add FK from `ServiceOrder` to `ServiceCatalog`
+
+---
+
+### Risks & Mitigation
+
+| Risk | Probability | Impact | Mitigation |
+|------|------------|--------|------------|
+| **Kafka event schema changes** | Medium | High | Version all schemas, fail gracefully on unknown fields |
+| **Postal code data quality** | High | Medium | Validate during import, flag missing codes |
+| **Sync drift accumulation** | Medium | High | Daily reconciliation, automated alerts at >5% drift |
+| **Performance degradation** | Medium | High | Aggressive indexing, caching, materialized views if needed |
+| **Migration from JSON breaks providers** | Low | Critical | Dual-read during transition, extensive testing |
+
+---
+
+### Files Created/Modified
+
+**Documentation** (2025-01-17):
+- ✅ `/product-docs/domain/11-service-provider-referential.md` (NEW, 1100 lines)
+- ✅ `/product-docs/integration/09-service-catalog-sync.md` (NEW, 600 lines)
+- 🟡 `/product-docs/api/10-service-catalog-api.md` (PENDING)
+
+**Code** (Pending):
+- [ ] `/prisma/schema.prisma` (ADD geographic + service catalog models)
+- [ ] `/prisma/migrations/*_add_service_referential.sql`
+- [ ] `/prisma/seeds/geographic-data.ts`
+- [ ] `/prisma/seeds/service-catalog.ts`
+- [ ] `/src/modules/service-catalog/*` (NEW module)
+- [ ] `/src/modules/service-catalog/consumers/service-catalog.consumer.ts`
+- [ ] `/src/modules/service-catalog/services/service-catalog-sync.service.ts`
+- [ ] `/src/modules/service-catalog/jobs/reconciliation.job.ts`
+- [ ] `/src/modules/service-catalog/controllers/service-catalog.controller.ts`
+
+**Next Actions**:
+1. Create complete Prisma schema updates (Week 5)
+2. Generate and run migrations (Week 5)
+3. Seed geographic data for 4 countries (Week 6)
+4. Implement core service catalog service (Week 7-8)
+5. Build Kafka event consumer (Week 9-10)
+6. Implement daily reconciliation job (Week 10-11)
+7. Build API layer (Week 12-13)
+8. Testing and validation (Week 14)
+
+---
+
+**Last Updated**: 2025-01-17
 **Document Owner**: Engineering Lead
 **Review Frequency**: Weekly (update after Friday retrospective)
