@@ -300,7 +300,7 @@ export class TechnicianAuthService {
     }
 
     const user = device.user;
-    const roles = user.roles.map((ur) => ur.role.name);
+    const roles = user.roles.map((ur: any) => ur.role.name);
 
     // Generate offline token with 7-day expiration
     const offlineTokenPayload = {

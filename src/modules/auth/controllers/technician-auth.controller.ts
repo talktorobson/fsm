@@ -212,7 +212,7 @@ export class TechnicianAuthController {
     description: 'Unauthorized - invalid or missing token',
   })
   async revokeDevice(
-    @Request() req,
+    @Request() req: any,
     @Param('deviceId') deviceId: string,
   ): Promise<{ message: string }> {
     return this.technicianAuthService.revokeDevice(req.user.userId, deviceId);
