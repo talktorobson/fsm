@@ -759,15 +759,15 @@ This implementation was **completely refactored** on 2025-11-17 to align with **
 ---
 
 #### Assignment Modes
-- [ ] **Direct assignment** (operator selects specific provider)
-- [ ] **Offer mode** (send offer to providers, wait for acceptance)
-- [ ] **Broadcast mode** (send to multiple, first-come-first-served)
-- [ ] **Country-specific auto-accept** (ES/IT bypass provider acceptance)
-- [ ] **Assignment state machine** (PENDING → OFFERED → ACCEPTED/DECLINED)
-- [ ] **API**: `/api/v1/assignments/*`
+- [x] **Direct assignment** (operator selects specific provider) — creates assignment + auto-accepts
+- [x] **Offer mode** (send offer to providers, wait for acceptance)
+- [x] **Broadcast mode** (send to multiple, first-come-first-served) — creates multiple offers, ranks retained per provider list
+- [x] **Country-specific auto-accept** (ES/IT bypass provider acceptance) — AUTO_ACCEPT mode or ES/IT auto-accept sets assignment + service order to ACCEPTED
+- [x] **Assignment state machine** (PENDING → OFFERED → ACCEPTED/DECLINED) — handled via assignment records and service order updates
+- [x] **API**: `/api/v1/assignments/*` (direct/offer/broadcast/auto-accept, accept/decline)
 
 **Owner**: [Backend Team F]
-**Progress**: 0/6 complete
+**Progress**: 6/6 complete
 
 ---
 
