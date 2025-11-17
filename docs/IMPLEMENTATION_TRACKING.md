@@ -36,6 +36,9 @@
 - [x] Non-working day calculation (skip weekends + holidays)
 - [x] Booking window validation (BUFFER_WINDOW_VIOLATION / BANK_HOLIDAY errors)
 - [x] **Buffer refactor committed and pushed** (commit: `68d5506`, 964 insertions, 112 deletions)
+- [x] **Database schema synced** (prisma db push - CalendarConfig applied)
+- [x] **Calendar configs seeded** (6 business units: ES, FR, IT, PL)
+- [x] **Buffer validation integrated** into service order scheduling (commit: `6fa9d5c`)
 
 **Next Up**:
 - [ ] Redis Calendar/Booking service (96 15-min slots, atomic booking)
@@ -43,7 +46,7 @@
 - [ ] Assignment service (DIRECT, OFFER, BROADCAST, AUTO_ACCEPT modes)
 
 **Blockers**: None
-**Risks**: Database migration pending (database not running)
+**Risks**: None (all migrations applied, database running)
 
 ### Latest Verification (2025-11-17)
 **Phase 1 Verification**:
@@ -62,9 +65,19 @@
   - Travel buffer storage/retrieval
   - Nager.Date API integration
   - ✅ **Committed and pushed**: commit `68d5506` to `origin/main`
-- ⚠️ Database migration pending: `refactor-buffers-prd-compliant` (database not running)
+- ✅ **Database migration applied**: Schema synced with `prisma db push`
+- ✅ **Calendar configs seeded**: 6 business units (ES LM/BD, FR LM/BD, IT LM, PL LM)
+  - Global buffer: 2-4 non-working days
+  - Static buffer: 1-2 non-working days
+  - Travel buffer: 30-45 minutes
+  - Working days: Mon-Fri + timezone + holiday region
+- ✅ **Buffer validation integrated**: Service order scheduling validates booking windows
+  - Throws BUFFER_WINDOW_VIOLATION if within global buffer
+  - Throws BANK_HOLIDAY if scheduled on non-working day
+  - ✅ **Committed and pushed**: commit `6fa9d5c` to `origin/main`
 - ✅ All TypeScript compilation clean
 - ✅ All modules wired into AppModule
+- ✅ Docker services running (PostgreSQL 15 + Redis 7)
 
 ---
 
@@ -536,9 +549,15 @@
 
 **Team**: 1 engineer (Solo development with AI assistance)
 **Goal**: Core business logic - slot calculation and provider assignment
-**Status**: In Progress (35% - Service Orders + Buffers Complete)
+**Status**: In Progress (40% - Service Orders + Buffer Validation Complete)
 **Started**: 2025-11-17
 **Current Focus**: Calendar pre-booking and provider filtering
+
+**Latest Milestone** (2025-11-17):
+- ✅ PRD-compliant buffer logic refactored and tested (17/17 tests passing)
+- ✅ Database schema synced and calendar configs seeded (6 business units)
+- ✅ Buffer validation integrated into service order scheduling workflow
+- ✅ All changes committed and pushed to main branch
 
 ### Deliverables
 
@@ -714,15 +733,44 @@ This implementation was **completely refactored** on 2025-11-17 to align with **
 - **Changes**: 964 insertions, 112 deletions across 3 files
 
 **Migration Status**:
-- ⚠️ **Pending**: Prisma migration `refactor-buffers-prd-compliant` (database not running)
-- Migration will be applied when database is available
+- ✅ **Applied**: Schema synced with `npx prisma db push` (2025-11-17)
+- ✅ Database running: PostgreSQL 15 + Redis 7 via Docker Compose
 
-**Next Steps**:
-1. ⏳ Run Prisma migration when database is available: `npx prisma migrate dev --name refactor-buffers-prd-compliant`
-2. ⏳ Seed CalendarConfig data for each business unit (ES, FR, IT, PL)
-3. ⏳ Integrate `validateBookingWindow()` into Service Order scheduling workflow
-4. ⏳ Update Service Order service to call buffer validation before scheduling
-5. ⏳ Add buffer validation to calendar pre-booking logic
+**Calendar Configuration Seeding** (commit: `6fa9d5c`):
+- ✅ Created standalone seeding script: `prisma/seed-calendar-configs.ts`
+- ✅ Updated main seed: `prisma/seed.ts` (section 9)
+- ✅ Seeded 6 calendar configurations:
+  - **Spain**: LM_ES, BD_ES (3 days global, 2 days static, 30min travel)
+  - **France**: LM_FR, BD_FR (4 days global, 2 days static, 45min travel)
+  - **Italy**: LM_IT (3 days global, 2 days static, 30min travel)
+  - **Poland**: LM_PL (2 days global, 1 day static, 30min travel)
+- Each config includes:
+  - Working days: [1,2,3,4,5] (Mon-Fri)
+  - Shift times (morning 08:00-13:00/14:00, afternoon 14:00-19:00/20:00)
+  - Timezone (Europe/Madrid, Paris, Rome, Warsaw)
+  - Holiday region for Nager.Date API integration
+
+**Service Order Integration** (commit: `6fa9d5c`):
+- ✅ Imported SchedulingModule into ServiceOrdersModule
+- ✅ Injected BufferLogicService into ServiceOrdersService
+- ✅ Added buffer validation in `schedule()` method (line 308-314)
+- ✅ Validates global buffer window before scheduling
+- ✅ Throws BUFFER_WINDOW_VIOLATION or BANK_HOLIDAY errors
+- ✅ Logs successful validation
+- ✅ Build passes with no TypeScript errors
+
+**Completed Tasks**:
+1. ✅ Database migration applied via `prisma db push`
+2. ✅ CalendarConfig data seeded for all business units (6 configs)
+3. ✅ Buffer validation integrated into Service Order scheduling workflow
+4. ✅ Service Order service calls buffer validation before scheduling
+5. ✅ All changes committed and pushed (commits: `68d5506`, `6fa9d5c`)
+
+**Remaining Tasks**:
+1. ⏳ Add static buffer validation when delivery date field is implemented
+2. ⏳ Integrate buffer validation into calendar pre-booking logic (Redis slots)
+3. ⏳ Create integration tests for service order buffer validation scenarios
+4. ⏳ Set up automated job to sync holidays from Nager.Date API to database
 
 ---
 
