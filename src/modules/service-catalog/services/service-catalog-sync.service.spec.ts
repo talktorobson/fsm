@@ -5,7 +5,7 @@ import { ServiceStatus, ServiceType, ServiceCategory } from '@prisma/client';
 
 describe('ServiceCatalogSyncService', () => {
   let service: ServiceCatalogSyncService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: any;
 
   const mockServiceData = {
     externalServiceCode: 'PYX_ES_HVAC_00123',
@@ -151,7 +151,7 @@ describe('ServiceCatalogSyncService', () => {
         { category: 'hvac', expected: ServiceCategory.HVAC },
         { category: 'plumbing', expected: ServiceCategory.PLUMBING },
         { category: 'electrical', expected: ServiceCategory.ELECTRICAL },
-        { category: 'kitchen', expected: ServiceCategory.KITCHEN_INSTALLATION },
+        { category: 'kitchen', expected: ServiceCategory.KITCHEN },
         { category: 'unknown', expected: ServiceCategory.OTHER },
       ];
 

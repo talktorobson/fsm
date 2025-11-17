@@ -13,6 +13,9 @@ import { UsersModule } from './modules/users/users.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { ConfigModuleApp } from './modules/config/config.module';
 import { ServiceCatalogModule } from './modules/service-catalog/service-catalog.module';
+import { ServiceOrdersModule } from './modules/service-orders/service-orders.module';
+import { SchedulingModule } from './modules/scheduling/scheduling.module';
+import { ExecutionModule } from './modules/execution/execution.module';
 
 // Controllers
 import { AppController } from './app.controller';
@@ -46,6 +49,13 @@ import { AppController } from './app.controller';
     ProvidersModule,
     ConfigModuleApp,
     ServiceCatalogModule,
+
+    // Feature modules (Phase 2)
+    ServiceOrdersModule,
+    SchedulingModule,
+
+    // Feature modules (Phase 3)
+    ExecutionModule,
   ],
   controllers: [AppController],
 })
