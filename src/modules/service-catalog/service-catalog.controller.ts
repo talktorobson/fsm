@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Query,
   Body,
@@ -10,11 +11,15 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ServiceCatalogService } from './service-catalog.service';
 import { PricingService } from './pricing.service';
 import { GeographicService } from './geographic.service';
 import { ProviderSpecialtyService } from './provider-specialty.service';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
+import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
+import { DeprecateServiceDto } from './dto/deprecate-service.dto';
 import { ServiceStatus, ServiceType, ServiceCategory } from '@prisma/client';
 
 /**
@@ -23,6 +28,7 @@ import { ServiceStatus, ServiceType, ServiceCategory } from '@prisma/client';
  * REST API endpoints for service catalog management.
  * Provides access to services, pricing, geographic data, and provider specialties.
  */
+@ApiTags('Service Catalog')
 @Controller('api/v1/service-catalog')
 export class ServiceCatalogController {
   constructor(
@@ -113,6 +119,128 @@ export class ServiceCatalogController {
     @Query('businessUnit') businessUnit: string,
   ) {
     return this.serviceCatalogService.getStatistics(countryCode, businessUnit);
+  }
+
+  /**
+   * Create a new service
+   * POST /api/v1/service-catalog/services
+   */
+  @Post('services')
+  @ApiOperation({ summary: 'Create a new service in the catalog' })
+  @ApiResponse({ status: 201, description: 'Service created successfully' })
+  @ApiResponse({ status: 409, description: 'Service with external code already exists' })
+  async createService(@Body() dto: CreateServiceDto) {
+    // Extract English name as default (fallback to first available language)
+    const name = dto.name.en || dto.name.es || dto.name.fr || dto.name.it || dto.name.pl || 'Unnamed Service';
+    const description = dto.description?.en || dto.description?.es || dto.description?.fr || dto.description?.it || dto.description?.pl || undefined;
+
+    // Generate FSM service code
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const fsmServiceCode = `${dto.countryCode}_${dto.serviceCategory.substring(0, 4)}_${timestamp}${random}`;
+
+    return this.serviceCatalogService.create({
+      externalServiceCode: dto.externalServiceCode,
+      fsmServiceCode,
+      externalSource: dto.externalSource,
+      countryCode: dto.countryCode,
+      businessUnit: dto.businessUnit,
+      serviceType: dto.serviceType as ServiceType,
+      serviceCategory: dto.serviceCategory as ServiceCategory,
+      name,
+      description,
+      scopeIncluded: dto.scopeIncluded || [],
+      scopeExcluded: dto.scopeExcluded || [],
+      worksiteRequirements: dto.worksiteRequirements || [],
+      productPrerequisites: dto.productPrerequisites || [],
+      estimatedDurationMinutes: dto.estimatedDurationMinutes,
+      requiresPreServiceContract: dto.requiresPreServiceContract ?? false,
+      requiresPostServiceWCF: dto.requiresPostServiceWCF ?? true,
+      contractTemplateId: dto.contractTemplateId,
+      createdBy: 'API_USER', // TODO: Extract from JWT token
+    });
+  }
+
+  /**
+   * Update an existing service
+   * PATCH /api/v1/service-catalog/services/:id
+   */
+  @Patch('services/:id')
+  @ApiOperation({ summary: 'Update an existing service' })
+  @ApiResponse({ status: 200, description: 'Service updated successfully' })
+  @ApiResponse({ status: 404, description: 'Service not found' })
+  async updateService(
+    @Param('id') id: string,
+    @Body() dto: UpdateServiceDto,
+  ) {
+    // Extract English name as default if provided
+    const updateData: any = {};
+
+    if (dto.name) {
+      updateData.name = dto.name.en || dto.name.es || dto.name.fr || dto.name.it || dto.name.pl;
+    }
+
+    if (dto.description) {
+      updateData.description = dto.description.en || dto.description.es || dto.description.fr || dto.description.it || dto.description.pl;
+    }
+
+    if (dto.scopeIncluded !== undefined) {
+      updateData.scopeIncluded = dto.scopeIncluded;
+    }
+
+    if (dto.scopeExcluded !== undefined) {
+      updateData.scopeExcluded = dto.scopeExcluded;
+    }
+
+    if (dto.worksiteRequirements !== undefined) {
+      updateData.worksiteRequirements = dto.worksiteRequirements;
+    }
+
+    if (dto.productPrerequisites !== undefined) {
+      updateData.productPrerequisites = dto.productPrerequisites;
+    }
+
+    if (dto.estimatedDurationMinutes !== undefined) {
+      updateData.estimatedDurationMinutes = dto.estimatedDurationMinutes;
+    }
+
+    if (dto.requiresPreServiceContract !== undefined) {
+      updateData.requiresPreServiceContract = dto.requiresPreServiceContract;
+    }
+
+    if (dto.requiresPostServiceWCF !== undefined) {
+      updateData.requiresPostServiceWCF = dto.requiresPostServiceWCF;
+    }
+
+    if (dto.contractTemplateId !== undefined) {
+      updateData.contractTemplateId = dto.contractTemplateId;
+    }
+
+    return this.serviceCatalogService.update(
+      id,
+      updateData,
+      'API_USER', // TODO: Extract from JWT token
+    );
+  }
+
+  /**
+   * Deprecate a service
+   * DELETE /api/v1/service-catalog/services/:id
+   */
+  @Delete('services/:id')
+  @ApiOperation({ summary: 'Deprecate a service (soft delete)' })
+  @ApiResponse({ status: 200, description: 'Service deprecated successfully' })
+  @ApiResponse({ status: 404, description: 'Service not found' })
+  @ApiResponse({ status: 400, description: 'Service already deprecated' })
+  async deprecateService(
+    @Param('id') id: string,
+    @Body() dto: DeprecateServiceDto,
+  ) {
+    return this.serviceCatalogService.deprecate(
+      id,
+      dto.reason || 'Deprecated via API',
+      'API_USER', // TODO: Extract from JWT token
+    );
   }
 
   // ============================================================================
