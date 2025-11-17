@@ -14,6 +14,7 @@ import { EventSyncController } from './event-sync.controller';
   imports: [PrismaModule],
   controllers: [ServiceCatalogController, EventSyncController],
   providers: [
+    // Core services
     ServiceCatalogService,
     PricingService,
     GeographicService,
