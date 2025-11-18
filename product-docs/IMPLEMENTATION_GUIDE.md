@@ -70,10 +70,10 @@ The following documentation categories have template structures in place. Each c
 
 #### Week 1: Infrastructure Setup
 1. **Cloud Account Setup**
-   - AWS/Azure subscription
-   - VPC/VNet configuration
-   - PostgreSQL RDS/Azure DB (dev instance)
-   - S3/Blob storage buckets
+   - GCP project with billing
+   - VPC network configuration
+   - PostgreSQL Cloud SQL (dev instance)
+   - Google Cloud Storage buckets
 
 2. **Development Environment**
    - Create monorepo structure
@@ -122,7 +122,7 @@ The following documentation categories have template structures in place. Each c
 #### Week 4: Event Infrastructure
 
 1. **Kafka Setup**
-   - Confluent Cloud or AWS MSK setup
+   - Strimzi on GKE deployment
    - Topic creation strategy
    - Schema registry configuration
    - Basic producer/consumer patterns
@@ -437,14 +437,14 @@ Add as needed:
 
 ### Infrastructure
 
-- [ ] AWS/Azure account with billing alerts
-- [ ] Terraform for IaC
-- [ ] Kubernetes cluster (EKS/AKS)
-- [ ] PostgreSQL 15+ (RDS/Azure DB)
-- [ ] Redis 7+ (ElastiCache)
-- [ ] Kafka (Confluent Cloud / MSK)
-- [ ] S3/Blob storage
-- [ ] OpenSearch / Elasticsearch
+- [ ] GCP project with billing alerts
+- [ ] Terraform for IaC (GCP provider)
+- [ ] GKE Autopilot cluster
+- [ ] PostgreSQL 15+ (Cloud SQL or self-hosted on GKE)
+- [ ] Redis 7+ (Cloud Memorystore or self-hosted on GKE)
+- [ ] Kafka (Strimzi on GKE)
+- [ ] Google Cloud Storage (GCS)
+- [ ] OpenSearch (self-hosted on GKE)
 
 ### CI/CD
 
