@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import calendar styles */
+@import './calendar.css';
+
 @layer base {
   :root {
     --color-primary-50: 239 246 255;

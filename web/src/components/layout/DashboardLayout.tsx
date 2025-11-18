@@ -10,6 +10,7 @@ import {
   ClipboardList,
   UserCheck,
   Users,
+  Calendar,
   CheckSquare,
   LogOut,
   User,
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Service Orders', href: '/service-orders', icon: ClipboardList },
   { name: 'Assignments', href: '/assignments', icon: UserCheck },
   { name: 'Providers', href: '/providers', icon: Users },
+  { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Tasks & Alerts', href: '/tasks', icon: CheckSquare },
 ];
 
