@@ -54,14 +54,16 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 1. **Media Storage** (Phase 3) 🔴
    - **Status**: media-upload.service.ts is a **31-line stub** (only generates placeholder URLs)
    - **Impact**: Mobile app cannot upload photos/videos
-   - **Evidence**: No S3/CloudStorage integration code found
-   - **Required**: Implement S3 upload + thumbnail generation
+   - **Evidence**: No GCS (Google Cloud Storage) integration code found
+   - **Required**: Implement GCS upload + thumbnail generation (Cloud Functions or sharp)
+   - **Infrastructure**: GCS bucket + Cloud CDN for delivery
    - **Effort**: 2-3 days
 
 2. **WCF Document Persistence** (Phase 3) 🔴
    - **Status**: WCF service uses **in-memory storage only** (Map<string, WcfRecord>)
    - **Impact**: Cannot store/retrieve work closing forms
-   - **Required**: Implement database persistence + S3 storage for PDFs
+   - **Required**: Implement database persistence + GCS storage for PDFs
+   - **Infrastructure**: GCS bucket for PDFs + PostgreSQL metadata
    - **Effort**: 2 days
 
 3. **E-Signature Integration** (Phase 3) 🟠
@@ -101,8 +103,8 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 
 **Top Priorities**:
 1. [ ] Add assignment funnel transparency API endpoints (1 day)
-2. [ ] Wire up S3 media storage (replace stub) (2-3 days)
-3. [ ] Persist WCF documents to database + S3 (2 days)
+2. [ ] Wire up GCS media storage (replace stub) (2-3 days)
+3. [ ] Persist WCF documents to database + GCS (2 days)
 4. [ ] Complete provider geographic filtering (distance calculations) (1-2 days)
 5. [ ] Re-run integration/e2e suites after fixes
 
@@ -126,7 +128,7 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 - [x] **Redis setup** (for calendar bitmaps, caching) ✅
 - [x] **Docker containerization** (Docker Compose for local dev) ✅
 - [ ] **CI/CD pipeline** (GitHub Actions or GitLab CI) ⚪ **Deferred to Phase 5**
-- [ ] **Infrastructure as Code** (Terraform for AWS/Azure/GCP) ⚪ **Deferred to Phase 5**
+- [ ] **Infrastructure as Code** (Terraform for GCP) ⚪ **Deferred to Phase 5**
 - [x] **Environment setup** (local dev environment configured) ✅
 
 **Owner**: Solo Developer
@@ -424,7 +426,7 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 - [x] **Check-in API** (GPS validation, geofencing) ⚠️ **STUB - Placeholder geofence comment**
 - [x] **Check-out API** (duration calculation, validation) ⚠️ **BASIC - Simplistic duration calc**
 - [x] **Service execution status updates** ✅
-- [ ] **Media upload** (S3/CloudStorage, thumbnail generation) 🔴 **CRITICAL - 31-line stub only**
+- [ ] **Media upload** (GCS/Cloud Storage, thumbnail generation) 🔴 **CRITICAL - 31-line stub only**
 - [x] **Offline sync endpoint** (batch updates, conflict resolution placeholder) ⚠️ **STUB**
 - [x] **API**: `/api/v1/execution/*` ✅
 
@@ -435,8 +437,8 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 
 **CRITICAL GAPS**:
 1. **Geofencing**: Line 19-20 has placeholder comment: "In production, plug in geofence polygon validation here"
-2. **Media Storage**: NO S3 integration code found
-3. **Thumbnail Generation**: Not implemented
+2. **Media Storage**: NO GCS integration code found
+3. **Thumbnail Generation**: Not implemented (use Cloud Functions + sharp or ImageMagick)
 
 **Owner**: Solo Developer
 **Progress**: 3/6 complete (20% - routes exist, business logic incomplete)
@@ -454,7 +456,7 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 - wcf/wcf.service.ts: **52 lines** (in-memory Map storage)
 - wcf/wcf.controller.ts: **31 lines**
 
-**CRITICAL GAP**: No database/S3 persistence for WCF documents (uses Map<string, WcfRecord>)
+**CRITICAL GAP**: No database/GCS persistence for WCF documents (uses Map<string, WcfRecord>)
 
 **Owner**: Solo Developer
 **Progress**: 2/5 complete (40% - structure exists, storage missing)
@@ -650,7 +652,7 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 - [ ] **XSS prevention** (output sanitization)
 - [ ] **CSRF protection** (tokens on state-changing operations)
 - [ ] **Rate limiting tuning** (prevent abuse)
-- [ ] **Secrets management** (AWS Secrets Manager or HashiCorp Vault)
+- [ ] **Secrets management** (GCP Secret Manager or HashiCorp Vault)
 - [ ] **Penetration testing** (third-party security audit)
 
 **Owner**: Solo Developer
@@ -675,7 +677,7 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 - [ ] **Prometheus metrics** (API latency, error rates, DB queries)
 - [ ] **Grafana dashboards** (system health, business metrics)
 - [ ] **Alerting** (PagerDuty for critical incidents)
-- [ ] **Log aggregation** (CloudWatch or Datadog)
+- [ ] **Log aggregation** (Cloud Logging/Stackdriver or Datadog)
 - [ ] **Uptime monitoring** (Pingdom or StatusCake)
 - [ ] **Distributed tracing** (defer to post-launch if not needed)
 
@@ -761,8 +763,8 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|------------|
-| **Media storage blocking mobile app** | **HIGH** | **HIGH** | **URGENT: Implement S3 integration (2-3 days)** |
-| **WCF persistence missing** | **HIGH** | **MEDIUM** | **Implement DB+S3 storage (2 days)** |
+| **Media storage blocking mobile app** | **HIGH** | **HIGH** | **URGENT: Implement GCS integration (2-3 days)** |
+| **WCF persistence missing** | **HIGH** | **MEDIUM** | **Implement DB+GCS storage (2 days)** |
 | **E-signature integration delays** | **MEDIUM** | **HIGH** | **Start DocuSign API work in Week 12** |
 | **Assignment transparency API incomplete** | **MEDIUM** | **MEDIUM** | **Add API endpoints (1 day) - Persistence done ✅** |
 | **Mobile offline sync edge cases** | **MEDIUM** | **HIGH** | Extensive field testing, simple conflict resolution (server wins) |
@@ -773,15 +775,41 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 
 ## 📝 Architecture Decisions (Simplifications Adopted)
 
+### **Infrastructure: GCP + Open Source Hybrid**
+
+**GCP Services (Cost-Optimized, Scalable):**
+1. ✅ **Google Cloud Storage (GCS)** - Object storage for media/documents (cheaper than AWS S3)
+2. ✅ **Cloud SQL PostgreSQL** - Managed PostgreSQL 15+ with automatic backups
+3. ✅ **Google Kubernetes Engine (GKE)** - Container orchestration (Autopilot mode for cost savings)
+4. ✅ **Cloud Memorystore (Redis)** - Managed Redis for caching/calendar bitmaps
+5. ✅ **Cloud CDN** - Global content delivery for media
+6. ✅ **Cloud Load Balancing** - HTTP(S) load balancing with SSL
+7. ✅ **Secret Manager** - Secrets and credentials management
+8. ✅ **Cloud Monitoring & Logging** - Observability (Stackdriver)
+
+**Open Source (Self-Hosted on GKE):**
+1. ✅ **Kafka** (Confluent Community or Strimzi) - Event streaming (open source, no vendor lock-in)
+2. ✅ **Prometheus + Grafana** - Metrics and dashboards (supplement Cloud Monitoring)
+3. ✅ **PostgreSQL** - Could self-host for cost at scale, or use Cloud SQL initially
+4. ✅ **Redis** - Could self-host for cost at scale, or use Memorystore initially
+
+**Simplifications:**
 1. ✅ **Single PostgreSQL schema** (not 8 schemas) - Simpler migrations, easier JOINs
 2. ✅ **Application-level multi-tenancy** (not RLS) - Explicit WHERE clauses in code
-3. ✅ **PostgreSQL outbox pattern** (not Kafka initially) - Add Kafka later if needed (>10k events/sec)
-4. ✅ **PostgreSQL full-text search** (not OpenSearch) - Fast enough for <1M rows
+3. ✅ **PostgreSQL outbox pattern** (not Kafka initially) - Add self-hosted Kafka later if needed (>10k events/sec)
+4. ✅ **PostgreSQL full-text search** (not Elasticsearch) - Fast enough for <1M rows, avoid GCP Enterprise Search costs
 5. ✅ **6 modular services** (not 9 microservices) - Merged related domains, clear boundaries maintained
 6. ✅ **Environment-based feature flags** (not LaunchDarkly) - Simple on/off
-7. ✅ **Correlation IDs + structured logs** (not OpenTelemetry tracing) - Defer distributed tracing
+7. ✅ **Correlation IDs + structured logs** (not full OpenTelemetry tracing) - Defer distributed tracing
 
-**Impact**: -40% infrastructure complexity, -30% initial costs (~$15k/year savings), +25% dev velocity
+**Cost Optimization Strategy:**
+- Start with managed GCP services (Cloud SQL, Memorystore) for speed
+- Move to self-hosted open source (PostgreSQL, Redis, Kafka on GKE) as scale increases
+- Use GCS for all object storage (cost-effective, scalable)
+- Use Cloud CDN for media delivery (pay-per-use)
+- GKE Autopilot mode for cost-efficient container orchestration
+
+**Impact**: -40% infrastructure complexity, -35% initial costs vs AWS (~$18k/year savings), +25% dev velocity, no vendor lock-in
 
 ---
 
@@ -790,17 +818,20 @@ This document has been **thoroughly audited twice** and updated to reflect **act
 ### Immediate Priorities (Week 11-12)
 
 **HIGH PRIORITY** (MVP Blockers):
-1. [ ] **Implement S3 media storage** (2-3 days)
-   - Replace media-upload.service.ts stub with real AWS S3 SDK
-   - Add thumbnail generation (sharp or ImageMagick)
-   - Update ExecutionModule to use S3Service
+1. [ ] **Implement GCS media storage** (2-3 days)
+   - Replace media-upload.service.ts stub with @google-cloud/storage SDK
+   - Add thumbnail generation (sharp library or Cloud Functions)
+   - Update ExecutionModule to use GCSService
+   - Configure signed URLs for secure access
+   - Set up Cloud CDN for media delivery
    - Test end-to-end upload from mobile app
 
 2. [ ] **Implement WCF document persistence** (2 days)
    - Add WCF document repository (Prisma model exists)
-   - Store PDFs in S3 with metadata in PostgreSQL
-   - Add retrieval/download endpoints
+   - Store PDFs in GCS bucket with metadata in Cloud SQL PostgreSQL
+   - Add retrieval/download endpoints with signed URLs
    - Update WCF service to persist instead of in-memory Map
+   - Consider Cloud Storage lifecycle policies for retention
 
 3. [ ] **Start DocuSign integration** (3-4 days)
    - Set up DocuSign developer account
