@@ -29,18 +29,18 @@ This document defines the technology choices for the AHS Field Service Execution
 ├─────────────────────────────────────────────────────────────────┤
 │                       DATA & STORAGE                            │
 ├─────────────────────────────────────────────────────────────────┤
-│ Primary DB:        PostgreSQL 15+ (self-hosted on K8s) ⚠️ REQUIRED │
+│ Primary DB:        PostgreSQL 15+ (Cloud SQL or self-hosted)  │
 │ Search:            PostgreSQL FTS (defer OpenSearch)           │
-│ Cache:             Redis 7+ / Valkey (self-hosted)             │
-│ Object Storage:    S3 / Azure Blob / GCS                       │
-│ Message Bus:       Apache Kafka (REQUIRED - Confluent Cloud)   │
+│ Cache:             Redis 7+ / Valkey (Memorystore or self-hosted) │
+│ Object Storage:    Google Cloud Storage (GCS)                  │
+│ Message Bus:       Apache Kafka (Strimzi on GKE)              │
 │ Schema Registry:   Confluent Schema Registry (Avro)            │
 ├─────────────────────────────────────────────────────────────────┤
 │                    INFRASTRUCTURE                               │
 ├─────────────────────────────────────────────────────────────────┤
 │ Container:         Docker                                       │
-│ Orchestration:     Kubernetes (AWS EKS / Azure AKS / GKE)      │
-│ IaC:               Terraform 1.5+                              │
+│ Orchestration:     Google Kubernetes Engine (GKE Autopilot)    │
+│ IaC:               Terraform 1.5+ (GCP provider)               │
 │ CI/CD:             GitHub Actions                               │
 │ API Gateway:       Kong 3.x / Traefik                          │
 │ Service Mesh:      (Deferred - not needed initially)           │
@@ -312,7 +312,7 @@ export class ProviderController {
 
 ### Primary Database: PostgreSQL
 
-**Choice**: PostgreSQL 15+ (managed: AWS RDS / Azure Database)
+**Choice**: PostgreSQL 15+ (managed: GCP Cloud SQL or self-hosted on GKE)
 
 **Rationale**:
 - **Feature-rich**: JSONB, full-text search, CTEs, window functions
@@ -349,13 +349,13 @@ CREATE TABLE service_orders_2025_01 PARTITION OF service_orders
 
 ### Search: OpenSearch
 
-**Choice**: OpenSearch 2.x (AWS OpenSearch Service or self-hosted)
+**Choice**: OpenSearch 2.x (self-hosted on GKE)
 
 **Rationale**:
 - **Full-text search**: Natural language queries across entities
 - **Aggregations**: Dashboards and analytics
 - **Open source**: No licensing concerns (vs Elasticsearch)
-- **Managed option**: AWS OpenSearch Service
+- **Deployment**: Self-hosted on GKE with persistent volumes
 
 **Indexed entities**:
 - Projects
@@ -388,7 +388,7 @@ CREATE TABLE service_orders_2025_01 PARTITION OF service_orders
 
 ### Cache: Redis / Valkey
 
-**Choice**: Redis 7+ or Valkey (AWS ElastiCache / Azure Cache)
+**Choice**: Redis 7+ or Valkey (GCP Cloud Memorystore or self-hosted on GKE)
 
 **Rationale**:
 - **Speed**: In-memory, microsecond latency
@@ -430,16 +430,16 @@ if (count > 100) {
 }
 ```
 
-### Object Storage: S3 / Azure Blob
+### Object Storage: Google Cloud Storage (GCS)
 
-**Choice**: AWS S3 or Azure Blob Storage
+**Choice**: Google Cloud Storage (GCS)
 
 **Rationale**:
 - **Scalability**: Unlimited storage
 - **Durability**: 99.999999999% (11 9's)
 - **Lifecycle policies**: Automatic archival and deletion
-- **CDN integration**: CloudFront / Azure CDN
-- **Access control**: Fine-grained IAM policies
+- **CDN integration**: Cloud CDN with global edge network
+- **Access control**: Fine-grained IAM policies + Workload Identity
 
 **Bucket structure**:
 ```
@@ -454,8 +454,8 @@ ahs-field-service-{env}/
 ```
 
 **Lifecycle rules**:
-- Contracts/WCF: Retain 10 years (STANDARD → GLACIER after 2 years)
-- Media: STANDARD → STANDARD_IA after 90 days → GLACIER after 1 year → DELETE after 5 years
+- Contracts/WCF: Retain 10 years (STANDARD → COLDLINE after 2 years → ARCHIVE after 5 years)
+- Media: STANDARD → NEARLINE after 90 days → COLDLINE after 1 year → ARCHIVE after 3 years → DELETE after 5 years
 - Temp uploads: DELETE after 7 days if not confirmed
 
 ## Messaging: Apache Kafka (REQUIRED)
@@ -471,13 +471,13 @@ ahs-field-service-{env}/
 - **Replay**: Reprocess events from any point
 - **Schema evolution**: With Confluent Schema Registry
 - **Ecosystem**: Kafka Connect, ksqlDB (if needed)
-- **Cloud-agnostic**: Confluent Cloud works across AWS/Azure/GCP
+- **Self-hosted on GKE**: Strimzi operator provides Kafka without vendor lock-in (~70% cost savings vs Confluent Cloud)
 
 **Deployment Options**:
 1. **Confluent Cloud** (Preferred) - Fully managed, multi-cloud
 2. **Self-hosted on Kubernetes** - Using Confluent Operator or Strimzi
 
-**Do NOT use**: AWS MSK, Azure Event Hubs, GCP Pub/Sub (avoid cloud vendor lock-in)
+**Implementation**: Self-hosted Apache Kafka using Strimzi operator on GKE (avoids vendor lock-in, ~70% cost savings)
 
 **Topic naming**:
 ```
@@ -520,7 +520,7 @@ Examples:
 
 ### Container Platform: Kubernetes
 
-**Choice**: Managed Kubernetes (AWS EKS, Azure AKS, or GCP GKE)
+**Choice**: Google Kubernetes Engine (GKE Autopilot)
 
 **Rationale**:
 - **Standardization**: Industry standard orchestration
@@ -530,27 +530,36 @@ Examples:
 - **Managed**: Avoid control plane operational burden
 
 **Cluster setup**:
-```yaml
-# Terraform example
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+```hcl
+# Terraform example - GKE Autopilot
+resource "google_container_cluster" "primary" {
+  name     = "ahs-fsm-${var.environment}"
+  location = var.region
 
-  cluster_name    = "ahs-fsm-${var.environment}"
-  cluster_version = "1.28"
+  # Enable Autopilot mode (fully managed)
+  enable_autopilot = true
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  # Release channel for automatic upgrades
+  release_channel {
+    channel = "REGULAR"
+  }
 
-  eks_managed_node_groups = {
-    main = {
-      min_size     = 3
-      max_size     = 10
-      desired_size = 3
+  # Networking configuration
+  network    = var.network_name
+  subnetwork = var.subnetwork_name
 
-      instance_types = ["t3.xlarge"]
-      capacity_type  = "ON_DEMAND"
-    }
+  # Workload Identity for GKE pods → GCP service accounts
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  # Monitoring and logging
+  monitoring_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+  }
+
+  logging_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
   }
 }
 ```
@@ -631,12 +640,12 @@ services:
 
 ### IaC: Terraform
 
-**Choice**: Terraform 1.5+ with remote state (S3 + DynamoDB / Azure Blob)
+**Choice**: Terraform 1.5+ with remote state (GCS)
 
 **Rationale**:
-- **Multi-cloud**: Cloud-agnostic (important for EU requirements)
-- **State management**: Centralized, locked state
-- **Module ecosystem**: Reusable modules
+- **GCP-native**: Optimized for Google Cloud Platform
+- **State management**: Centralized, locked state with GCS backend
+- **Module ecosystem**: Reusable GCP modules
 - **Plan/apply workflow**: Safe changes
 
 **Structure**:
@@ -869,7 +878,7 @@ passport.use(new SamlStrategy(
 - **Database**: Dynamic PostgreSQL credentials
 - **PKI**: TLS certificates
 - **Transit**: Encryption as a service (encrypt PII fields)
-- **AWS/Azure Secrets Engine**: Dynamic cloud credentials
+- **GCP Secrets Engine**: Dynamic cloud credentials and Workload Identity integration
 
 **Integration with PingID**:
 - Use Vault OIDC auth method with PingID
@@ -1095,7 +1104,7 @@ class AdobeSignService {
   async handleWebhook(event: AdobeSignWebhookEvent) {
     switch (event.event) {
       case 'AGREEMENT_WORKFLOW_COMPLETED':
-        // Download signed PDF, store in S3, update contract status
+        // Download signed PDF, store in GCS, update contract status
         await this.downloadSignedDocument(event.agreementId);
         await contractService.markAsSigned(event.agreementId);
         break;
@@ -1742,15 +1751,15 @@ this.logger.log({
 | Primary DB | MySQL, MongoDB | **PostgreSQL** ⚠️ REQUIRED | Features, JSON support, RLS |
 | Frontend | Vue, Angular | **React** | Ecosystem, talent pool |
 | Mobile | Native, Flutter | **React Native** | Code sharing, OTA updates |
-| Message Bus | RabbitMQ, AWS SQS, Outbox | **Kafka** ⚠️ REQUIRED | Enterprise requirement, durability, replay |
+| Message Bus | RabbitMQ, SQS, Outbox | **Kafka** ⚠️ REQUIRED | Enterprise requirement, durability, replay |
 | Search | Elasticsearch, OpenSearch | **PostgreSQL FTS** (defer OpenSearch) | Simplicity, avoid premature optimization |
 | Cache | Memcached | **Redis / Valkey** | Data structures, features |
 | Observability | Grafana, Prometheus, ELK | **Datadog** ⚠️ REQUIRED | Enterprise requirement, unified platform |
-| Secrets | AWS Secrets, Azure Key Vault | **HashiCorp Vault** ⚠️ REQUIRED | Enterprise requirement, cloud-agnostic |
+| Secrets | Cloud Secrets, Key Vault | **HashiCorp Vault** ⚠️ REQUIRED | Enterprise requirement, cloud-agnostic |
 | SSO | Okta, Auth0 | **PingID** ⚠️ REQUIRED | Enterprise requirement, existing integration |
-| Workflow Engine | Temporal, AWS Step Functions | **Camunda Platform 8** | BPMN support, human tasks, audit trail |
+| Workflow Engine | Temporal, Step Functions | **Camunda Platform 8** | BPMN support, human tasks, audit trail |
 | E-Signature | DocuSign, Yousign | **Adobe Sign** | eIDAS-compliant, enterprise license |
-| Notifications | Twilio, SendGrid, AWS SES | **Enterprise Messaging Service** | Pre-existing contract, multi-channel |
+| Notifications | Twilio, SendGrid, SES | **Enterprise Messaging Service** | Pre-existing contract, multi-channel |
 
 **Legend**: ⚠️ REQUIRED = Mandatory by enterprise client (non-negotiable)
 

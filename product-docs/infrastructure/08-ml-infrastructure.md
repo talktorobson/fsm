@@ -77,7 +77,7 @@ The **ML Infrastructure** provides the foundation for deploying, serving, and ma
 **Internal Services**:
 - PostgreSQL: Feature data retrieval
 - Redis: Feature caching
-- S3: Model artifact storage
+- GCS: Model artifact storage
 
 ---
 
@@ -176,33 +176,35 @@ Response:
 
 #### 3.2.2 Model Loader
 
-**Purpose**: Load trained models from S3 into memory at service startup
+**Purpose**: Load trained models from GCS into memory at service startup
 
 **Implementation**:
 
 ```python
 # model_loader.py
-import boto3
+from google.cloud import storage
 import joblib
 from pathlib import Path
+import json
 
 class ModelLoader:
-    def __init__(self, s3_bucket: str, model_registry_path: str):
-        self.s3 = boto3.client('s3')
-        self.bucket = s3_bucket
+    def __init__(self, gcs_bucket: str, model_registry_path: str):
+        self.storage_client = storage.Client()
+        self.bucket = self.storage_client.bucket(gcs_bucket)
         self.registry_path = model_registry_path
         self.models = {}
 
     def load_model(self, model_name: str, version: str = 'latest'):
-        """Load model from S3 into memory"""
+        """Load model from GCS into memory"""
         if version == 'latest':
             version = self._get_latest_version(model_name)
 
         model_path = f"{self.registry_path}/{model_name}/{version}/model.pkl"
         local_path = f"/tmp/{model_name}_{version}.pkl"
 
-        # Download from S3
-        self.s3.download_file(self.bucket, model_path, local_path)
+        # Download from GCS
+        blob = self.bucket.blob(model_path)
+        blob.download_to_filename(local_path)
 
         # Load with joblib
         model = joblib.load(local_path)
@@ -222,8 +224,8 @@ class ModelLoader:
     def _get_latest_version(self, model_name: str) -> str:
         """Get latest model version from registry metadata"""
         metadata_path = f"{self.registry_path}/{model_name}/latest.json"
-        response = self.s3.get_object(Bucket=self.bucket, Key=metadata_path)
-        metadata = json.loads(response['Body'].read())
+        blob = self.bucket.blob(metadata_path)
+        metadata = json.loads(blob.download_as_text())
         return metadata['version']
 ```
 
@@ -373,7 +375,7 @@ spec:
     ┌───────────────────────┐  ┌───────────────────────┐
     │   Data Extraction     │  │  Feature Engineering  │
     │   - SQL queries       │  │  - Transform data     │
-    │   - Export to S3      │  │  - Create features    │
+    │   - Export to GCS     │  │  - Create features    │
     └───────────┬───────────┘  └───────────┬───────────┘
                 │                          │
                 └──────────────┬───────────┘
@@ -394,7 +396,7 @@ spec:
                                │
                                ▼
                    ┌───────────────────────┐
-                   │  Model Registry       │
+                   │  Model Registry (GCS) │
                    │  - Version model      │
                    │  - Tag as candidate   │
                    └───────────┬───────────┘
@@ -427,7 +429,7 @@ spec:
 # dags/train_sales_potential_model.py
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.operators.sagemaker import SageMakerTrainingOperator
+from airflow.providers.google.cloud.operators.kubernetes_engine import GKEStartPodOperator
 from datetime import datetime, timedelta
 
 default_args = {
@@ -455,7 +457,7 @@ with DAG(
         python_callable=extract_tv_quotation_data,
         op_kwargs={
             'lookback_months': 6,
-            's3_output_path': 's3://fsm-ml-data/sales-potential/training-data/'
+            'gcs_output_path': 'gs://fsm-ml-data/sales-potential/training-data/'
         }
     )
 
@@ -464,8 +466,8 @@ with DAG(
         task_id='engineer_features',
         python_callable=engineer_sales_potential_features,
         op_kwargs={
-            's3_input_path': 's3://fsm-ml-data/sales-potential/training-data/',
-            's3_output_path': 's3://fsm-ml-data/sales-potential/features/'
+            'gcs_input_path': 'gs://fsm-ml-data/sales-potential/training-data/',
+            'gcs_output_path': 'gs://fsm-ml-data/sales-potential/features/'
         }
     )
 
@@ -474,8 +476,8 @@ with DAG(
         task_id='train_xgboost_model',
         python_callable=train_sales_potential_model,
         op_kwargs={
-            's3_features_path': 's3://fsm-ml-data/sales-potential/features/',
-            's3_model_output': 's3://fsm-ml-models/sales-potential/',
+            'gcs_features_path': 'gs://fsm-ml-data/sales-potential/features/',
+            'gcs_model_output': 'gs://fsm-ml-models/sales-potential/',
             'hyperparameters': {
                 'n_estimators': 100,
                 'max_depth': 6,
@@ -489,8 +491,8 @@ with DAG(
         task_id='evaluate_model',
         python_callable=evaluate_sales_potential_model,
         op_kwargs={
-            's3_model_path': 's3://fsm-ml-models/sales-potential/',
-            's3_test_data': 's3://fsm-ml-data/sales-potential/test-data/',
+            'gcs_model_path': 'gs://fsm-ml-models/sales-potential/',
+            'gcs_test_data': 'gs://fsm-ml-data/sales-potential/test-data/',
             'metrics_threshold': {
                 'accuracy': 0.75,
                 'precision_high': 0.80,
@@ -505,7 +507,7 @@ with DAG(
         python_callable=register_model_version,
         op_kwargs={
             'model_name': 'sales-potential-scorer',
-            's3_model_path': 's3://fsm-ml-models/sales-potential/',
+            'gcs_model_path': 'gs://fsm-ml-models/sales-potential/',
             'tag': 'candidate'
         }
     )
@@ -578,10 +580,10 @@ embeddings:salesman_notes:{service_order_id} = [0.12, -0.34, 0.56, ...] # 384-di
 
 ## 6. Model Versioning & Registry
 
-### 6.1 Model Registry Structure (S3)
+### 6.1 Model Registry Structure (GCS)
 
 ```
-s3://fsm-ml-models/
+gs://fsm-ml-models/
 ├── sales-potential-scorer/
 │   ├── v1.0.0/
 │   │   ├── model.pkl              # Serialized XGBoost model
@@ -799,8 +801,10 @@ spec:
         env:
         - name: MODEL_VERSION
           value: "v1.1.0"
-        - name: S3_BUCKET
+        - name: GCS_BUCKET
           value: "fsm-ml-models"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/var/secrets/google/key.json"
         - name: REDIS_HOST
           value: "redis-feature-store"
         - name: DATABASE_URL
@@ -808,6 +812,14 @@ spec:
             secretKeyRef:
               name: ml-db-credentials
               key: url
+        volumeMounts:
+        - name: gcp-credentials
+          mountPath: /var/secrets/google
+          readOnly: true
+      volumes:
+      - name: gcp-credentials
+        secret:
+          secretName: gcp-ml-service-account
         livenessProbe:
           httpGet:
             path: /health
@@ -824,15 +836,15 @@ spec:
 
 ### 8.2 Storage
 
-**Model Artifacts** (S3):
+**Model Artifacts** (GCS):
 - Bucket: `fsm-ml-models`
 - Versioning: Enabled
-- Lifecycle: Archive models older than 12 months to Glacier
+- Lifecycle: Archive models older than 12 months to ARCHIVE storage class
 
-**Training Data** (S3):
+**Training Data** (GCS):
 - Bucket: `fsm-ml-data`
 - Retention: 24 months
-- Encryption: AES-256 (server-side)
+- Encryption: Google-managed encryption keys (GMEK)
 
 **Feature Cache** (Redis):
 - Instance: Redis 7.0 (Valkey fork)
@@ -920,8 +932,8 @@ spec:
 **Model Artifact Signing**: Sign model files with GPG to prevent tampering
 
 **Access Control**:
-- S3 bucket access: Data science team + CI/CD pipeline only
-- Model serving pods: Read-only access to S3 models
+- GCS bucket access: Data science team + CI/CD pipeline only
+- Model serving pods: Read-only access to GCS models via Workload Identity
 - Feature store (Redis): Application-level access only
 
 ---
@@ -932,21 +944,21 @@ spec:
 
 | Component | Resource | Monthly Cost (USD) |
 |-----------|----------|-------------------|
-| Model Serving (Kubernetes) | 6 pods × 2 CPU × 4 GB RAM | $360 |
-| Feature Store (Redis) | 8 GB memory, 1 replica | $120 |
-| Model Storage (S3) | 50 GB models + data | $15 |
-| Training (on-demand) | 2 monthly runs × 2 hours GPU | $40 |
-| **Total** | | **$535/month** |
+| Model Serving (GKE) | 6 pods × 2 CPU × 4 GB RAM | $360 |
+| Feature Store (Memorystore/Self-hosted) | 8 GB memory, 1 replica | $100 |
+| Model Storage (GCS) | 50 GB models + data | $10 |
+| Training (on-demand GKE) | 2 monthly runs × 2 hours GPU | $30 |
+| **Total** | | **$500/month** |
 
 ### 11.2 Cost Optimization Strategies
 
 **Compute**:
-- Use spot instances for training (60% cost savings)
+- Use GKE Spot VMs for training (60% cost savings)
 - Auto-scale model serving pods based on load
-- Use ARM-based instances (Graviton2) for 20% savings
+- Use ARM-based instances (Tau T2A) for 20% savings
 
 **Storage**:
-- Archive old model versions to S3 Glacier after 12 months
+- Archive old model versions to GCS ARCHIVE storage class after 12 months
 - Compress training data with Parquet format
 
 **Feature Store**:
@@ -959,33 +971,33 @@ spec:
 
 ### 12.1 Backup Strategy
 
-**Model Artifacts** (S3):
-- S3 versioning enabled (retain last 10 versions)
-- Cross-region replication to `eu-west-1` (primary) and `us-east-1` (DR)
+**Model Artifacts** (GCS):
+- GCS versioning enabled (retain last 10 versions)
+- Multi-region or Dual-region bucket configuration (europe-west1 + europe-west3)
 
 **Feature Store** (Redis):
-- RDB snapshots every 6 hours to S3
+- RDB snapshots every 6 hours to GCS
 - Point-in-time recovery up to 24 hours
 
 **Training Data**:
-- S3 versioning enabled
+- GCS versioning enabled
 - Retention: 24 months
 
 ### 12.2 Recovery Procedures
 
 **Model Service Failure** (RTO: 5 minutes):
-1. Kubernetes auto-restarts failed pods
+1. GKE auto-restarts failed pods
 2. Health checks verify recovery
 3. If persistent failure, rollback to previous model version
 
 **Redis Failure** (RTO: 10 minutes):
-1. Promote replica to primary
+1. Promote replica to primary (Memorystore automatic failover)
 2. Application continues with degraded performance (direct DB queries)
-3. Restore RDB snapshot to new primary
+3. Restore RDB snapshot from GCS to new primary
 
-**S3 Region Failure** (RTO: 30 minutes):
-1. Switch to DR region (us-east-1)
-2. Update model loader S3 bucket region
+**GCS Region Failure** (RTO: 30 minutes):
+1. Multi-region bucket automatically handles failover
+2. Update model loader GCS bucket configuration (if needed)
 3. Restart model service pods with new configuration
 
 ---

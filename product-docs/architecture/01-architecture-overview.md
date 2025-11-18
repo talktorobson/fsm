@@ -130,7 +130,7 @@ Build a **simple, modular, scalable, and resilient** field service management pl
 │  └─────────────┘  └─────────────┘  └─────────────┘                 │
 │                                                                       │
 │  ┌─────────────────────────────────────────────────────────┐        │
-│  │          Object Storage (S3 / Azure Blob)               │        │
+│  │       Object Storage (Google Cloud Storage / GCS)      │        │
 │  │  • Contracts  • WCF  • Photos  • Videos  • Documents   │        │
 │  └─────────────────────────────────────────────────────────┘        │
 │                                                                       │
@@ -402,9 +402,9 @@ See [Technical Stack](./02-technical-stack.md) for detailed rationale.
 
 **Core Platform**:
 - TypeScript + Node.js (NestJS framework)
-- PostgreSQL 15+
-- Kafka (Confluent Cloud or AWS MSK)
-- Redis (Valkey)
+- PostgreSQL 15+ (Cloud SQL)
+- Kafka (Strimzi on GKE)
+- Redis (Valkey / Memorystore)
 - OpenSearch
 
 **Frontend**:
@@ -413,8 +413,8 @@ See [Technical Stack](./02-technical-stack.md) for detailed rationale.
 - Next.js (customer portal)
 
 **Infrastructure**:
-- Kubernetes (managed: EKS/AKS/GKE)
-- Terraform for IaC
+- Google Kubernetes Engine (GKE Autopilot)
+- Terraform for IaC (GCP provider)
 - GitHub Actions for CI/CD
 
 ## Non-Functional Requirements
