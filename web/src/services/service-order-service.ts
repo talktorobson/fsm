@@ -1,0 +1,122 @@
+/**
+ * Service Order Service
+ * API calls for service order management
+ */
+
+import apiClient from './api-client';
+import { ServiceOrder, PaginatedResponse, SalesPotential, RiskLevel, GoExecStatus } from '@/types';
+
+interface ServiceOrderFilters {
+  status?: string;
+  serviceType?: string;
+  priority?: string;
+  salesPotential?: string;
+  riskLevel?: string;
+  countryCode?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface AssessSalesPotentialDto {
+  salesPotential: SalesPotential;
+  salesPotentialScore: number;
+  salesPreEstimationValue?: number;
+  salesmanNotes?: string;
+}
+
+interface AssessRiskDto {
+  riskLevel: RiskLevel;
+  riskScore: number;
+  riskFactors?: Record<string, unknown>;
+}
+
+interface UpdateGoExecDto {
+  goExecStatus: GoExecStatus;
+  goExecBlockReason?: string;
+  paymentStatus?: string;
+  productDeliveryStatus?: string;
+}
+
+class ServiceOrderService {
+  /**
+   * Get all service orders with filters
+   */
+  async getAll(filters: ServiceOrderFilters = {}): Promise<PaginatedResponse<ServiceOrder>> {
+    const response = await apiClient.get<PaginatedResponse<ServiceOrder>>('/service-orders', {
+      params: filters,
+    });
+    return response.data;
+  }
+
+  /**
+   * Get service order by ID
+   */
+  async getById(id: string): Promise<ServiceOrder> {
+    const response = await apiClient.get<ServiceOrder>(`/service-orders/${id}`);
+    return response.data;
+  }
+
+  /**
+   * Assess sales potential (AI-powered)
+   */
+  async assessSalesPotential(id: string, data: AssessSalesPotentialDto): Promise<ServiceOrder> {
+    const response = await apiClient.post<ServiceOrder>(
+      `/service-orders/${id}/assess-sales-potential`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Assess risk level (AI-powered)
+   */
+  async assessRisk(id: string, data: AssessRiskDto): Promise<ServiceOrder> {
+    const response = await apiClient.post<ServiceOrder>(`/service-orders/${id}/assess-risk`, data);
+    return response.data;
+  }
+
+  /**
+   * Acknowledge risk
+   */
+  async acknowledgeRisk(id: string, userId: string): Promise<ServiceOrder> {
+    const response = await apiClient.post<ServiceOrder>(`/service-orders/${id}/acknowledge-risk`, {
+      userId,
+    });
+    return response.data;
+  }
+
+  /**
+   * Update Go Exec status
+   */
+  async updateGoExecStatus(id: string, data: UpdateGoExecDto): Promise<ServiceOrder> {
+    const response = await apiClient.patch<ServiceOrder>(
+      `/service-orders/${id}/go-exec-status`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Override Go Exec (derogation)
+   */
+  async overrideGoExec(
+    id: string,
+    data: { reason: string; approvedBy: string }
+  ): Promise<ServiceOrder> {
+    const response = await apiClient.post<ServiceOrder>(
+      `/service-orders/${id}/override-go-exec`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Get service order statistics
+   */
+  async getStatistics() {
+    const response = await apiClient.get('/service-orders/statistics');
+    return response.data;
+  }
+}
+
+export const serviceOrderService = new ServiceOrderService();

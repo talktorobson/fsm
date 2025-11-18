@@ -1,0 +1,157 @@
+/**
+ * Custom styles for react-big-calendar
+ * Override default styles to match our design system
+ */
+
+/* Import react-big-calendar base styles */
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+/* Calendar container */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+/* Toolbar */
+.rbc-toolbar {
+  padding: 1rem 0;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rbc-toolbar button {
+  @apply px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors;
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active {
+  @apply bg-primary-600 text-white border-primary-600;
+}
+
+.rbc-toolbar button:focus {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* Month view */
+.rbc-month-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rbc-month-header {
+  @apply bg-gray-50;
+}
+
+.rbc-header {
+  @apply border-b border-gray-200 py-3 px-2 text-sm font-semibold text-gray-700;
+}
+
+.rbc-month-row {
+  @apply border-b border-gray-200;
+}
+
+.rbc-day-bg {
+  @apply border-l border-gray-200;
+}
+
+.rbc-off-range-bg {
+  @apply bg-gray-50;
+}
+
+.rbc-today {
+  @apply bg-primary-50;
+}
+
+.rbc-date-cell {
+  @apply px-2 py-1;
+}
+
+.rbc-date-cell > a {
+  @apply text-sm font-medium text-gray-900;
+}
+
+.rbc-off-range {
+  @apply text-gray-400;
+}
+
+/* Events */
+.rbc-event {
+  @apply text-xs px-2 py-1 rounded;
+  border: none !important;
+}
+
+.rbc-event:focus {
+  @apply outline-none ring-2 ring-white;
+}
+
+.rbc-event-label {
+  @apply text-xs;
+}
+
+.rbc-event-content {
+  @apply text-xs;
+}
+
+/* Week and Day views */
+.rbc-time-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rbc-time-header {
+  @apply border-b border-gray-200;
+}
+
+.rbc-time-header-content {
+  @apply border-l border-gray-200;
+}
+
+.rbc-time-content {
+  @apply border-t border-gray-200;
+}
+
+.rbc-time-slot {
+  @apply border-t border-gray-100;
+}
+
+.rbc-current-time-indicator {
+  @apply bg-red-500;
+  height: 2px;
+}
+
+.rbc-timeslot-group {
+  @apply border-l border-gray-200;
+}
+
+/* Agenda view */
+.rbc-agenda-view {
+  @apply border border-gray-200 rounded-lg overflow-hidden;
+}
+
+.rbc-agenda-view table {
+  @apply w-full;
+}
+
+.rbc-agenda-date-cell {
+  @apply px-4 py-3 text-sm font-medium text-gray-900 bg-gray-50;
+}
+
+.rbc-agenda-time-cell {
+  @apply px-4 py-3 text-sm text-gray-600;
+}
+
+.rbc-agenda-event-cell {
+  @apply px-4 py-3 text-sm text-gray-900;
+}
+
+/* Selected event */
+.rbc-selected {
+  @apply bg-primary-700;
+}
+
+/* Accessibility */
+.rbc-show-more {
+  @apply text-xs text-primary-600 hover:text-primary-700 cursor-pointer;
+}
