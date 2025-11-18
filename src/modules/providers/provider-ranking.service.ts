@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { DistanceCalculationService } from '@/common/distance';
 
 export interface CandidateFilterInput {
   serviceId: string;
@@ -23,6 +24,7 @@ export interface CandidateScore {
   capacityScore: number;
   qualityScore: number;
   distanceScore: number;
+  distanceKm?: number;
 }
 
 export interface FunnelAuditEntry {
@@ -40,7 +42,12 @@ export interface RankingResult {
 
 @Injectable()
 export class ProviderRankingService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProviderRankingService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly distanceService: DistanceCalculationService,
+  ) {}
 
   /**
    * Rank providers/work teams for a service order based on eligibility and scoring.
@@ -149,8 +156,25 @@ export class ProviderRankingService {
       const avgQuality = qualityScores.length ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 3;
       const qualityScore = avgQuality / 5; // normalize 0-1
 
-      // Distance heuristic placeholder (no geo service yet); neutral weight if missing
-      const distanceScore = 0.5;
+      // Distance calculation
+      let distanceScore = 0.5; // Default neutral score if coordinates unavailable
+      let distanceKm: number | undefined = undefined;
+
+      if (postalCode) {
+        try {
+          const distance = await this.calculateDistanceToWorkTeam(postalCode, candidate.postalCodes as string[]);
+          if (distance !== null) {
+            distanceKm = distance;
+            // Convert distance to normalized score (0-1) based on 20-point scale
+            const distancePoints = this.distanceService.calculateDistanceScore(distance);
+            distanceScore = distancePoints / 20; // Normalize to 0-1 range
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Failed to calculate distance for work team ${candidate.id}: ${error.message}`,
+          );
+        }
+      }
 
       // Final weighted score
       const score = capacityScore * 0.4 + qualityScore * 0.4 + distanceScore * 0.2;
@@ -164,6 +188,7 @@ export class ProviderRankingService {
         capacityScore,
         qualityScore,
         distanceScore,
+        distanceKm,
       });
     }
 
@@ -189,5 +214,69 @@ export class ProviderRankingService {
     }
 
     return { rankings, funnel };
+  }
+
+  /**
+   * Calculate minimum distance from job postal code to any postal code covered by work team
+   *
+   * @param jobPostalCode - Job location postal code
+   * @param teamPostalCodes - Array of postal codes covered by work team
+   * @returns Minimum distance in kilometers, or null if coordinates unavailable
+   */
+  private async calculateDistanceToWorkTeam(
+    jobPostalCode: string,
+    teamPostalCodes: string[],
+  ): Promise<number | null> {
+    // Get job location coordinates
+    const jobPostal = await this.prisma.postalCode.findFirst({
+      where: { code: jobPostalCode },
+      select: { latitude: true, longitude: true },
+    });
+
+    if (!jobPostal || !jobPostal.latitude || !jobPostal.longitude) {
+      this.logger.debug(`No coordinates available for job postal code: ${jobPostalCode}`);
+      return null;
+    }
+
+    const jobCoords = this.distanceService.decimalToCoordinates(jobPostal.latitude, jobPostal.longitude);
+    if (!jobCoords) {
+      return null;
+    }
+
+    // Get coordinates for all team postal codes
+    const teamPostals = await this.prisma.postalCode.findMany({
+      where: {
+        code: { in: teamPostalCodes },
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+      select: { code: true, latitude: true, longitude: true },
+    });
+
+    if (teamPostals.length === 0) {
+      this.logger.debug(
+        `No coordinates available for work team postal codes: ${teamPostalCodes.join(', ')}`,
+      );
+      return null;
+    }
+
+    // Calculate distance to each team postal code and return minimum
+    let minDistance = Infinity;
+
+    for (const teamPostal of teamPostals) {
+      const teamCoords = this.distanceService.decimalToCoordinates(
+        teamPostal.latitude,
+        teamPostal.longitude,
+      );
+
+      if (teamCoords) {
+        const result = await this.distanceService.calculateDistance(jobCoords, teamCoords);
+        if (result.distanceKm < minDistance) {
+          minDistance = result.distanceKm;
+        }
+      }
+    }
+
+    return minDistance === Infinity ? null : minDistance;
   }
 }

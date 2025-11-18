@@ -428,6 +428,10 @@ model PostalCode {
   cityId String @map("city_id")
   code   String @db.VarChar(10) // 28001, 75001, etc.
 
+  // Geographic coordinates for distance calculations
+  latitude  Decimal? @db.Decimal(10, 8) // e.g., 40.41678901
+  longitude Decimal? @db.Decimal(11, 8) // e.g., -3.70378876
+
   // Relations
   city            City             @relation(fields: [cityId], references: [id], onDelete: Cascade)
   servicePricing  ServicePricing[]
