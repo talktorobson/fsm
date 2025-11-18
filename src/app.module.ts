@@ -20,6 +20,7 @@ import { ExecutionModule } from './modules/execution/execution.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { TechnicalVisitsModule } from './modules/technical-visits/technical-visits.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 // Controllers
 import { AppController } from './app.controller';
@@ -66,6 +67,7 @@ import { AppController } from './app.controller';
 
     // Feature modules (Phase 4)
     TasksModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
 })

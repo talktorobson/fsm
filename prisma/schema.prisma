@@ -51,6 +51,9 @@ model User {
   refreshTokens RefreshToken[]
   devices       RegisteredDevice[]
 
+  // Notification preferences
+  notificationPreference NotificationPreference?
+
   // Project ownership (Phase 2)
   pilotedProjects Project[] @relation("ProjectPilot")
 
@@ -1936,4 +1939,222 @@ enum WcfSignerType {
   TECHNICIAN
   PROVIDER_MANAGER
   QUALITY_INSPECTOR
+}// ============================================================================
+// NOTIFICATION & COMMUNICATION MODULE
+// ============================================================================
+
+// Notification templates for emails, SMS, and push notifications
+model NotificationTemplate {
+  id              String   @id @default(uuid())
+  code            String   @unique @db.VarChar(100) // ORDER_ASSIGNED, TECH_ON_WAY, WCF_READY
+  name            String   @db.VarChar(255)
+  description     String?  @db.Text
+
+  // Template type
+  channel         NotificationChannelType @map("channel")
+  eventType       String   @map("event_type") @db.VarChar(100) // order.assigned, execution.checkin
+
+  // Multi-tenancy
+  countryCode     String?  @map("country_code") @db.VarChar(3) // NULL = all countries
+  businessUnit    String?  @map("business_unit") @db.VarChar(50) // NULL = all BUs
+
+  // Template content (multi-language)
+  translations    NotificationTranslation[]
+
+  // Template configuration
+  priority        NotificationPriority @default(NORMAL)
+  retryEnabled    Boolean  @default(true) @map("retry_enabled")
+  maxRetries      Int      @default(3) @map("max_retries")
+
+  // Status
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Relations
+  notifications   Notification[]
+
+  // Audit
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdBy       String?  @map("created_by")
+
+  @@index([channel])
+  @@index([eventType])
+  @@index([countryCode, businessUnit])
+  @@index([isActive])
+  @@map("notification_templates")
+}
+
+// Multi-language template translations
+model NotificationTranslation {
+  id              String   @id @default(uuid())
+  templateId      String   @map("template_id")
+  language        String   @db.VarChar(5) // es, fr, it, pl, en
+
+  // Content
+  subject         String?  @db.VarChar(500) // For email
+  bodyTemplate    String   @map("body_template") @db.Text // Handlebars template
+
+  // SMS/Push specific
+  shortMessage    String?  @map("short_message") @db.VarChar(160) // For SMS
+
+  // Relations
+  template        NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([templateId, language])
+  @@index([templateId])
+  @@index([language])
+  @@map("notification_translations")
+}
+
+// User notification preferences (opt-in/opt-out)
+model NotificationPreference {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+
+  // Preferences by channel
+  emailEnabled    Boolean  @default(true) @map("email_enabled")
+  smsEnabled      Boolean  @default(true) @map("sms_enabled")
+  pushEnabled     Boolean  @default(true) @map("push_enabled")
+
+  // Preferences by event type
+  eventPreferences Json    @map("event_preferences") // { "order.assigned": { email: true, sms: false }, ... }
+
+  // Quiet hours
+  quietHoursEnabled Boolean @default(false) @map("quiet_hours_enabled")
+  quietHoursStart   String? @map("quiet_hours_start") @db.VarChar(5) // HH:MM
+  quietHoursEnd     String? @map("quiet_hours_end") @db.VarChar(5) // HH:MM
+  quietHoursTimezone String? @map("quiet_hours_timezone") @db.VarChar(50)
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+// Notification log
+model Notification {
+  id              String   @id @default(uuid())
+  templateId      String?  @map("template_id")
+
+  // Recipient
+  recipientId     String?  @map("recipient_id") // User ID (optional)
+  recipientEmail  String?  @map("recipient_email")
+  recipientPhone  String?  @map("recipient_phone")
+  recipientName   String?  @map("recipient_name") @db.VarChar(255)
+
+  // Notification details
+  channel         NotificationChannelType
+  eventType       String   @map("event_type") @db.VarChar(100)
+  priority        NotificationPriority @default(NORMAL)
+  language        String   @default("en") @db.VarChar(5)
+
+  // Content
+  subject         String?  @db.VarChar(500)
+  body            String   @db.Text
+  variables       Json?    // Template variables used
+
+  // Status
+  status          NotificationStatusType @default(PENDING)
+  errorMessage    String?  @map("error_message") @db.Text
+  errorCode       String?  @map("error_code") @db.VarChar(100)
+
+  // Delivery tracking
+  sentAt          DateTime? @map("sent_at")
+  deliveredAt     DateTime? @map("delivered_at")
+  readAt          DateTime? @map("read_at")
+  clickedAt       DateTime? @map("clicked_at")
+
+  // Provider tracking
+  providerMessageId String? @map("provider_message_id") @db.VarChar(255) // Twilio/SendGrid ID
+  providerResponse  Json?   @map("provider_response")
+
+  // Retry tracking
+  retryCount      Int      @default(0) @map("retry_count")
+  lastRetryAt     DateTime? @map("last_retry_at")
+  nextRetryAt     DateTime? @map("next_retry_at")
+
+  // Context
+  contextType     String?  @map("context_type") @db.VarChar(100) // service_order, assignment, contract
+  contextId       String?  @map("context_id") // ID of the related entity
+  metadata        Json?    // Additional context
+
+  // Multi-tenancy
+  countryCode     String?  @map("country_code") @db.VarChar(3)
+  businessUnit    String?  @map("business_unit") @db.VarChar(50)
+
+  // Relations
+  template        NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  // Audit
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([recipientId])
+  @@index([recipientEmail])
+  @@index([recipientPhone])
+  @@index([channel])
+  @@index([status])
+  @@index([eventType])
+  @@index([contextType, contextId])
+  @@index([createdAt])
+  @@index([nextRetryAt])
+  @@map("notifications")
+}
+
+// Notification delivery webhooks (for tracking delivery status)
+model NotificationWebhook {
+  id              String   @id @default(uuid())
+  notificationId  String   @map("notification_id")
+
+  // Webhook details
+  provider        String   @db.VarChar(50) // twilio, sendgrid
+  event           String   @db.VarChar(100) // delivered, bounced, opened, clicked
+
+  // Payload
+  payload         Json
+
+  // Processing
+  processed       Boolean  @default(false)
+  processedAt     DateTime? @map("processed_at")
+
+  receivedAt      DateTime @default(now()) @map("received_at")
+
+  @@index([notificationId])
+  @@index([provider])
+  @@index([event])
+  @@index([processed])
+  @@map("notification_webhooks")
+}
+
+// Enums for notifications
+enum NotificationChannelType {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatusType {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  BOUNCED
+  UNSUBSCRIBED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
