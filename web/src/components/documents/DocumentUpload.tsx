@@ -17,7 +17,7 @@ interface DocumentUploadProps {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const ALLOWED_MIME_TYPES = {
+const ALLOWED_MIME_TYPES: Partial<Record<DocumentType, string[]>> = {
   [DocumentType.PHOTO]: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
   [DocumentType.PDF]: ['application/pdf'],
   [DocumentType.CONTRACT]: ['application/pdf'],
@@ -68,7 +68,7 @@ export default function DocumentUpload({ serviceOrderId, onSuccess }: DocumentUp
 
     // Validate file type
     const allowedTypes = ALLOWED_MIME_TYPES[documentType];
-    if (!allowedTypes.includes('*/*') && !allowedTypes.includes(selectedFile.type)) {
+    if (allowedTypes && !allowedTypes.includes('*/*') && !allowedTypes.includes(selectedFile.type)) {
       toast.error(`Invalid file type. Please select a valid ${documentType.toLowerCase()} file.`);
       return;
     }
@@ -187,7 +187,7 @@ export default function DocumentUpload({ serviceOrderId, onSuccess }: DocumentUp
                 type="file"
                 className="hidden"
                 onChange={handleFileChange}
-                accept={ALLOWED_MIME_TYPES[documentType].join(',')}
+                accept={ALLOWED_MIME_TYPES[documentType]?.join(',') || '*/*'}
                 disabled={uploadMutation.isPending}
               />
             </label>

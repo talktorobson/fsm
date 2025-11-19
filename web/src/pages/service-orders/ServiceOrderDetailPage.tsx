@@ -7,12 +7,13 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { serviceOrderService } from '@/services/service-order-service';
-import { ArrowLeft, TrendingUp, Shield, PlayCircle, FileText, Clock } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Shield, PlayCircle, FileText, Clock, CalendarClock } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import DocumentUpload from '@/components/documents/DocumentUpload';
 import NoteForm from '@/components/documents/NoteForm';
 import DocumentList from '@/components/documents/DocumentList';
+import RescheduleModal from '@/components/service-orders/RescheduleModal';
 import type { Note } from '@/services/document-service';
 
 type TabType = 'overview' | 'documents' | 'timeline';
@@ -21,6 +22,7 @@ export default function ServiceOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['service-order', id],
@@ -423,6 +425,13 @@ export default function ServiceOrderDetailPage() {
             <h3 className="font-semibold mb-4">Quick Actions</h3>
             <div className="space-y-2">
               <button className="btn btn-primary w-full text-sm">Create Assignment</button>
+              <button
+                onClick={() => setShowRescheduleModal(true)}
+                className="btn btn-secondary w-full text-sm flex items-center justify-center gap-2"
+              >
+                <CalendarClock className="w-4 h-4" />
+                Reschedule
+              </button>
               <button className="btn btn-secondary w-full text-sm">Generate Contract</button>
               <button
                 onClick={() => setActiveTab('documents')}
@@ -440,6 +449,18 @@ export default function ServiceOrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Reschedule Modal */}
+      {showRescheduleModal && (
+        <RescheduleModal
+          serviceOrder={order}
+          onClose={() => setShowRescheduleModal(false)}
+          onSuccess={() => {
+            setShowRescheduleModal(false);
+            // Service order data will be automatically refreshed by React Query
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -4,8 +4,7 @@
  */
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tantml:function_calls>
-<invoke name="documentService">
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   documentService,
   type Document,
@@ -23,7 +22,6 @@ import {
   MessageSquare,
   Eye,
   Edit,
-  AlertCircle,
   Info,
   Shield,
   Wrench,
