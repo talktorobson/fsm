@@ -24,6 +24,8 @@ export class ServiceCatalogSyncService {
   async handleServiceCreated(data: ServiceCatalogEventData, eventLogId: string): Promise<void> {
     this.logger.log(`Creating service: ${data.externalServiceCode}`);
 
+
+
     // Check if already exists (race condition protection)
     const existing = await this.prisma.serviceCatalog.findUnique({
       where: { externalServiceCode: data.externalServiceCode },
@@ -53,8 +55,12 @@ export class ServiceCatalogSyncService {
         serviceCategory: this.mapServiceCategory(data.category),
 
         // Use English name/description as default (i18n will be added in v2)
-        name: data.name.en || data.name.es || Object.values(data.name)[0] || 'Unnamed Service',
-        description: data.description?.en || data.description?.es || Object.values(data.description || {})[0] || null,
+        name: typeof data.name === 'string' 
+          ? data.name 
+          : (data.name.en || data.name.es || Object.values(data.name)[0] || 'Unnamed Service'),
+        description: typeof data.description === 'string'
+          ? data.description
+          : (data.description?.en || data.description?.es || Object.values(data.description || {})[0] || null),
 
         scopeIncluded: data.scopeIncluded || [],
         scopeExcluded: data.scopeExcluded || [],
@@ -115,8 +121,12 @@ export class ServiceCatalogSyncService {
     const updated = await this.prisma.serviceCatalog.update({
       where: { id: existing.id },
       data: {
-        name: data.name.en || data.name.es || Object.values(data.name)[0] || existing.name,
-        description: data.description?.en || data.description?.es || Object.values(data.description || {})[0] || existing.description,
+        name: typeof data.name === 'string'
+          ? data.name
+          : (data.name.en || data.name.es || Object.values(data.name)[0] || existing.name),
+        description: typeof data.description === 'string'
+          ? data.description
+          : (data.description?.en || data.description?.es || Object.values(data.description || {})[0] || existing.description),
 
         scopeIncluded: (data.scopeIncluded || existing.scopeIncluded) as any,
         scopeExcluded: (data.scopeExcluded || existing.scopeExcluded) as any,

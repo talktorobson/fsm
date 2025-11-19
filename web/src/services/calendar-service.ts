@@ -65,6 +65,7 @@ class CalendarService {
     startDate: string;
     endDate: string;
     providerId?: string;
+    providerIds?: string[];
     countryCode?: string;
   }): Promise<ServiceOrder[]> {
     const response = await apiClient.get<ServiceOrder[]>('/calendar/scheduled-orders', {

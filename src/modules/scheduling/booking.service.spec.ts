@@ -14,6 +14,12 @@ const mockPrisma = {
   workTeam: {
     findUnique: jest.fn(),
   },
+  serviceOrder: {
+    findMany: jest.fn(),
+  },
+  provider: {
+    findMany: jest.fn(),
+  },
 };
 
 const mockRedis = {
@@ -134,5 +140,59 @@ describe('BookingService', () => {
         endSlot: 82,
       }),
     ).rejects.toThrow('outside working shifts');
+  });
+
+  describe('Calendar Features', () => {
+    it('getScheduledOrders filters by providerIds and state', async () => {
+      const mockOrders = [{ id: 'order-1' }];
+      mockPrisma.serviceOrder.findMany.mockResolvedValue(mockOrders);
+
+      const result = await service.getScheduledOrders({
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        providerIds: ['p1', 'p2'],
+      });
+
+      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            assignedProviderId: { in: ['p1', 'p2'] },
+            state: { in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] },
+          }),
+        }),
+      );
+      expect(result).toEqual(mockOrders);
+    });
+
+    it('getUtilizationMetrics calculates rates correctly', async () => {
+      mockPrisma.provider.findMany.mockResolvedValue([
+        { id: 'p1', name: 'Provider 1' },
+      ]);
+      
+      // Mock orders: 2 orders of 4 hours (240 mins) each = 8 hours total
+      mockPrisma.serviceOrder.findMany.mockResolvedValue([
+        { estimatedDurationMinutes: 240 },
+        { estimatedDurationMinutes: 240 },
+      ]);
+
+      const result = await service.getUtilizationMetrics({
+        startDate: '2025-01-01', // Wednesday
+        endDate: '2025-01-01',   // 1 day
+        providerIds: ['p1'],
+      });
+
+      // 1 day = 8 hours capacity
+      // Scheduled = 8 hours
+      // Utilization = 100%
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        providerId: 'p1',
+        providerName: 'Provider 1',
+        totalHours: 8,
+        scheduledHours: 8,
+        availableHours: 0,
+        utilizationRate: 100,
+      });
+    });
   });
 });

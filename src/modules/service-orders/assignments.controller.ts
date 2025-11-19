@@ -16,6 +16,12 @@ class AssignmentResponseDto {
   assignmentIds: string[];
 }
 
+class BulkAssignmentDto {
+  serviceOrderIds: string[];
+  providerId: string;
+  mode?: AssignmentMode;
+}
+
 @ApiTags('Assignments')
 @Controller('assignments')
 export class AssignmentsController {
@@ -88,5 +94,16 @@ export class AssignmentsController {
   async getFunnel(@Param('id') id: string): Promise<AssignmentFunnelResponseDto> {
     const result = await this.assignmentsService.getAssignmentFunnel(id);
     return result as unknown as AssignmentFunnelResponseDto;
+  }
+
+  @Post('bulk')
+  @ApiOperation({ summary: 'Bulk assign multiple service orders to a provider' })
+  @ApiResponse({ status: 201, description: 'Bulk assignment processed' })
+  async bulkAssign(@Body() dto: BulkAssignmentDto) {
+    return this.assignmentsService.bulkCreateAssignments({
+      serviceOrderIds: dto.serviceOrderIds,
+      providerId: dto.providerId,
+      mode: dto.mode || AssignmentMode.DIRECT,
+    });
   }
 }

@@ -129,7 +129,7 @@ describe('ProviderRankingService', () => {
           specialtyAssignments: [
             { specialtyId: 's1', totalJobsCompleted: 2, avgQualityScore: 4.5 },
           ],
-          postalCodes: ['28001'],
+          postalCodes: ['28001', '28002'],
         },
       ]);
 
@@ -163,7 +163,7 @@ describe('ProviderRankingService', () => {
           specialtyAssignments: [
             { specialtyId: 's1', totalJobsCompleted: 2, avgQualityScore: 4.5 },
           ],
-          postalCodes: ['28001'],
+          postalCodes: ['28001', '28002'],
         },
       ]);
 
@@ -190,7 +190,7 @@ describe('ProviderRankingService', () => {
           specialtyAssignments: [
             { specialtyId: 's1', totalJobsCompleted: 2, avgQualityScore: 4.0 },
           ],
-          postalCodes: ['28001'],
+          postalCodes: ['28001', '28002'],
         },
         {
           id: 'wt2',
@@ -199,7 +199,7 @@ describe('ProviderRankingService', () => {
           specialtyAssignments: [
             { specialtyId: 's1', totalJobsCompleted: 2, avgQualityScore: 4.0 },
           ],
-          postalCodes: ['28050'],
+          postalCodes: ['28050', '28002'],
         },
       ]);
 
@@ -282,7 +282,7 @@ describe('ProviderRankingService', () => {
         serviceId: 'svc',
         countryCode: 'ES',
         businessUnit: 'LM_ES',
-        postalCode: '28010',
+        postalCode: '28002',
         requiredDurationMinutes: 60,
       });
 

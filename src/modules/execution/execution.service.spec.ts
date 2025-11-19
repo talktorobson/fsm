@@ -177,6 +177,10 @@ describe('ExecutionService', () => {
           serviceOrderId: 'so1',
           technicianUserId: 'u1',
           occurredAt: new Date().toISOString(),
+          location: { latitude: 0, longitude: 0 },
+          completionStatus: 'COMPLETED' as any,
+          workSummary: { description: 'Done', tasksCompleted: [] },
+          materialsUsed: [],
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -195,6 +199,10 @@ describe('ExecutionService', () => {
         serviceOrderId: 'so1',
         technicianUserId: 'u1',
         occurredAt: checkOutTime.toISOString(),
+        location: { latitude: 0, longitude: 0 },
+        completionStatus: 'COMPLETED' as any,
+        workSummary: { description: 'Done', tasksCompleted: [] },
+        materialsUsed: [],
       });
 
       expect(result.id).toBe('co1');

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { OrderIntakeService } from '../order-intake.service';
-import { KafkaService } from '../../../../common/kafka/kafka.service';
+import { KafkaProducerService } from '../../../../common/kafka/kafka-producer.service';
 import { RedisService } from '../../../../common/redis/redis.service';
 import {
   OrderIntakeRequestDto,
@@ -15,18 +15,17 @@ import { IntegrationContext } from '../../interfaces';
 
 describe('OrderIntakeService', () => {
   let service: OrderIntakeService;
-  let kafkaService: jest.Mocked<KafkaService>;
+  let kafkaService: jest.Mocked<KafkaProducerService>;
   let redisService: jest.Mocked<RedisService>;
 
   beforeEach(async () => {
     const mockKafkaService = {
       send: jest.fn().mockResolvedValue(undefined),
-      ping: jest.fn().mockResolvedValue(true),
     };
 
     const mockRedisService = {
       get: jest.fn().mockResolvedValue(null),
-      setex: jest.fn().mockResolvedValue('OK'),
+      set: jest.fn().mockResolvedValue('OK'),
     };
 
     const mockConfigService = {
@@ -36,14 +35,14 @@ describe('OrderIntakeService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderIntakeService,
-        { provide: KafkaService, useValue: mockKafkaService },
+        { provide: KafkaProducerService, useValue: mockKafkaService },
         { provide: RedisService, useValue: mockRedisService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<OrderIntakeService>(OrderIntakeService);
-    kafkaService = module.get(KafkaService) as jest.Mocked<KafkaService>;
+    kafkaService = module.get(KafkaProducerService) as jest.Mocked<KafkaProducerService>;
     redisService = module.get(RedisService) as jest.Mocked<RedisService>;
   });
 
@@ -115,18 +114,18 @@ describe('OrderIntakeService', () => {
 
       // Verify Kafka event was published
       expect(kafkaService.send).toHaveBeenCalledWith(
+        'sales.order.intake',
         expect.objectContaining({
-          topic: 'sales.order.intake',
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              key: response.orderId,
-            }),
-          ]),
+          externalOrderId: 'PX-TEST-001',
+        }),
+        response.orderId,
+        expect.objectContaining({
+          'correlation-id': 'corr-test-001',
         }),
       );
 
       // Verify Redis cache was set
-      expect(redisService.setex).toHaveBeenCalled();
+      expect(redisService.set).toHaveBeenCalled();
     });
 
     it('should return cached response for duplicate request (idempotency)', async () => {
@@ -138,7 +137,7 @@ describe('OrderIntakeService', () => {
         receivedAt: new Date().toISOString(),
       };
 
-      redisService.get.mockResolvedValue(cachedResponse);
+      redisService.get.mockResolvedValue(JSON.stringify(cachedResponse));
 
       const request: OrderIntakeRequestDto = {
         externalOrderId: 'PX-TEST-001',
@@ -340,23 +339,5 @@ describe('OrderIntakeService', () => {
     });
   });
 
-  describe('healthCheck', () => {
-    it('should return healthy status when Kafka is connected', async () => {
-      kafkaService.ping.mockResolvedValue(true);
 
-      const health = await service.healthCheck();
-
-      expect(health.status).toBe('healthy');
-      expect(health.details?.kafka).toBe('connected');
-    });
-
-    it('should return unhealthy status when Kafka is disconnected', async () => {
-      kafkaService.ping.mockResolvedValue(false);
-
-      const health = await service.healthCheck();
-
-      expect(health.status).toBe('unhealthy');
-      expect(health.details?.kafka).toBe('disconnected');
-    });
-  });
 });

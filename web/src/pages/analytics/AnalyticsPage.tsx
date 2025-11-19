@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-// import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   TrendingUp,
   TrendingDown,
@@ -15,78 +15,38 @@ import {
   Calendar,
   Download,
 } from 'lucide-react';
-// import { dashboardService } from '@/services/dashboard-service';
+import { dashboardService, AnalyticsData } from '@/services/dashboard-service';
+import { StatCardSkeleton } from '@/components/LoadingSkeleton';
 
 type TimeRange = '7d' | '30d' | '90d' | 'custom';
-
-interface KPIData {
-  value: number;
-  change: number;
-  trend: 'up' | 'down' | 'stable';
-}
-
-interface AnalyticsData {
-  serviceOrders: {
-    total: KPIData;
-    completed: KPIData;
-    avgCompletionTime: KPIData;
-    successRate: KPIData;
-  };
-  assignments: {
-    total: KPIData;
-    acceptanceRate: KPIData;
-    avgResponseTime: KPIData;
-  };
-  providers: {
-    total: KPIData;
-    activeRate: KPIData;
-    utilization: KPIData;
-  };
-  trends: {
-    labels: string[];
-    serviceOrders: number[];
-    completions: number[];
-    assignments: number[];
-  };
-}
-
-// Mock analytics data - would come from API
-const mockAnalyticsData: AnalyticsData = {
-  serviceOrders: {
-    total: { value: 248, change: 12.5, trend: 'up' },
-    completed: { value: 198, change: 8.3, trend: 'up' },
-    avgCompletionTime: { value: 4.2, change: -5.2, trend: 'down' },
-    successRate: { value: 94.5, change: 2.1, trend: 'up' },
-  },
-  assignments: {
-    total: { value: 312, change: 15.2, trend: 'up' },
-    acceptanceRate: { value: 89.7, change: 3.4, trend: 'up' },
-    avgResponseTime: { value: 2.8, change: -8.1, trend: 'down' },
-  },
-  providers: {
-    total: { value: 45, change: 5.0, trend: 'up' },
-    activeRate: { value: 82.2, change: 1.8, trend: 'up' },
-    utilization: { value: 76.5, change: 4.2, trend: 'up' },
-  },
-  trends: {
-    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-    serviceOrders: [58, 62, 65, 63],
-    completions: [45, 51, 54, 48],
-    assignments: [72, 78, 82, 80],
-  },
-};
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
 
-  // TODO: Use real-time stats from dashboard service
-  // const { data: stats } = useQuery({
-  //   queryKey: ['dashboard-stats'],
-  //   queryFn: () => dashboardService.getStats(),
-  // });
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: ['analytics', timeRange],
+    queryFn: () => dashboardService.getAnalytics(timeRange),
+  });
 
-  const analytics = mockAnalyticsData;
+  if (isLoading || !analytics) {
+    return (
+      <div className="p-6">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+            <p className="text-gray-600 mt-1">Performance metrics and insights</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   const handleExportCSV = () => {
     // Create CSV content

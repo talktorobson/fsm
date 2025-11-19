@@ -34,7 +34,7 @@ describe('NotificationsService', () => {
         {
           provide: KafkaProducerService,
           useValue: {
-            publish: jest.fn(),
+            send: jest.fn(),
           },
         },
         {
@@ -108,7 +108,7 @@ describe('NotificationsService', () => {
         messageId: 'sg-123',
       });
       jest.spyOn(prismaService.notification, 'update').mockResolvedValue({} as any);
-      jest.spyOn(kafkaProducer, 'publish').mockResolvedValue(undefined);
+      jest.spyOn(kafkaProducer, 'send').mockResolvedValue([]);
 
       // Act
       const result = await service.sendNotification({
@@ -130,7 +130,7 @@ describe('NotificationsService', () => {
         subject: 'Order Assigned',
         html: '<p>Your order has been assigned</p>',
       });
-      expect(kafkaProducer.publish).toHaveBeenCalledWith(
+      expect(kafkaProducer.send).toHaveBeenCalledWith(
         'communications.notification.sent',
         expect.objectContaining({
           notificationId: 'notification-123',
@@ -167,7 +167,7 @@ describe('NotificationsService', () => {
         messageId: 'twilio-123',
       });
       jest.spyOn(prismaService.notification, 'update').mockResolvedValue({} as any);
-      jest.spyOn(kafkaProducer, 'publish').mockResolvedValue(undefined);
+      jest.spyOn(kafkaProducer, 'send').mockResolvedValue([]);
 
       // Act
       const result = await service.sendNotification({
@@ -242,20 +242,26 @@ describe('NotificationsService', () => {
         errorCode: 'INVALID_EMAIL',
       });
       jest.spyOn(prismaService.notification, 'update').mockResolvedValue({} as any);
-      jest.spyOn(kafkaProducer, 'publish').mockResolvedValue(undefined);
+      jest.spyOn(kafkaProducer, 'send').mockResolvedValue([]);
 
       // Act & Assert
-      await expect(
-        service.sendNotification({
-          templateCode: 'ORDER_ASSIGNED',
-          recipientId: 'user-123',
-          recipientEmail: 'invalid-email',
-          channel: 'EMAIL',
-          eventType: 'order.assigned',
-          language: 'en',
-          variables: {},
+      const result = await service.sendNotification({
+        templateCode: 'ORDER_ASSIGNED',
+        recipientId: 'user-123',
+        recipientEmail: 'user@example.com',
+        channel: 'EMAIL',
+        eventType: 'order.assigned',
+        language: 'en',
+        variables: {},
+      });
+
+      expect(result).toBe('notification-789');
+      expect(prismaService.notification.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'notification-789' },
+          data: expect.objectContaining({ status: 'FAILED' }),
         }),
-      ).rejects.toThrow();
+      );
 
       expect(prismaService.notification.update).toHaveBeenCalledWith({
         where: { id: 'notification-789' },

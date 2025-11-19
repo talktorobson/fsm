@@ -79,8 +79,10 @@ describe('Duration Calculation Utility', () => {
       expect(result.totalHours).toBe(8);
       expect(result.isMultiDay).toBe(true);
       expect(result.daysSpanned).toBe(2);
-      expect(result.warnings).toContain(
-        expect.stringContaining('Multi-day work session detected'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('Multi-day work session detected'),
+        ]),
       );
     });
 
@@ -101,8 +103,10 @@ describe('Duration Calculation Utility', () => {
       );
 
       expect(result.totalHours).toBe(18);
-      expect(result.warnings).toContain(
-        expect.stringContaining('exceeds maximum allowed'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('exceeds maximum allowed'),
+        ]),
       );
     });
 
@@ -116,8 +120,10 @@ describe('Duration Calculation Utility', () => {
         breakTimeMinutes: 300, // 5 hours of breaks (> 50% of 9 hours)
       });
 
-      expect(result.warnings).toContain(
-        expect.stringContaining('more than 50% of total time'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('more than 50% of total time'),
+        ]),
       );
     });
 
@@ -141,8 +147,10 @@ describe('Duration Calculation Utility', () => {
       expect(result.regularHours).toBe(8);
       expect(result.overtimeHours).toBe(0);
       expect(result.doubleTimeHours).toBe(2);
-      expect(result.warnings).toContain(
-        expect.stringContaining('Weekend work detected'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('Weekend work detected'),
+        ]),
       );
     });
 
@@ -212,8 +220,10 @@ describe('Duration Calculation Utility', () => {
       });
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain(
-        expect.stringContaining('must be after check-in time'),
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('must be after check-in time'),
+        ]),
       );
     });
 
@@ -242,8 +252,10 @@ describe('Duration Calculation Utility', () => {
       });
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain(
-        expect.stringContaining('cannot exceed total duration'),
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('cannot exceed total duration'),
+        ]),
       );
     });
 
@@ -257,8 +269,10 @@ describe('Duration Calculation Utility', () => {
       });
 
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain(
-        expect.stringContaining('Very short work session'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('Very short work session'),
+        ]),
       );
     });
 
@@ -272,8 +286,10 @@ describe('Duration Calculation Utility', () => {
       });
 
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain(
-        expect.stringContaining('exceeds 24 hours'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('exceeds 24 hours'),
+        ]),
       );
     });
 
@@ -288,8 +304,10 @@ describe('Duration Calculation Utility', () => {
       });
 
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain(
-        expect.stringContaining('No break time recorded'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('No break time recorded'),
+        ]),
       );
     });
 
@@ -343,8 +361,10 @@ describe('Duration Calculation Utility', () => {
       });
 
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain(
-        expect.stringContaining('more than 7 days ago'),
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('more than 7 days ago'),
+        ]),
       );
     });
   });

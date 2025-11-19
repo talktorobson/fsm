@@ -330,4 +330,48 @@ export class NotificationsService {
       metadata: notification.metadata as Record<string, any>,
     });
   }
+
+  /**
+   * Mark notification as read
+   */
+  async markAsRead(id: string) {
+    return this.prisma.notification.update({
+      where: { id },
+      data: { readAt: new Date() },
+    });
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllAsRead(userId: string) {
+    return this.prisma.notification.updateMany({
+      where: {
+        recipientId: userId,
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+  }
+
+  /**
+   * Get unread notification count for a user
+   */
+  async getUnreadCount(userId: string) {
+    return this.prisma.notification.count({
+      where: {
+        recipientId: userId,
+        readAt: null,
+      },
+    });
+  }
+
+  /**
+   * Delete a notification
+   */
+  async delete(id: string) {
+    return this.prisma.notification.delete({
+      where: { id },
+    });
+  }
 }

@@ -5,7 +5,6 @@ import { TaskPriority } from '@prisma/client';
 
 describe('TaskSlaService', () => {
   let service: TaskSlaService;
-  let prisma: PrismaService;
 
   const mockPrismaService = {
     task: {
@@ -15,6 +14,7 @@ describe('TaskSlaService', () => {
   };
 
   beforeEach(async () => {
+    jest.useFakeTimers();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TaskSlaService,
@@ -23,9 +23,12 @@ describe('TaskSlaService', () => {
     }).compile();
 
     service = module.get<TaskSlaService>(TaskSlaService);
-    prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should be defined', () => {
@@ -81,9 +84,7 @@ describe('TaskSlaService', () => {
       };
 
       // Mock current time to be 2 hours after creation (50% of 4-hour SLA)
-      jest.spyOn(global, 'Date').mockImplementation(() => {
-        return new Date('2025-01-20T12:00:00Z') as any;
-      });
+      jest.setSystemTime(new Date('2025-01-20T12:00:00Z'));
 
       const percentage = service.calculateSlaPercentage(task);
 
@@ -100,9 +101,7 @@ describe('TaskSlaService', () => {
         slaPausedAt: null,
       };
 
-      jest.spyOn(global, 'Date').mockImplementation(() => {
-        return new Date('2025-01-20T14:00:00Z') as any;
-      });
+      jest.setSystemTime(new Date('2025-01-20T14:00:00Z'));
 
       const percentage = service.calculateSlaPercentage(task);
 
@@ -121,9 +120,7 @@ describe('TaskSlaService', () => {
         slaPausedAt,
       };
 
-      jest.spyOn(global, 'Date').mockImplementation(() => {
-        return new Date('2025-01-20T16:00:00Z') as any; // Current time is way past deadline
-      });
+      jest.setSystemTime(new Date('2025-01-20T16:00:00Z')); // Current time is way past deadline
 
       const percentage = service.calculateSlaPercentage(task);
 

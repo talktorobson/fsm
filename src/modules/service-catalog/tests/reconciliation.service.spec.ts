@@ -316,7 +316,10 @@ value4,value5,value6`;
 
       const result = service['parseCSV'](csvData);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual([
+        { col1: 'value1', col2: 'value2', col3: 'value3' },
+        { col1: 'value4', col2: 'value5', col3: 'value6' },
+      ]);
     });
 
     it('should throw error on invalid CSV', () => {
@@ -325,7 +328,7 @@ value4,value5,value6`;
       // csv-parse will handle this gracefully, but let's test error handling
       const malformedCSV = null as any;
 
-      expect(() => service['parseCSV'](malformedCSV)).not.toThrow();
+      expect(() => service['parseCSV'](malformedCSV)).toThrow();
     });
   });
 

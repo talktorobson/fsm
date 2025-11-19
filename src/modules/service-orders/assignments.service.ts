@@ -168,4 +168,31 @@ export class AssignmentsService {
 
     return funnelExecution;
   }
+
+  async bulkCreateAssignments(input: {
+    serviceOrderIds: string[];
+    providerId: string;
+    mode: AssignmentMode;
+    executedBy?: string;
+  }) {
+    const { serviceOrderIds, providerId, mode, executedBy } = input;
+    const results = [];
+
+    for (const serviceOrderId of serviceOrderIds) {
+      try {
+        const assignments = await this.createAssignments({
+          serviceOrderId,
+          providerIds: [providerId],
+          mode,
+          executedBy,
+        });
+        results.push({ serviceOrderId, success: true, assignments });
+      } catch (error) {
+        this.logger.error(`Failed to assign service order ${serviceOrderId}: ${error.message}`);
+        results.push({ serviceOrderId, success: false, error: error.message });
+      }
+    }
+
+    return results;
+  }
 }

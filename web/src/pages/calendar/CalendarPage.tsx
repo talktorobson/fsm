@@ -68,7 +68,7 @@ export default function CalendarPage() {
     queryFn: () =>
       calendarService.getScheduledOrders({
         ...dateRange,
-        providerId: selectedProviders[0], // TODO: Support multiple
+        providerIds: selectedProviders,
       }),
   });
 

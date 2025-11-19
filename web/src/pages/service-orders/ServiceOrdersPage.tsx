@@ -5,12 +5,14 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { serviceOrderService } from '@/services/service-order-service';
+import { assignmentService } from '@/services/assignment-service';
+import { providerService } from '@/services/provider-service';
 import { Search, Filter, X, CheckSquare, UserPlus, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
-import { ServiceOrderStatus, SalesPotential, RiskLevel } from '@/types';
+import { ServiceOrderStatus, SalesPotential, RiskLevel, AssignmentMode } from '@/types';
 
 export default function ServiceOrdersPage() {
   const [filters, setFilters] = useState({
@@ -32,7 +34,15 @@ export default function ServiceOrdersPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState('');
+  const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>(AssignmentMode.DIRECT);
+  const queryClient = useQueryClient();
 
+  const { data: providersData } = useQuery({
+    queryKey: ['providers'],
+    queryFn: () => providerService.getAll(),
+  });
+  const providers = providersData?.data || [];
   const { data, isLoading, error } = useQuery({
     queryKey: ['service-orders', filters],
     queryFn: () => serviceOrderService.getAll(filters),
@@ -60,10 +70,15 @@ export default function ServiceOrdersPage() {
   };
 
   const handleBulkAssign = async () => {
-    // TODO: Implement bulk assign API call
-    console.log('Bulk assigning orders:', Array.from(selectedOrders));
-    setShowBulkAssignModal(false);
-    setSelectedOrders(new Set());
+    if (!selectedProviderId) return;
+    try {
+      await assignmentService.bulkAssign(Array.from(selectedOrders), selectedProviderId, assignmentMode);
+      setSelectedOrders(new Set());
+      setShowBulkAssignModal(false);
+      queryClient.invalidateQueries({ queryKey: ['service-orders'] });
+    } catch (error) {
+      console.error('Failed to bulk assign', error);
+    }
   };
 
   const clearFilters = () => {
@@ -421,7 +436,7 @@ export default function ServiceOrdersPage() {
                   </th>
                   <th className="px-6 py-3 text-left">Order ID</th>
                   <th className="px-6 py-3 text-left">Customer</th>
-                  <th className="px-6 py-3 text-left">Type / Priority</th>
+                  <th className="px-6 py-3 text-left">Service</th>
                   <th className="px-6 py-3 text-left">Status</th>
                   <th className="px-6 py-3 text-left">Sales Potential</th>
                   <th className="px-6 py-3 text-left">Risk</th>
@@ -429,9 +444,9 @@ export default function ServiceOrdersPage() {
                   <th className="px-6 py-3 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {orders.map((order) => (
-                  <tr key={order.id} className="table-row">
+                  <tr key={order.id} className="hover:bg-gray-50">
                     <td className="table-cell">
                       <input
                         type="checkbox"
@@ -531,11 +546,17 @@ export default function ServiceOrdersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Provider
                 </label>
-                <select className="input w-full">
+                <select
+                  className="input w-full"
+                  value={selectedProviderId}
+                  onChange={(e) => setSelectedProviderId(e.target.value)}
+                >
                   <option value="">Choose a provider...</option>
-                  <option value="provider-1">Solar Experts Ltd</option>
-                  <option value="provider-2">Green Energy Solutions</option>
-                  <option value="provider-3">EcoInstall Partners</option>
+                  {providers.map((provider) => (
+                    <option key={provider.id} value={provider.id}>
+                      {provider.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -543,10 +564,14 @@ export default function ServiceOrdersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Assignment Mode
                 </label>
-                <select className="input w-full">
-                  <option value="DIRECT">Direct Assignment</option>
-                  <option value="OFFER">Send as Offer</option>
-                  <option value="BROADCAST">Broadcast to Multiple</option>
+                <select
+                  className="input w-full"
+                  value={assignmentMode}
+                  onChange={(e) => setAssignmentMode(e.target.value as AssignmentMode)}
+                >
+                  <option value={AssignmentMode.DIRECT}>Direct Assignment</option>
+                  <option value={AssignmentMode.OFFER}>Send as Offer</option>
+                  <option value={AssignmentMode.BROADCAST}>Broadcast to Multiple</option>
                 </select>
               </div>
 

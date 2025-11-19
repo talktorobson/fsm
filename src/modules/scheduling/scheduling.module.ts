@@ -9,6 +9,7 @@ import { RedisBitmapService } from './redis-bitmap.service';
 import { BookingService } from './booking.service';
 import { AvailabilityController } from './controllers/availability.controller';
 import { BookingsController } from './controllers/bookings.controller';
+import { CalendarController } from './controllers/calendar.controller';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { BookingsController } from './controllers/bookings.controller';
     RedisModule,
   ],
   providers: [BufferLogicService, SlotCalculatorService, RedisBitmapService, BookingService],
-  controllers: [AvailabilityController, BookingsController],
+  controllers: [AvailabilityController, BookingsController, CalendarController],
   exports: [BufferLogicService, SlotCalculatorService, BookingService],
 })
 export class SchedulingModule {}

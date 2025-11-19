@@ -28,49 +28,53 @@ export interface DashboardStats {
   };
 }
 
+export interface KPIData {
+  value: number;
+  change: number;
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface AnalyticsData {
+  serviceOrders: {
+    total: KPIData;
+    completed: KPIData;
+    avgCompletionTime: KPIData;
+    successRate: KPIData;
+  };
+  assignments: {
+    total: KPIData;
+    acceptanceRate: KPIData;
+    avgResponseTime: KPIData;
+  };
+  providers: {
+    total: KPIData;
+    activeRate: KPIData;
+    utilization: KPIData;
+  };
+  trends: {
+    labels: string[];
+    serviceOrders: number[];
+    completions: number[];
+    assignments: number[];
+  };
+}
+
 export const dashboardService = {
   /**
    * Get dashboard statistics
    */
   async getStats(): Promise<DashboardStats> {
-    try {
-      // Fetch counts from each endpoint
-      const [serviceOrdersRes, assignmentsRes, providersRes] = await Promise.all([
-        apiClient.get('/service-orders', { params: { limit: 1 } }),
-        apiClient.get('/assignments', { params: { limit: 1 } }),
-        apiClient.get('/providers', { params: { limit: 1 } }),
-      ]);
+    const response = await apiClient.get<DashboardStats>('/dashboard/stats');
+    return response.data;
+  },
 
-      return {
-        serviceOrders: {
-          total: serviceOrdersRes.data.pagination?.total || 0,
-          pending: 0, // Would need filtered query
-          byStatus: {
-            CREATED: 0, // Would need separate API calls or aggregation endpoint
-            SCHEDULED: 0,
-            ASSIGNED: 0,
-            IN_PROGRESS: 0,
-            COMPLETED: 0,
-          },
-        },
-        assignments: {
-          total: assignmentsRes.data.pagination?.total || 0,
-          pending: 0, // Would need filtered query
-          accepted: 0,
-        },
-        providers: {
-          total: providersRes.data.pagination?.total || 0,
-          active: 0, // Would need filtered query
-        },
-        tasks: {
-          total: 0, // Would need tasks endpoint
-          pending: 0,
-          overdue: 0,
-        },
-      };
-    } catch (error) {
-      console.error('[Dashboard] Failed to fetch stats:', error);
-      throw error;
-    }
+  /**
+   * Get advanced analytics data
+   */
+  async getAnalytics(range: string = '30d'): Promise<AnalyticsData> {
+    const response = await apiClient.get<AnalyticsData>('/dashboard/analytics', {
+      params: { range },
+    });
+    return response.data;
   },
 };

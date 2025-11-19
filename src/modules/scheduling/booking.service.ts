@@ -202,6 +202,92 @@ export class BookingService {
     return { availableStartSlots, availability };
   }
 
+  async getScheduledOrders(params: {
+    startDate: string;
+    endDate: string;
+    providerIds?: string[];
+    countryCode?: string;
+  }) {
+    const { startDate, endDate, providerIds, countryCode } = params;
+
+    return this.prisma.serviceOrder.findMany({
+      where: {
+        scheduledDate: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+        ...(providerIds && providerIds.length > 0 && { assignedProviderId: { in: providerIds } }),
+        ...(countryCode && { countryCode }),
+        state: {
+          in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'],
+        },
+      },
+      include: {
+        assignedProvider: true,
+        project: true,
+      },
+    });
+  }
+
+  async getUtilizationMetrics(params: {
+    startDate: string;
+    endDate: string;
+    providerIds?: string[];
+  }) {
+    const { startDate, endDate, providerIds } = params;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Get all providers if not specified
+    const providers = await this.prisma.provider.findMany({
+      where: {
+        ...(providerIds && providerIds.length > 0 && { id: { in: providerIds } }),
+        status: 'ACTIVE',
+      },
+      select: { id: true, name: true },
+    });
+
+    const metrics = [];
+
+    for (const provider of providers) {
+      // Get scheduled orders for this provider in the range
+      const orders = await this.prisma.serviceOrder.findMany({
+        where: {
+          assignedProviderId: provider.id,
+          scheduledDate: {
+            gte: start,
+            lte: end,
+          },
+          state: {
+            in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'],
+          },
+        },
+        select: {
+          estimatedDurationMinutes: true,
+        },
+      });
+
+      const scheduledHours = orders.reduce((acc, order) => acc + ((order.estimatedDurationMinutes || 0) / 60), 0);
+      
+      // Simplified calculation: Assume 8 hours per day, 5 days a week
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const totalHours = days * 8; // Rough estimate
+      const availableHours = Math.max(0, totalHours - scheduledHours);
+      const utilizationRate = totalHours > 0 ? (scheduledHours / totalHours) * 100 : 0;
+
+      metrics.push({
+        providerId: provider.id,
+        providerName: provider.name,
+        totalHours,
+        scheduledHours,
+        availableHours,
+        utilizationRate: Number(utilizationRate.toFixed(1)),
+      });
+    }
+
+    return metrics;
+  }
+
   private async findBooking(request: ConfirmBookingRequest) {
     if (request.bookingId) {
       return this.prisma.booking.findUnique({ where: { id: request.bookingId } });

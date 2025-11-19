@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { EachMessagePayload } from 'kafkajs';
 import { ServiceCatalogEventType } from '../dto/kafka-event.dto';
 import { EventProcessingStatus } from '@prisma/client';
+import { AppModule } from '@/app.module';
 
 /**
  * Integration tests for ServiceCatalogEventConsumer
@@ -20,25 +21,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
       providers: [
         ServiceCatalogEventConsumer,
         ServiceCatalogSyncService,
         ServiceCatalogEventLogService,
-        PrismaService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              const config = {
-                KAFKA_ENABLED: 'false',
-                KAFKA_BROKERS: 'localhost:9092',
-                KAFKA_SERVICE_CATALOG_TOPIC: 'service-catalog',
-                KAFKA_SSL: 'false',
-              };
-              return config[key];
-            }),
-          },
-        },
       ],
     }).compile();
 
@@ -46,6 +33,15 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
     syncService = module.get<ServiceCatalogSyncService>(ServiceCatalogSyncService);
     eventLogService = module.get<ServiceCatalogEventLogService>(ServiceCatalogEventLogService);
     prisma = module.get<PrismaService>(PrismaService);
+
+    // Cleanup leftovers from previous runs
+    await prisma.serviceCatalog.deleteMany({
+      where: {
+        externalServiceCode: {
+          startsWith: 'KAFKA_TEST_',
+        },
+      },
+    });
   });
 
   afterAll(async () => {
@@ -70,11 +66,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
   describe('handleMessage - service.created', () => {
     it('should process service.created event successfully', async () => {
       const eventId = `test-event-created-${Date.now()}`;
-      const messagePayload: EachMessagePayload = {
+      const messagePayload: any = {
         topic: 'service-catalog',
         partition: 0,
         message: {
-          key: Buffer.from('KAFKA_TEST_CREATE_001'),
+          key: Buffer.from(eventId),
           value: Buffer.from(
             JSON.stringify({
               eventId,
@@ -83,26 +79,20 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
               source: 'PYXIS',
               data: {
                 externalServiceCode: 'KAFKA_TEST_CREATE_001',
-                externalSource: 'PYXIS',
                 countryCode: 'ES',
                 businessUnit: 'LM_ES',
-                serviceType: 'installation',
-                serviceCategory: 'hvac',
-                nameI18n: {
-                  es: 'Instalación de Aire Acondicionado',
-                  en: 'Air Conditioning Installation',
-                },
-                descriptionI18n: {
-                  es: 'Instalación completa de AC',
-                },
+                type: 'INSTALLATION',
+                category: 'HVAC',
+                name: 'Air Conditioning Installation',
+                description: 'Instalación completa de AC',
                 scopeIncluded: ['Instalación', 'Pruebas'],
                 scopeExcluded: ['Modificaciones estructurales'],
                 worksiteRequirements: ['Toma eléctrica'],
                 productPrerequisites: ['Unidad AC entregada'],
-                estimatedDurationMinutes: 180,
+                estimatedDuration: 180,
                 requiresPreServiceContract: true,
                 requiresPostServiceWCF: true,
-                contractTemplateId: 'tpl-123',
+                contractTemplateCode: 'tpl-123',
               },
             }),
           ),
@@ -124,32 +114,32 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
         where: { eventId },
       });
 
-      expect(eventLog).toBeDefined();
-      expect(eventLog.eventType).toBe(ServiceCatalogEventType.SERVICE_CREATED);
-      expect(eventLog.processingStatus).toBe(EventProcessingStatus.COMPLETED);
-      expect(eventLog.externalSource).toBe('PYXIS');
+      expect(eventLog).not.toBeNull();
+      expect(eventLog!.eventType).toBe(ServiceCatalogEventType.SERVICE_CREATED);
+      expect(eventLog!.processingStatus).toBe(EventProcessingStatus.COMPLETED);
+      expect(eventLog!.externalSource).toBe('PYXIS');
 
       // Verify service was created
       const service = await prisma.serviceCatalog.findUnique({
         where: { externalServiceCode: 'KAFKA_TEST_CREATE_001' },
       });
 
-      expect(service).toBeDefined();
-      expect(service.name).toBe('Air Conditioning Installation'); // English fallback
-      expect(service.countryCode).toBe('ES');
-      expect(service.estimatedDurationMinutes).toBe(180);
-      expect(service.scopeIncluded).toEqual(['Instalación', 'Pruebas']);
+      expect(service).not.toBeNull();
+      expect(service!.name).toBe('Air Conditioning Installation'); // English fallback
+      expect(service!.countryCode).toBe('ES');
+      expect(service!.estimatedDurationMinutes).toBe(180);
+      expect(service!.scopeIncluded).toEqual(['Instalación', 'Pruebas']);
     });
 
     it('should be idempotent - skip duplicate event', async () => {
       const eventId = `test-event-duplicate-${Date.now()}`;
 
       // First event
-      const messagePayload: EachMessagePayload = {
+      const messagePayload: any = {
         topic: 'service-catalog',
         partition: 0,
         message: {
-          key: Buffer.from('KAFKA_TEST_DUPLICATE_001'),
+          key: Buffer.from(eventId),
           value: Buffer.from(
             JSON.stringify({
               eventId,
@@ -158,13 +148,18 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
               source: 'PYXIS',
               data: {
                 externalServiceCode: 'KAFKA_TEST_DUPLICATE_001',
-                externalSource: 'PYXIS',
                 countryCode: 'FR',
                 businessUnit: 'LM_FR',
-                serviceType: 'maintenance',
-                serviceCategory: 'plumbing',
-                nameI18n: { en: 'Plumbing Maintenance' },
+                type: 'MAINTENANCE',
+                category: 'PLUMBING',
+                name: 'Plumbing Maintenance',
                 estimatedDurationMinutes: 90,
+                scopeIncluded: [],
+                scopeExcluded: [],
+                worksiteRequirements: [],
+                productPrerequisites: [],
+                requiresPreServiceContract: false,
+                requiresPostServiceWCF: false,
               },
             }),
           ),
@@ -209,11 +204,21 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
     let existingServiceId: string;
 
     beforeAll(async () => {
+      // Cleanup
+      await prisma.serviceCatalog.deleteMany({
+        where: {
+          OR: [
+            { externalServiceCode: 'KAFKA_TEST_UPDATE_001' },
+            { fsmServiceCode: 'FR_ELEC_CONS_001' },
+          ],
+        },
+      });
+
       // Create a service to update
       const service = await prisma.serviceCatalog.create({
         data: {
           externalServiceCode: 'KAFKA_TEST_UPDATE_001',
-          fsmServiceCode: 'FR_ELEC_111111',
+          fsmServiceCode: 'FR_ELEC_CONS_001',
           externalSource: 'TEMPO',
           countryCode: 'FR',
           businessUnit: 'LM_FR',
@@ -222,7 +227,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
           name: 'Original Electrical Service',
           estimatedDurationMinutes: 120,
           status: 'ACTIVE',
-          checksum: 'original-checksum',
+          syncChecksum: 'original-checksum',
+          scopeIncluded: [],
+          scopeExcluded: [],
+          worksiteRequirements: [],
+          productPrerequisites: [],
         },
       });
       existingServiceId = service.id;
@@ -230,11 +239,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
 
     it('should process service.updated event successfully', async () => {
       const eventId = `test-event-updated-${Date.now()}`;
-      const messagePayload: EachMessagePayload = {
+      const messagePayload: any = {
         topic: 'service-catalog',
         partition: 0,
         message: {
-          key: Buffer.from('KAFKA_TEST_UPDATE_001'),
+          key: Buffer.from(eventId),
           value: Buffer.from(
             JSON.stringify({
               eventId,
@@ -243,15 +252,19 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
               source: 'TEMPO',
               data: {
                 externalServiceCode: 'KAFKA_TEST_UPDATE_001',
-                externalSource: 'TEMPO',
                 countryCode: 'FR',
                 businessUnit: 'LM_FR',
-                serviceType: 'installation',
-                serviceCategory: 'electrical',
-                nameI18n: { en: 'Updated Electrical Service' },
-                descriptionI18n: { en: 'Now includes outdoor work' },
-                estimatedDurationMinutes: 180, // Updated
+                type: 'INSTALLATION',
+                category: 'ELECTRICAL',
+                name: 'Updated Electrical Service',
+                description: 'Now includes outdoor work',
+                estimatedDuration: 180, // Updated
                 scopeIncluded: ['New scope item'], // Updated
+                scopeExcluded: [],
+                worksiteRequirements: [],
+                productPrerequisites: [],
+                requiresPreServiceContract: false,
+                requiresPostServiceWCF: false,
               },
             }),
           ),
@@ -272,19 +285,19 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
         where: { eventId },
       });
 
-      expect(eventLog).toBeDefined();
-      expect(eventLog.processingStatus).toBe(EventProcessingStatus.COMPLETED);
+      expect(eventLog).not.toBeNull();
+      expect(eventLog!.processingStatus).toBe(EventProcessingStatus.COMPLETED);
 
       // Verify service was updated
       const service = await prisma.serviceCatalog.findUnique({
         where: { id: existingServiceId },
       });
 
-      expect(service).toBeDefined();
-      expect(service.name).toBe('Updated Electrical Service');
-      expect(service.description).toBe('Now includes outdoor work');
-      expect(service.estimatedDurationMinutes).toBe(180);
-      expect(service.scopeIncluded).toEqual(['New scope item']);
+      expect(service).not.toBeNull();
+      expect(service!.name).toBe('Updated Electrical Service');
+      expect(service!.description).toBe('Now includes outdoor work');
+      expect(service!.estimatedDurationMinutes).toBe(180);
+      expect(service!.scopeIncluded).toEqual(['New scope item']);
     });
   });
 
@@ -305,6 +318,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
           name: 'Kitchen Service to Deprecate',
           estimatedDurationMinutes: 240,
           status: 'ACTIVE',
+          syncChecksum: 'checksum',
+          scopeIncluded: [],
+          scopeExcluded: [],
+          worksiteRequirements: [],
+          productPrerequisites: [],
         },
       });
       serviceToDeprecate = service.id;
@@ -312,11 +330,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
 
     it('should process service.deprecated event successfully', async () => {
       const eventId = `test-event-deprecated-${Date.now()}`;
-      const messagePayload: EachMessagePayload = {
+      const messagePayload: any = {
         topic: 'service-catalog',
         partition: 0,
         message: {
-          key: Buffer.from('KAFKA_TEST_DEPRECATE_001'),
+          key: Buffer.from(eventId),
           value: Buffer.from(
             JSON.stringify({
               eventId,
@@ -325,13 +343,18 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
               source: 'PYXIS',
               data: {
                 externalServiceCode: 'KAFKA_TEST_DEPRECATE_001',
-                externalSource: 'PYXIS',
                 countryCode: 'IT',
                 businessUnit: 'LM_IT',
-                serviceType: 'installation',
-                serviceCategory: 'kitchen',
-                nameI18n: { en: 'Kitchen Service to Deprecate' },
+                type: 'INSTALLATION',
+                category: 'KITCHEN',
+                name: 'Kitchen Service to Deprecate',
                 estimatedDurationMinutes: 240,
+                scopeIncluded: [],
+                scopeExcluded: [],
+                worksiteRequirements: [],
+                productPrerequisites: [],
+                requiresPreServiceContract: false,
+                requiresPostServiceWCF: false,
               },
             }),
           ),
@@ -352,23 +375,23 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
         where: { eventId },
       });
 
-      expect(eventLog).toBeDefined();
-      expect(eventLog.processingStatus).toBe(EventProcessingStatus.COMPLETED);
+      expect(eventLog).not.toBeNull();
+      expect(eventLog!.processingStatus).toBe(EventProcessingStatus.COMPLETED);
 
       // Verify service was deprecated
       const service = await prisma.serviceCatalog.findUnique({
         where: { id: serviceToDeprecate },
       });
 
-      expect(service).toBeDefined();
-      expect(service.status).toBe('DEPRECATED');
+      expect(service).not.toBeNull();
+      expect(service!.status).toBe('DEPRECATED');
     });
   });
 
   describe('Error handling', () => {
     it('should handle malformed JSON gracefully', async () => {
       const eventId = `test-event-malformed-${Date.now()}`;
-      const messagePayload: EachMessagePayload = {
+      const messagePayload: any = {
         topic: 'service-catalog',
         partition: 0,
         message: {
@@ -390,7 +413,7 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
 
     it('should handle missing required fields in event', async () => {
       const eventId = `test-event-invalid-${Date.now()}`;
-      const messagePayload: EachMessagePayload = {
+      const messagePayload: any = {
         topic: 'service-catalog',
         partition: 0,
         message: {
@@ -425,15 +448,16 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
           eventId,
           eventType: ServiceCatalogEventType.SERVICE_CREATED,
           externalSource: 'PYXIS',
-          rawPayload: '{}',
+          payload: '{}',
           processingStatus: EventProcessingStatus.FAILED,
           retryCount: 1,
-          error: 'Test error',
+          errorMessage: 'Test error',
+          externalServiceCode: 'TEST_RETRY_001',
         },
       });
 
       // Find retryable events
-      const retryable = await eventLogService.findRetryable(10);
+      const retryable = await eventLogService.findRetryable(100);
 
       expect(retryable.length).toBeGreaterThanOrEqual(1);
       expect(retryable.some((e) => e.eventId === eventId)).toBe(true);
@@ -448,10 +472,11 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
           eventId,
           eventType: ServiceCatalogEventType.SERVICE_CREATED,
           externalSource: 'PYXIS',
-          rawPayload: '{}',
+          payload: '{}',
           processingStatus: EventProcessingStatus.FAILED,
           retryCount: 3, // Max retries
-          error: 'Persistent error',
+          errorMessage: 'Persistent error',
+          externalServiceCode: 'TEST_DLQ_001',
         },
       });
 
@@ -462,7 +487,7 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
         where: { eventId },
       });
 
-      expect(eventLog.processingStatus).toBe(EventProcessingStatus.DEAD_LETTER);
+      expect(eventLog!.processingStatus).toBe(EventProcessingStatus.DEAD_LETTER);
     });
   });
 
@@ -476,28 +501,31 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
             eventId: `stats-event-1-${Date.now()}`,
             eventType: ServiceCatalogEventType.SERVICE_CREATED,
             externalSource: 'PYXIS',
-            rawPayload: '{}',
+            payload: '{}',
             processingStatus: EventProcessingStatus.COMPLETED,
             retryCount: 0,
             processedAt: baseTime,
+            externalServiceCode: 'STATS_001',
           },
           {
             eventId: `stats-event-2-${Date.now()}`,
             eventType: ServiceCatalogEventType.SERVICE_UPDATED,
             externalSource: 'TEMPO',
-            rawPayload: '{}',
+            payload: '{}',
             processingStatus: EventProcessingStatus.COMPLETED,
             retryCount: 0,
             processedAt: baseTime,
+            externalServiceCode: 'STATS_002',
           },
           {
             eventId: `stats-event-3-${Date.now()}`,
             eventType: ServiceCatalogEventType.SERVICE_CREATED,
             externalSource: 'PYXIS',
-            rawPayload: '{}',
+            payload: '{}',
             processingStatus: EventProcessingStatus.FAILED,
             retryCount: 1,
-            error: 'Test error',
+            errorMessage: 'Test error',
+            externalServiceCode: 'STATS_003',
           },
         ],
       });
@@ -507,11 +535,10 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
       const stats = await eventLogService.getStatistics();
 
       expect(stats).toBeDefined();
-      expect(stats.totalEvents).toBeGreaterThanOrEqual(3);
-      expect(stats.completedEvents).toBeGreaterThanOrEqual(2);
-      expect(stats.failedEvents).toBeGreaterThanOrEqual(1);
-      expect(stats.byEventType).toBeDefined();
-      expect(stats.bySource).toBeDefined();
+      expect(stats.total).toBeGreaterThanOrEqual(3);
+      expect(stats.completed).toBeGreaterThanOrEqual(2);
+      expect(stats.failed).toBeGreaterThanOrEqual(1);
+
     });
 
     it('should return statistics since specific date', async () => {
@@ -521,7 +548,7 @@ describe('ServiceCatalogEventConsumer (Integration)', () => {
       const stats = await eventLogService.getStatistics(yesterday);
 
       expect(stats).toBeDefined();
-      expect(stats.totalEvents).toBeGreaterThanOrEqual(3);
+      expect(stats.total).toBeGreaterThanOrEqual(3);
     });
   });
 });

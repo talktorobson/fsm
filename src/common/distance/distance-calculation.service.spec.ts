@@ -224,7 +224,7 @@ describe('DistanceCalculationService', () => {
           name: 'Tokyo to Osaka',
           from: { latitude: 35.6762, longitude: 139.6503 },
           to: { latitude: 34.6937, longitude: 135.5023 },
-          expectedKm: 403, // Approximate
+          expectedKm: 397, // Approximate
           marginKm: 10,
         },
       ];

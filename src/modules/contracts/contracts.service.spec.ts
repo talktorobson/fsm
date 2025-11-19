@@ -108,15 +108,20 @@ const contractRecord = {
   serviceOrder: null,
 };
 
-const prismaMocks: PrismaMock = {
+import { ESignatureService } from './esignature/esignature.service';
+
+const prismaMocks = {
+  contract: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+  },
   serviceOrder: {
     findUnique: jest.fn(),
   },
   contractTemplate: {
-    findUnique: jest.fn(),
-  },
-  contract: {
-    create: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
     findMany: jest.fn(),
@@ -126,6 +131,12 @@ const prismaMocks: PrismaMock = {
     update: jest.fn(),
   },
   $transaction: jest.fn(),
+};
+
+const mockESignatureService = {
+  createEnvelope: jest.fn(),
+  getEnvelopeStatus: jest.fn(),
+  getSignedDocument: jest.fn(),
 };
 
 describe('ContractsService', () => {
@@ -139,10 +150,15 @@ describe('ContractsService', () => {
           provide: PrismaService,
           useValue: prismaMocks,
         },
+        {
+          provide: ESignatureService,
+          useValue: mockESignatureService,
+        },
       ],
     }).compile();
 
     service = module.get(ContractsService);
+
     for (const group of Object.values(prismaMocks)) {
       if (group && typeof group === 'object') {
         for (const maybeMock of Object.values(group)) {

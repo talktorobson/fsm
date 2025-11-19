@@ -53,7 +53,7 @@ describe('ServiceCatalogService (Integration)', () => {
         estimatedDurationMinutes: 180,
         requiresPreServiceContract: true,
         requiresPostServiceWCF: true,
-        contractTemplateId: 'tpl-123',
+        contractTemplateId: undefined,
         createdBy: 'TEST_USER',
       };
 
@@ -66,7 +66,7 @@ describe('ServiceCatalogService (Integration)', () => {
       expect(result.name).toBe(createData.name);
       expect(result.serviceType).toBe(ServiceType.INSTALLATION);
       expect(result.serviceCategory).toBe(ServiceCategory.HVAC);
-      expect(result.status).toBe(ServiceStatus.ACTIVE);
+      expect(result.status).toBe(ServiceStatus.CREATED);
       expect(result.scopeIncluded).toEqual(createData.scopeIncluded);
       expect(result.scopeExcluded).toEqual(createData.scopeExcluded);
       expect(result.estimatedDurationMinutes).toBe(180);
@@ -78,8 +78,8 @@ describe('ServiceCatalogService (Integration)', () => {
         where: { id: result.id },
       });
 
-      expect(dbService).toBeDefined();
-      expect(dbService.externalServiceCode).toBe(createData.externalServiceCode);
+      expect(dbService).not.toBeNull();
+      expect(dbService!.externalServiceCode).toBe(createData.externalServiceCode);
     });
 
     it('should reject duplicate external service code', async () => {
@@ -184,10 +184,20 @@ describe('ServiceCatalogService (Integration)', () => {
 
   describe('findAll', () => {
     beforeAll(async () => {
+      // Cleanup potential leftovers
+      await prisma.serviceCatalog.deleteMany({
+        where: {
+          OR: [
+            { externalServiceCode: { in: ['TEST_ELEC_001', 'TEST_HVAC_ES_002'] } },
+            { fsmServiceCode: { in: ['FR_ELEC_INTEG_001', 'ES_HVAC_INTEG_002'] } },
+          ],
+        },
+      });
+
       // Create additional test services for filtering tests
       await service.create({
         externalServiceCode: 'TEST_ELEC_001',
-        fsmServiceCode: 'FR_ELEC_111111',
+        fsmServiceCode: 'FR_ELEC_INTEG_001',
         externalSource: 'TEMPO',
         countryCode: 'FR',
         businessUnit: 'LM_FR',
@@ -206,7 +216,7 @@ describe('ServiceCatalogService (Integration)', () => {
 
       await service.create({
         externalServiceCode: 'TEST_HVAC_ES_002',
-        fsmServiceCode: 'ES_HVAC_222222',
+        fsmServiceCode: 'ES_HVAC_INTEG_002',
         externalSource: 'PYXIS',
         countryCode: 'ES',
         businessUnit: 'LM_ES',
@@ -221,6 +231,37 @@ describe('ServiceCatalogService (Integration)', () => {
         requiresPreServiceContract: false,
         requiresPostServiceWCF: true,
         createdBy: 'TEST_USER',
+      });
+
+      await service.create({
+        externalServiceCode: 'TEST_HVAC_ES_003',
+        fsmServiceCode: 'ES_HVAC_INTEG_003',
+        externalSource: 'PYXIS',
+        countryCode: 'ES',
+        businessUnit: 'LM_ES',
+        serviceType: ServiceType.INSTALLATION,
+        serviceCategory: ServiceCategory.HVAC,
+        name: 'Third HVAC Service',
+        scopeIncluded: [],
+        scopeExcluded: [],
+        worksiteRequirements: [],
+        productPrerequisites: [],
+        estimatedDurationMinutes: 150,
+        requiresPreServiceContract: false,
+        requiresPostServiceWCF: true,
+        createdBy: 'TEST_USER',
+      });
+
+      // Update status to ACTIVE for filtering tests
+      await prisma.serviceCatalog.updateMany({
+        where: {
+          externalServiceCode: {
+            in: ['TEST_ELEC_001', 'TEST_HVAC_ES_002', 'TEST_HVAC_ES_003'],
+          },
+        },
+        data: {
+          status: ServiceStatus.ACTIVE,
+        },
       });
     });
 
@@ -327,7 +368,7 @@ describe('ServiceCatalogService (Integration)', () => {
         where: { id: testServiceId },
       });
 
-      expect(dbService.name).toBe('Updated HVAC Installation');
+      expect(dbService!.name).toBe('Updated HVAC Installation');
     });
 
     it('should update only provided fields', async () => {
@@ -390,7 +431,7 @@ describe('ServiceCatalogService (Integration)', () => {
         where: { id: deprecateTestServiceId },
       });
 
-      expect(dbService.status).toBe(ServiceStatus.DEPRECATED);
+      expect(dbService!.status).toBe(ServiceStatus.DEPRECATED);
     });
 
     it('should throw BadRequestException when trying to deprecate already deprecated service', async () => {

@@ -3,6 +3,8 @@ import {
   Post,
   Get,
   Put,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -55,6 +57,58 @@ export class NotificationsController {
       notificationId,
       message: 'Notification sent successfully',
     };
+  }
+
+  @Get('unread/count')
+  @ApiOperation({ summary: 'Get unread notification count' })
+  @ApiResponse({
+    status: 200,
+    description: 'Unread count retrieved successfully',
+  })
+  async getUnreadCount(@Query('userId') userId: string) {
+    const count = await this.notificationsService.getUnreadCount(userId);
+    return { count };
+  }
+
+  @Post('read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiResponse({
+    status: 200,
+    description: 'All notifications marked as read',
+  })
+  async markAllAsRead(@Body('userId') userId: string) {
+    const result = await this.notificationsService.markAllAsRead(userId);
+    return { count: result.count };
+  }
+
+  @Patch(':id/read')
+  @ApiOperation({ summary: 'Mark notification as read' })
+  @ApiParam({
+    name: 'id',
+    description: 'Notification ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification marked as read',
+  })
+  async markAsRead(@Param('id') id: string) {
+    return this.notificationsService.markAsRead(id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete notification' })
+  @ApiParam({
+    name: 'id',
+    description: 'Notification ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification deleted successfully',
+  })
+  async deleteNotification(@Param('id') id: string) {
+    return this.notificationsService.delete(id);
   }
 
   @Get(':id')

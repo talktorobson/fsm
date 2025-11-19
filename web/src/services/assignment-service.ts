@@ -160,6 +160,18 @@ class AssignmentService {
     const response = await apiClient.post(`/assignments/${id}/reject`, data);
     return response.data;
   }
+
+  /**
+   * Bulk assign service orders
+   */
+  async bulkAssign(serviceOrderIds: string[], providerId: string, mode: AssignmentMode = AssignmentMode.DIRECT): Promise<any> {
+    const response = await apiClient.post('/assignments/bulk', {
+      serviceOrderIds,
+      providerId,
+      mode,
+    });
+    return response.data;
+  }
 }
 
 export const assignmentService = new AssignmentService();

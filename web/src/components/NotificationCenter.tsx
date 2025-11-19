@@ -4,7 +4,12 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, CheckCheck, X, AlertCircle, Info, CheckCircle, XCircle } from 'lucide-react';
+import { notificationService, Notification as ApiNotification } from '@/services/notification-service';
+
+// Temporary user ID until auth context is fully implemented
+const CURRENT_USER_ID = 'test-user-id';
 
 type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -18,61 +23,65 @@ interface Notification {
   actionUrl?: string;
 }
 
-// Mock notifications - would come from API
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'success',
-    title: 'Service Order Completed',
-    message: 'SO-2024-156 has been successfully completed by Tech John Doe',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-    read: false,
-    actionUrl: '/service-orders/SO-2024-156',
-  },
-  {
-    id: '2',
-    type: 'warning',
-    title: 'Assignment Pending',
-    message: 'Assignment #AS-2024-089 requires your attention',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    read: false,
-    actionUrl: '/assignments/AS-2024-089',
-  },
-  {
-    id: '3',
-    type: 'info',
-    title: 'New Provider Registered',
-    message: 'Provider "Solar Experts Ltd" has been added to the system',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    read: true,
-    actionUrl: '/providers',
-  },
-  {
-    id: '4',
-    type: 'error',
-    title: 'Service Order Issue',
-    message: 'SO-2024-145 reported technical issues during installation',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
-    read: true,
-    actionUrl: '/service-orders/SO-2024-145',
-  },
-  {
-    id: '5',
-    type: 'success',
-    title: 'Assignment Accepted',
-    message: 'Provider has accepted assignment #AS-2024-088',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
-    read: true,
-    actionUrl: '/assignments/AS-2024-088',
-  },
-];
+const mapNotificationType = (type: string): NotificationType => {
+  if (type.includes('SUCCESS') || type.includes('ACCEPTED') || type.includes('COMPLETED')) return 'success';
+  if (type.includes('WARNING') || type.includes('PENDING') || type.includes('BLOCKED')) return 'warning';
+  if (type.includes('ERROR') || type.includes('FAILED') || type.includes('REJECTED')) return 'error';
+  return 'info';
+};
+
+const mapApiNotification = (n: ApiNotification): Notification => ({
+  id: n.id,
+  type: mapNotificationType(n.type),
+  title: n.title,
+  message: n.message,
+  timestamp: new Date(n.createdAt),
+  read: !!n.readAt, // API uses readAt date, UI uses boolean
+  actionUrl: n.link,
+});
 
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Fetch notifications
+  const { data: apiNotifications = [] } = useQuery({
+    queryKey: ['notifications', CURRENT_USER_ID],
+    queryFn: () => notificationService.getAll(CURRENT_USER_ID),
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+
+  // Fetch unread count
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread', CURRENT_USER_ID],
+    queryFn: () => notificationService.getUnreadCount(CURRENT_USER_ID),
+    refetchInterval: 30000,
+  });
+
+  const notifications = apiNotifications.map(mapApiNotification);
+
+  // Mutations
+  const markAsReadMutation = useMutation({
+    mutationFn: (id: string) => notificationService.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationService.markAllAsRead(CURRENT_USER_ID),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -92,17 +101,22 @@ export default function NotificationCenter() {
   }, [isOpen]);
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    markAsReadMutation.mutate(id);
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllAsReadMutation.mutate();
   };
 
   const handleClearAll = () => {
-    setNotifications([]);
+    // Delete all notifications one by one or implement delete all endpoint
+    // For now, just close as we don't have delete all endpoint exposed in UI logic usually
+    // But the UI has a "Clear all" button.
+    // Let's just delete them all locally or implement delete all in backend.
+    // Since we don't have delete all in backend yet, let's just iterate.
+    for (const n of notifications) {
+      deleteMutation.mutate(n.id);
+    }
     setIsOpen(false);
   };
 
@@ -206,17 +220,10 @@ export default function NotificationCenter() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                      !notification.read ? 'bg-blue-50/30' : ''
+                    className={`p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 ${
+                      notification.read ? '' : 'bg-blue-50/30'
                     }`}
-                    onClick={() => {
-                      if (notification.actionUrl) {
-                        window.location.href = notification.actionUrl;
-                      }
-                      handleMarkAsRead(notification.id);
-                    }}
                   >
-                    <div className="flex items-start gap-3">
                       {/* Icon */}
                       <div
                         className={`flex-shrink-0 w-10 h-10 rounded-lg ${getNotificationBgColor(
@@ -227,7 +234,15 @@ export default function NotificationCenter() {
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
+                      <button
+                        className="flex-1 min-w-0 text-left"
+                        onClick={() => {
+                          if (notification.actionUrl) {
+                            globalThis.location.href = notification.actionUrl;
+                          }
+                          handleMarkAsRead(notification.id);
+                        }}
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold text-gray-900 truncate">
                             {notification.title}
@@ -242,7 +257,7 @@ export default function NotificationCenter() {
                         <p className="text-xs text-gray-500 mt-1">
                           {getRelativeTime(notification.timestamp)}
                         </p>
-                      </div>
+                      </button>
 
                       {/* Mark as read button */}
                       {!notification.read && (
@@ -257,7 +272,6 @@ export default function NotificationCenter() {
                           <Check className="w-4 h-4" />
                         </button>
                       )}
-                    </div>
                   </div>
                 ))}
               </div>

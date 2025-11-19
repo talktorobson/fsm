@@ -35,7 +35,7 @@ describe('TasksService', () => {
   };
 
   const mockKafkaProducer = {
-    produce: jest.fn(),
+    send: jest.fn(),
   };
 
   const mockAssignmentService = {
@@ -106,7 +106,7 @@ describe('TasksService', () => {
       mockSlaService.calculateSlaDeadline.mockReturnValue(slaDeadline);
       mockAssignmentService.autoAssignTask.mockResolvedValue('user_123');
       mockAuditService.logAction.mockResolvedValue(undefined);
-      mockKafkaProducer.produce.mockResolvedValue(undefined);
+      mockKafkaProducer.send.mockResolvedValue(undefined);
     });
 
     it('should create a task and auto-assign it', async () => {
@@ -141,7 +141,7 @@ describe('TasksService', () => {
       });
       expect(mockAssignmentService.autoAssignTask).toHaveBeenCalled();
       expect(mockAuditService.logAction).toHaveBeenCalledTimes(2); // CREATED + ASSIGNED
-      expect(mockKafkaProducer.produce).toHaveBeenCalled();
+      expect(mockKafkaProducer.send).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if duplicate active task exists', async () => {
@@ -175,6 +175,9 @@ describe('TasksService', () => {
         id: 'task_456',
         ...dtoWithAssignment,
         status: TaskStatus.ASSIGNED,
+        slaDeadline: slaDeadline,
+        countryCode: 'FR',
+        businessUnit: 'Leroy Merlin',
       });
 
       await service.create(dtoWithAssignment, 'admin_user');
@@ -210,7 +213,7 @@ describe('TasksService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue(task);
       mockSlaService.isWithinSla.mockReturnValue(true);
       mockAuditService.logAction.mockResolvedValue(undefined);
-      mockKafkaProducer.produce.mockResolvedValue(undefined);
+      mockKafkaProducer.send.mockResolvedValue(undefined);
     });
 
     it('should complete a task successfully', async () => {
@@ -237,7 +240,7 @@ describe('TasksService', () => {
         expect.any(Object),
         completeDto.resolutionNotes,
       );
-      expect(mockKafkaProducer.produce).toHaveBeenCalled();
+      expect(mockKafkaProducer.send).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if task is not in valid status', async () => {
@@ -343,7 +346,7 @@ describe('TasksService', () => {
     beforeEach(() => {
       mockPrismaService.task.findUnique.mockResolvedValue(task);
       mockAuditService.logAction.mockResolvedValue(undefined);
-      mockKafkaProducer.produce.mockResolvedValue(undefined);
+      mockKafkaProducer.send.mockResolvedValue(undefined);
     });
 
     it('should assign task to operator', async () => {
@@ -362,7 +365,7 @@ describe('TasksService', () => {
       expect(result.assignedTo).toBe('user_456');
       expect(result.status).toBe(TaskStatus.ASSIGNED);
       expect(mockAuditService.logAction).toHaveBeenCalled();
-      expect(mockKafkaProducer.produce).toHaveBeenCalled();
+      expect(mockKafkaProducer.send).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if task is not in valid status', async () => {

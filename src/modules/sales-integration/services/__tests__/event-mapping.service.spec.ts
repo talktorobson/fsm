@@ -1,26 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventMappingService } from '../event-mapping.service';
-import { KafkaService } from '../../../../common/kafka/kafka.service';
+import { KafkaProducerService } from '../../../../common/kafka/kafka-producer.service';
 import { SalesSystem, OrderType, Priority } from '../../dto';
 
 describe('EventMappingService', () => {
   let service: EventMappingService;
-  let kafkaService: jest.Mocked<KafkaService>;
+  let kafkaProducerService: jest.Mocked<KafkaProducerService>;
 
   beforeEach(async () => {
-    const mockKafkaService = {
+    const mockKafkaProducerService = {
       send: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventMappingService,
-        { provide: KafkaService, useValue: mockKafkaService },
+        { provide: KafkaProducerService, useValue: mockKafkaProducerService },
       ],
     }).compile();
 
     service = module.get<EventMappingService>(EventMappingService);
-    kafkaService = module.get(KafkaService) as jest.Mocked<KafkaService>;
+    kafkaProducerService = module.get(KafkaProducerService) as jest.Mocked<KafkaProducerService>;
   });
 
   it('should be defined', () => {
@@ -59,15 +59,15 @@ describe('EventMappingService', () => {
         'corr-001',
       );
 
-      expect(kafkaService.send).toHaveBeenCalledWith(
+      expect(kafkaProducerService.send).toHaveBeenCalledWith(
+        'fsm.service_order.created',
         expect.objectContaining({
-          topic: 'fsm.service_order.created',
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              key: 'FSM-001',
-              value: expect.stringContaining('SERVICE_ORDER_CREATED'),
-            }),
-          ]),
+          eventType: 'SERVICE_ORDER_CREATED',
+          serviceOrderId: 'FSM-001',
+        }),
+        'FSM-001',
+        expect.objectContaining({
+          'correlation-id': 'corr-001',
         }),
       );
     });
@@ -84,14 +84,17 @@ describe('EventMappingService', () => {
         'corr-001',
       );
 
-      expect(kafkaService.send).toHaveBeenCalledWith(
+      expect(kafkaProducerService.send).toHaveBeenCalledWith(
+        'sales.pyxis.status_update',
         expect.objectContaining({
-          topic: 'sales.pyxis.status_update',
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              key: 'PX-TEST-001',
-            }),
-          ]),
+          eventType: 'SERVICE_ORDER_STATUS_UPDATED',
+          fsmServiceOrderId: 'FSM-001',
+          externalOrderId: 'PX-TEST-001',
+          newStatus: 'SCHEDULED',
+        }),
+        'PX-TEST-001',
+        expect.objectContaining({
+          'correlation-id': 'corr-001',
         }),
       );
     });
