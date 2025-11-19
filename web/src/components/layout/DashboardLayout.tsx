@@ -16,6 +16,8 @@ import {
   User,
 } from 'lucide-react';
 import clsx from 'clsx';
+import SearchButton from '@/components/search/SearchButton';
+import NotificationBadge from '@/components/notifications/NotificationBadge';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -98,7 +100,14 @@ export default function DashboardLayout() {
               {user?.countryCode} • {user?.businessUnit}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {/* Search */}
+            <SearchButton />
+
+            {/* Notifications */}
+            <NotificationBadge />
+
+            {/* User Role */}
             <span className={clsx('badge', {
               'badge-success': user?.role === 'OPERATOR',
               'badge-primary': user?.role === 'SUPER_ADMIN',
