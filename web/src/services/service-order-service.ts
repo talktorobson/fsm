@@ -117,6 +117,46 @@ class ServiceOrderService {
     const response = await apiClient.get('/service-orders/statistics');
     return response.data;
   }
+
+  /**
+   * Reschedule service order to new date/slot
+   */
+  async reschedule(
+    id: string,
+    data: {
+      newDate: string;
+      newSlot: 'AM' | 'PM';
+      reason: string;
+      reassignProvider: boolean;
+      notifyCustomer: boolean;
+      notifyProvider: boolean;
+    }
+  ): Promise<{
+    serviceOrderId: string;
+    previousSchedule: {
+      date: string;
+      slot: string;
+    };
+    newSchedule: {
+      date: string;
+      slot: string;
+      confirmedAt: string;
+    };
+    rescheduledBy: string;
+    rescheduledAt: string;
+    reason: string;
+    notifications: {
+      customerNotified: boolean;
+      providerNotified: boolean;
+    };
+    message: string;
+  }> {
+    const response = await apiClient.post(
+      `/cockpit/service-orders/${id}/reschedule`,
+      data
+    );
+    return response.data;
+  }
 }
 
 export const serviceOrderService = new ServiceOrderService();
