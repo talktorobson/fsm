@@ -1095,16 +1095,6 @@ This audit used automated and manual analysis:
 **Owner**: Solo Developer (AI-assisted)
 **Progress**: 7/7 complete (100%)
 
-**Pending Database Migration**:
-```prisma
-model Contract {
-  providerEnvelopeId    String?  // Envelope ID from e-signature provider
-  signedDocumentUrl     String?  // URL to signed document in GCS
-  signedDocumentChecksum String? // SHA-256 checksum for verification
-}
-```
-Run: `npx prisma migrate dev --name add_provider_envelope_id`
-
 ---
 
 #### Technical Visit (TV) Flow ✅ **PRODUCTION-READY**

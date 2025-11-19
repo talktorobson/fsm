@@ -819,6 +819,11 @@ model Contract {
   expiresAt      DateTime?      @map("expires_at")
   signatureCode  String?        @map("signature_code") @db.VarChar(20)
 
+  // E-Signature Provider Integration
+  providerEnvelopeId    String?  @map("provider_envelope_id") // Envelope ID from e-signature provider
+  signedDocumentUrl     String?  @map("signed_document_url") // URL to signed document in GCS
+  signedDocumentChecksum String? @map("signed_document_checksum") // SHA-256 checksum for verification
+
   // Relations
   serviceOrder   ServiceOrder   @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
   template       ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
