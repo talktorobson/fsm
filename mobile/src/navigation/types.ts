@@ -11,6 +11,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   ServiceOrders: undefined;
   Schedule: undefined;
+  Inventory: undefined;
   Executions: undefined;
   Profile: undefined;
 };
