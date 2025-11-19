@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Assignments', href: '/assignments', icon: UserCheck },
   { name: 'Providers', href: '/providers', icon: Users },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Performance', href: '/performance', icon: BarChart3 },
   { name: 'Tasks & Alerts', href: '/tasks', icon: CheckSquare },
 ];
 
