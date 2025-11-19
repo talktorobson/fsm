@@ -117,6 +117,101 @@ class ServiceOrderService {
     const response = await apiClient.get('/service-orders/statistics');
     return response.data;
   }
+
+  /**
+   * Reschedule service order to new date/slot
+   */
+  async reschedule(
+    id: string,
+    data: {
+      newDate: string;
+      newSlot: 'AM' | 'PM';
+      reason: string;
+      reassignProvider: boolean;
+      notifyCustomer: boolean;
+      notifyProvider: boolean;
+    }
+  ): Promise<{
+    serviceOrderId: string;
+    previousSchedule: {
+      date: string;
+      slot: string;
+    };
+    newSchedule: {
+      date: string;
+      slot: string;
+      confirmedAt: string;
+    };
+    rescheduledBy: string;
+    rescheduledAt: string;
+    reason: string;
+    notifications: {
+      customerNotified: boolean;
+      providerNotified: boolean;
+    };
+    message: string;
+  }> {
+    const response = await apiClient.post(
+      `/cockpit/service-orders/${id}/reschedule`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Record Technical Visit outcome
+   */
+  async recordTVOutcome(
+    id: string,
+    data: {
+      outcome: 'YES' | 'YES_BUT' | 'NO';
+      findings: string;
+      issues?: string;
+      scopeChanges?: string;
+      requiredActions?: string;
+      estimatedValue?: number;
+      blockInstallation: boolean;
+    }
+  ): Promise<ServiceOrder> {
+    const response = await apiClient.post<ServiceOrder>(
+      `/service-orders/${id}/tv-outcome`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Get blocked installation orders
+   */
+  async getBlockedOrders(projectId?: string): Promise<Array<{
+    id: string;
+    externalId: string;
+    serviceType: string;
+    blockedBy: {
+      tvOrderId: string;
+      tvOrderExternalId: string;
+      outcome: 'NO' | 'YES_BUT';
+      reason: string;
+    };
+    blockedAt: string;
+    status: string;
+  }>> {
+    const response = await apiClient.get('/service-orders/blocked', {
+      params: { projectId },
+    });
+    return response.data;
+  }
+
+  /**
+   * Unblock installation order
+   */
+  async unblockOrder(id: string, reason: string): Promise<ServiceOrder> {
+    const response = await apiClient.post<ServiceOrder>(
+      `/service-orders/${id}/unblock`,
+      { reason }
+    );
+    return response.data;
+  }
 }
 
 export const serviceOrderService = new ServiceOrderService();
