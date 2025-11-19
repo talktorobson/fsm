@@ -14,6 +14,8 @@ import DocumentUpload from '@/components/documents/DocumentUpload';
 import NoteForm from '@/components/documents/NoteForm';
 import DocumentList from '@/components/documents/DocumentList';
 import RescheduleModal from '@/components/service-orders/RescheduleModal';
+import GoExecStatusModal from '@/components/service-orders/GoExecStatusModal';
+import DerogationModal from '@/components/service-orders/DerogationModal';
 import type { Note } from '@/services/document-service';
 
 type TabType = 'overview' | 'documents' | 'timeline';
@@ -23,6 +25,8 @@ export default function ServiceOrderDetailPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showGoExecModal, setShowGoExecModal] = useState(false);
+  const [showDerogationModal, setShowDerogationModal] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['service-order', id],
@@ -350,7 +354,12 @@ export default function ServiceOrderDetailPage() {
                     <PlayCircle className="w-5 h-5 text-purple-600" />
                     <h2 className="text-lg font-semibold">Go Execution Monitoring</h2>
                   </div>
-                  <button className="btn btn-secondary text-sm">Update Status</button>
+                  <button
+                    onClick={() => setShowGoExecModal(true)}
+                    className="btn btn-secondary text-sm"
+                  >
+                    Update Status
+                  </button>
                 </div>
 
                 <div className="space-y-3">
@@ -363,6 +372,26 @@ export default function ServiceOrderDetailPage() {
                       {!order.goExecStatus && <span className="badge badge-gray">NOT SET</span>}
                     </div>
                   </div>
+
+                  {/* Block Reason */}
+                  {order.goExecStatus === 'NOK' && order.goExecBlockReason && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="text-xs font-medium text-red-700 mb-1">Block Reason:</div>
+                      <div className="text-sm text-red-900">{order.goExecBlockReason}</div>
+                    </div>
+                  )}
+
+                  {/* Derogation Info */}
+                  {order.goExecStatus === 'DEROGATION' && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="text-xs font-medium text-yellow-700 mb-1">
+                        ⚠️ Override Active (Derogation)
+                      </div>
+                      <div className="text-sm text-yellow-900">
+                        This service order was blocked but has been overridden with management approval.
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-gray-50 rounded-lg">
@@ -457,6 +486,31 @@ export default function ServiceOrderDetailPage() {
           onClose={() => setShowRescheduleModal(false)}
           onSuccess={() => {
             setShowRescheduleModal(false);
+            // Service order data will be automatically refreshed by React Query
+          }}
+        />
+      )}
+
+      {/* Go Exec Status Modal */}
+      {showGoExecModal && (
+        <GoExecStatusModal
+          serviceOrder={order}
+          onClose={() => setShowGoExecModal(false)}
+          onSuccess={() => {
+            setShowGoExecModal(false);
+            // Service order data will be automatically refreshed by React Query
+          }}
+          onRequestDerogation={() => setShowDerogationModal(true)}
+        />
+      )}
+
+      {/* Derogation Modal */}
+      {showDerogationModal && (
+        <DerogationModal
+          serviceOrder={order}
+          onClose={() => setShowDerogationModal(false)}
+          onSuccess={() => {
+            setShowDerogationModal(false);
             // Service order data will be automatically refreshed by React Query
           }}
         />
