@@ -1,0 +1,71 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: yellow-grid-demo-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: yellow_grid
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: demo_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: yellow-grid-demo-redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: yellow-grid-demo-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:demo_password@postgres:5432/yellow_grid?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: demo_secret_key_change_if_public
+      PORT: 3000
+      # Disable Kafka for lightweight demo
+      KAFKA_ENABLED: 'false'
+      # CORS configuration for mobile app access
+      CORS_ORIGIN: '*'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Frontend + Reverse Proxy (Caddy)
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+    container_name: yellow-grid-demo-frontend
+    restart: always
+    ports:
+      - '80:80'
+      # Uncomment 443 if you configure a domain in Caddyfile
+      # - '443:443'
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
