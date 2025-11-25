@@ -47,8 +47,13 @@ class ServiceOrderService {
    * Get all service orders with filters
    */
   async getAll(filters: ServiceOrderFilters = {}): Promise<PaginatedResponse<ServiceOrder>> {
+    // Remove empty filters
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
+    );
+
     const response = await apiClient.get<ApiResponse<PaginatedResponse<ServiceOrder>>>('/service-orders', {
-      params: filters,
+      params,
     });
     return response.data.data;
   }

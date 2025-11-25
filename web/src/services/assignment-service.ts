@@ -43,8 +43,13 @@ class AssignmentService {
    * Get all assignments with filters
    */
   async getAll(filters: AssignmentFilters = {}): Promise<PaginatedResponse<AssignmentWithScoring>> {
+    // Remove empty filters
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
+    );
+
     const response = await apiClient.get<ApiResponse<PaginatedResponse<AssignmentWithScoring>>>('/assignments', {
-      params: filters,
+      params,
     });
     return response.data.data;
   }

@@ -35,8 +35,13 @@ class ProviderService {
    * Get all providers with filters
    */
   async getAll(filters: ProviderFilters = {}): Promise<PaginatedResponse<Provider>> {
+    // Remove empty filters
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
+    );
+
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Provider>>>('/providers', {
-      params: filters,
+      params,
     });
     return response.data.data;
   }
