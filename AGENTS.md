@@ -4,7 +4,7 @@
 
 - **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). Phase 1 (Foundation) and Phase 2 (Scheduling) are complete. Phase 3 (Execution) is in progress.
 - **Mobile App**: `mobile-app/` (React Native + Expo). Phase 3 deliverable. Currently in scaffolding/early implementation.
-- **Web App**: `web/` (React + Vite). Phase 4 deliverable, but some scaffolding exists.
+- **Web App**: `web/` (React + Vite). Phase 4 deliverable. Core FSM features are complete and deployed.
 - **Documentation**: `product-docs/` holds v2.0 production-ready specs. `docs/IMPLEMENTATION_TRACKING.md` is the authoritative progress tracker.
 - **Legacy/Reference**: `roadshow-mockup/` is archived. `business-requirements/` are read-only source materials. `mobile/` and `web-app/` may contain reference implementations or alternative scaffolds but `mobile-app/` and `web/` are the active targets.
 
@@ -18,6 +18,7 @@
   - Unit: `npm test -- --runInBand` (expect some noise from mocks).
   - E2E: `npm run test:e2e` (requires DB setup, see `test/README.md`).
   - Coverage: `npm run test:cov`.
+- **Deploy**: `./deploy/deploy-remote.sh` (deploys to VPS).
 
 ### Mobile App (`mobile-app/`)
 
@@ -34,6 +35,8 @@
 ## Coding Style & Conventions
 
 - **Backend**: Strict TypeScript, NestJS patterns (`*.module.ts`, `*.service.ts`), DTOs with `class-validator`. Follow REST naming.
+  - **API Responses**: All endpoints must return `{ data: T, meta: any }`. Frontend services must unwrap this.
+  - **Auth**: `GET /auth/me` is the standard for user info.
 - **Mobile**: React Native with Expo. Functional components, hooks, strong typing.
 - **Web**: React with Vite. Functional components, hooks.
 - **General**: 2-space formatting, Prettier/ESLint.
