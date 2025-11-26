@@ -656,9 +656,17 @@ async function main() {
 
   for (const requirement of skillRequirements) {
     if (requirement.serviceId && requirement.specialtyId) {
-      await prisma.serviceSkillRequirement.create({
-        data: requirement,
-      });
+      try {
+        await prisma.serviceSkillRequirement.create({
+          data: requirement,
+        });
+      } catch (e: any) {
+        if (e.code === 'P2002') {
+          // Ignore unique constraint violations
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
