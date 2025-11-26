@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YellowGrid - Service Operator Cockpit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: #f3f4f6;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 64px;
+            background: linear-gradient(to bottom, #1e3a8a, #1e293b);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 0;
+            gap: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .sidebar-icon {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            position: relative;
+        }
+
+        .sidebar-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+
+        .sidebar-icon.active {
+            background: #1e40af;
+        }
+
+        .sidebar-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .sidebar-badge.blue {
+            background: #3b82f6;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .bell-icon {
+            font-size: 1.25rem;
+            color: #6b7280;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .bell-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow: hidden;
+            padding: 1rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+
+        .metric-card {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-card:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .metric-card.green-1 { background: #16a34a; }
+        .metric-card.green-2 { background: #15803d; }
+        .metric-card.green-3 { background: #166534; }
+        .metric-card.green-4 { background: #14532d; }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-icon {
+            font-size: 1.5rem;
+            opacity: 0.8;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .card-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .card-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .card-content::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .alert-item:hover {
+            background: #f3f4f6;
+        }
+
+        .alert-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            width: 32px;
+            flex-shrink: 0;
+        }
+
+        .alert-icon.red { color: #ef4444; }
+        .alert-icon.orange { color: #f97316; }
+        .alert-icon.yellow { color: #eab308; }
+
+        .alert-text {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 0.8rem;
+        }
+
+        .alert-subtitle {
+            font-size: 0.7rem;
+            color: #6b7280;
+        }
+
+        .alert-count {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #374151;
+            flex-shrink: 0;
+        }
+
+        /* Priority Tasks */
+        .priority-task {
+            padding: 0.75rem;
+            background: linear-gradient(to right, #fef2f2, #fed7aa);
+            border-left: 3px solid #ef4444;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-left {
+            flex: 1;
+        }
+
+        .task-id {
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+
+        .task-badge {
+            padding: 0.15rem 0.4rem;
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 0.25rem;
+        }
+
+        .task-client {
+            font-size: 0.75rem;
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        .task-right {
+            text-align: right;
+        }
+
+        .task-value {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #16a34a;
+        }
+
+        .task-date {
+            font-size: 0.65rem;
+            color: #6b7280;
+            margin-top: 0.15rem;
+        }
+
+        .task-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
+
+        .task-button {
+            padding: 0.4rem 0.6rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .task-button:hover {
+            background: #1d4ed8;
+        }
+
+        .task-button.green {
+            background: #16a34a;
+        }
+
+        .task-button.green:hover {
+            background: #15803d;
+        }
+
+        /* Chat Widget */
+        .chat-widget {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+        }
+
+        .chat-button {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #9333ea, #4f46e5);
+            color: white;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.3s;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .chat-button:hover {
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .chat-window {
+            width: 520px;
+            height: 720px;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(to right, #9333ea, #4f46e5);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .chat-header-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header-title {
+            font-weight: bold;
+        }
+
+        .chat-header-subtitle {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .chat-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .chat-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f9fafb;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .message {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 85%;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+        }
+
+        .message.user .message-content {
+            background: #2563eb;
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            color: #1f2937;
+        }
+
+        .bot-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .bot-label i {
+            color: #9333ea;
+        }
+
+        .message-text {
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .chat-quick-actions {
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .quick-action-btn {
+            padding: 0.4rem 0.75rem;
+            border: none;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .quick-action-btn.purple {
+            background: #f3e8ff;
+            color: #7e22ce;
+        }
+
+        .quick-action-btn.purple:hover {
+            background: #e9d5ff;
+        }
+
+        .quick-action-btn.red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .quick-action-btn.red:hover {
+            background: #fecaca;
+        }
+
+        .quick-action-btn.blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .quick-action-btn.blue:hover {
+            background: #bfdbfe;
+        }
+
+        .quick-action-btn.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .quick-action-btn.green:hover {
+            background: #bbf7d0;
+        }
+
+        .chat-input-area {
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #9333ea;
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+        }
+
+        .chat-send {
+            padding: 0.6rem 1rem;
+            background: linear-gradient(to right, #9333ea, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-send:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-blue {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-blue:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-green {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-green:hover {
+            background: #15803d;
+        }
+
+        .table-scroll {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .table-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1rem;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-badge.scheduled { background: #fef3c7; color: #92400e; }
+        .status-badge.distributed { background: #dbeafe; color: #1e40af; }
+        .status-badge.confirmed { background: #d1fae5; color: #065f46; }
+        .status-badge.in-progress { background: #e0e7ff; color: #3730a3; }
+
+        .action-icons {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            transition: color 0.2s;
+            font-size: 1rem;
+        }
+
+        .action-icon.blue { color: #2563eb; }
+        .action-icon.blue:hover { color: #1d4ed8; }
+        .action-icon.green { color: #16a34a; }
+        .action-icon.green:hover { color: #15803d; }
+        .action-icon.purple { color: #9333ea; }
+        .action-icon.purple:hover { color: #7e22ce; }
+        .action-icon.orange { color: #f97316; }
+        .action-icon.orange:hover { color: #ea580c; }
+
+        .table-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .pagination button:hover {
+            background: #f3f4f6;
+        }
+
+        /* Back to Demo Button */
+        .back-to-demo {
+            position: fixed;
+            top: 20px;
+            left: 80px;
+            background: rgba(255, 203, 50, 0.95);
+            color: #1b1305;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .back-to-demo:hover {
+            background: rgba(255, 203, 50, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #1f2937;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .info-value {
+            color: #1f2937;
+            font-size: 0.875rem;
+        }
+
+        .tech-option {
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tech-option:hover {
+            border-color: #2563eb;
+            background: #f0f9ff;
+        }
+
+        .tech-option.selected {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .tech-name {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+
+        .tech-skills {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .tech-rating {
+            font-size: 0.875rem;
+            color: #f59e0b;
+        }
+
+        .contact-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .contact-option {
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .contact-option:hover {
+            border-color: #2563eb;
+            background: #f0f9ff;
+        }
+
+        .contact-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .signature-pad {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            background: #f9fafb;
+            cursor: crosshair;
+            width: 100%;
+            height: 200px;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+    <a href="demo-interactive.html" class="back-to-demo">
+        <i class="fas fa-arrow-left"></i> Back to Interactive Demo
+    </a>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fas fa-home"></i>
+            </div>
+            <div class="sidebar-icon active" onclick="showTab('dashboard')" id="btn-dashboard" title="Dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <div class="sidebar-icon" onclick="showTab('tasks')" id="btn-tasks" title="Tasks">
+                <i class="fas fa-tasks"></i>
+                <span class="sidebar-badge" id="tasks-badge">12</span>
+            </div>
+            <div class="sidebar-icon" onclick="alert('Settings feature coming soon!')" title="Settings">
+                <i class="fas fa-cog"></i>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <h1 class="header-title">Welcome, Service Operator</h1>
+                    <span class="badge">AI Assistant Active</span>
+                </div>
+                <div class="header-right">
+                    <div class="bell-icon" onclick="alert('No new notifications')">
+                        <i class="fas fa-bell"></i>
+                        <span class="bell-badge" id="notification-count">12</span>
+                    </div>
+                    <div class="avatar">SO</div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Tab -->
+                <div id="tab-dashboard" class="tab-content">
+                    <!-- Metrics -->
+                    <div class="metrics-grid">
+                        <div class="metric-card green-1">
+                            <div class="metric-header">
+                                <i class="fas fa-file-signature metric-icon"></i>
+                            </div>
+                            <div class="metric-value" id="metric-prescheduled">156</div>
+                            <div class="metric-label">Pre-Scheduled</div>
+                        </div>
+                        <div class="metric-card green-2">
+                            <div class="metric-header">
+                                <i class="fas fa-calendar-check metric-icon"></i>
+                            </div>
+                            <div class="metric-value" id="metric-scheduled">89</div>
+                            <div class="metric-label">Scheduled</div>
+                        </div>
+                        <div class="metric-card green-3">
+                            <div class="metric-header">
+                                <i class="fas fa-tools metric-icon"></i>
+                            </div>
+                            <div class="metric-value" id="metric-inprogress">34</div>
+                            <div class="metric-label">In Progress</div>
+                        </div>
+                        <div class="metric-card green-4">
+                            <div class="metric-header">
+                                <i class="fas fa-file-contract metric-icon"></i>
+                            </div>
+                            <div class="metric-value" id="metric-wcf">23</div>
+                            <div class="metric-label">Awaiting WCF</div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts and Priority Tasks -->
+                    <div class="two-column">
+                        <!-- Alerts -->
+                        <div class="card">
+                            <h2 class="card-title">
+                                <i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>
+                                Critical Actions
+                            </h2>
+                            <div class="card-content" id="critical-actions-list">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Priority Tasks -->
+                        <div class="card">
+                            <h2 class="card-title">
+                                <i class="fas fa-star" style="color: #f59e0b;"></i>
+                                High Priority (Next 24h)
+                            </h2>
+                            <div class="card-content" id="priority-tasks-list">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Tab -->
+                <div id="tab-tasks" class="tab-content hidden">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2 class="table-title">Service Execution Management</h2>
+                            <div class="table-actions">
+                                <button class="btn btn-blue" onclick="alert('Filter feature coming soon!')">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                                <button class="btn btn-green" onclick="alert('Sort feature coming soon!')">
+                                    <i class="fas fa-sort"></i> Sort
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>PROJECT</th>
+                                        <th>STATUS</th>
+                                        <th>CLIENT</th>
+                                        <th>SERVICE</th>
+                                        <th>VALUE</th>
+                                        <th>DATE/PRO</th>
+                                        <th>ACTION NEEDED</th>
+                                        <th>ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="services-table-body">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer">
+                            <div style="font-size: 0.875rem; color: #374151;" id="table-info">Showing services...</div>
+                            <div class="pagination">
+                                <button><i class="fas fa-chevron-left"></i></button>
+                                <span style="padding: 0 1rem;">Page 1 of 1</span>
+                                <button><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chat Widget -->
+    <div class="chat-widget">
+        <button class="chat-button" id="chat-button" onclick="toggleChat()">
+            <i class="fas fa-robot"></i>
+        </button>
+
+        <div class="chat-window hidden" id="chat-window">
+            <div class="chat-header">
+                <div class="chat-header-left">
+                    <div class="chat-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="chat-header-info">
+                        <div class="chat-header-title">YellowGrid AI Assistant</div>
+                        <div class="chat-header-subtitle">AI + Human Support</div>
+                    </div>
+                </div>
+                <button class="chat-close" onclick="toggleChat()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot">
+                    <div class="message-content">
+                        <div class="bot-label">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Assistant</span>
+                        </div>
+                        <div class="message-text">Hello! I can help you with contract issues, Pro assignments, scheduling, and customer communication. What would you like to work on?</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-quick-actions">
+                <button class="quick-action-btn red" onclick="sendQuickMessage('contracts')">
+                    Contracts
+                </button>
+                <button class="quick-action-btn purple" onclick="sendQuickMessage('assign pros')">
+                    Assign Pros
+                </button>
+                <button class="quick-action-btn blue" onclick="sendQuickMessage('daily summary')">
+                    Daily Summary
+                </button>
+                <button class="quick-action-btn green" onclick="sendQuickMessage('wcf status')">
+                    WCF Status
+                </button>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Ask anything..." onkeypress="if(event.key==='Enter') sendMessage()">
+                    <button class="chat-send" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals will be inserted here dynamically -->
+    <div id="modal-container"></div>
+
+    <!-- State Management Script -->
+    <script src="yellowgrid-state.js"></script>
+
+    <script>
+        // Global state reference
+        let state = window.ygState;
+
+        // Initialize UI on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshDashboard();
+            refreshServiceTable();
+        });
+
+        // Listen for state changes
+        window.addEventListener('yellowgrid-state-changed', function() {
+            refreshDashboard();
+            refreshServiceTable();
+        });
+
+        // Tab Management
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            const targetTab = document.getElementById('tab-' + tabName);
+            if (targetTab) targetTab.classList.remove('hidden');
+
+            document.querySelectorAll('.sidebar-icon').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const targetBtn = document.getElementById('btn-' + tabName);
+            if (targetBtn) targetBtn.classList.add('active');
+        }
+
+        // Refresh Dashboard Metrics
+        function refreshDashboard() {
+            const services = state.getAllServices();
+
+            // Update metrics
+            const scheduled = services.filter(s => s.status === 'scheduled').length;
+            const inProgress = services.filter(s => s.status === 'in_progress').length;
+            const awaitingWCF = services.filter(s => s.status === 'awaiting_wcf').length;
+
+            document.getElementById('metric-scheduled').textContent = scheduled;
+            document.getElementById('metric-inprogress').textContent = inProgress;
+            document.getElementById('metric-wcf').textContent = awaitingWCF;
+
+            // Refresh critical actions
+            refreshCriticalActions();
+
+            // Refresh priority tasks
+            refreshPriorityTasks();
+        }
+
+        // Refresh Critical Actions
+        function refreshCriticalActions() {
+            const container = document.getElementById('critical-actions-list');
+            const services = state.getAllServices();
+
+            // Count critical issues
+            const unsignedContracts = services.filter(s => !s.contractSigned && s.status === 'scheduled').length;
+            const noProAssigned = services.filter(s => !s.technician && s.status === 'scheduled').length;
+            const awaitingWCF = services.filter(s => s.status === 'awaiting_wcf').length;
+
+            container.innerHTML = `
+                <div class="alert-item" onclick="handleCriticalAction('unsigned-contracts')">
+                    <div class="alert-left">
+                        <i class="fas fa-file-signature alert-icon red"></i>
+                        <div class="alert-text">
+                            <div class="alert-title">Contract Not Signed (>72h)</div>
+                            <div class="alert-subtitle">Customer signature needed</div>
+                        </div>
+                    </div>
+                    <div class="alert-count">${unsignedContracts}</div>
+                </div>
+                <div class="alert-item" onclick="handleCriticalAction('no-pro-assigned')">
+                    <div class="alert-left">
+                        <i class="fas fa-user-slash alert-icon orange"></i>
+                        <div class="alert-text">
+                            <div class="alert-title">Pro Allocation Failed</div>
+                            <div class="alert-subtitle">Manual assignment required</div>
+                        </div>
+                    </div>
+                    <div class="alert-count">${noProAssigned}</div>
+                </div>
+                <div class="alert-item" onclick="handleCriticalAction('no-show')">
+                    <div class="alert-left">
+                        <i class="fas fa-calendar-times alert-icon red"></i>
+                        <div class="alert-text">
+                            <div class="alert-title">Pro No-Show / Late</div>
+                            <div class="alert-subtitle">Pro didn't check-in on time</div>
+                        </div>
+                    </div>
+                    <div class="alert-count">3</div>
+                </div>
+                <div class="alert-item" onclick="handleCriticalAction('wcf-unsigned')">
+                    <div class="alert-left">
+                        <i class="fas fa-signature alert-icon yellow"></i>
+                        <div class="alert-text">
+                            <div class="alert-title">WCF Not Signed (>48h)</div>
+                            <div class="alert-subtitle">Customer signature needed</div>
+                        </div>
+                    </div>
+                    <div class="alert-count">${awaitingWCF}</div>
+                </div>
+            `;
+        }
+
+        // Refresh Priority Tasks
+        function refreshPriorityTasks() {
+            const container = document.getElementById('priority-tasks-list');
+            const services = state.getAllServices();
+
+            // Get high priority services (unsigned contracts, no pro, etc.)
+            const priorityServices = services.filter(s =>
+                !s.contractSigned || !s.technician
+            ).slice(0, 5);
+
+            container.innerHTML = priorityServices.map(service => {
+                const badge = !service.contractSigned ? 'CONTRACT' :
+                             !service.technician ? 'NO PRO' : 'URGENT';
+                const badgeColor = !service.contractSigned ? 'CONTRACT' : 'NO PRO';
+
+                return `
+                    <div class="priority-task">
+                        <div class="task-header">
+                            <div class="task-left">
+                                <div class="task-id">
+                                    #${service.id}
+                                    <span class="task-badge">${badge}</span>
+                                </div>
+                                <div class="task-client">${service.customer.name} • ${service.type}</div>
+                            </div>
+                            <div class="task-right">
+                                <div class="task-value">€${service.pricing.amount.toFixed(0)}</div>
+                                <div class="task-date">${formatDate(service.schedule.date)}</div>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="task-button" onclick="openContactCustomerModal('${service.id}')">
+                                <i class="fas fa-phone"></i> Call
+                            </button>
+                            <button class="task-button green" onclick="contactCustomer('${service.id}', 'whatsapp')">
+                                <i class="fab fa-whatsapp"></i> Message
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Refresh Service Table
+        function refreshServiceTable() {
+            const tbody = document.getElementById('services-table-body');
+            const services = state.getAllServices();
+
+            tbody.innerHTML = services.map(service => {
+                const statusClass = service.status.replace('_', '-');
+                const statusText = service.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                let actionNeeded = 'On track';
+                let actionColor = '#10b981';
+
+                if (!service.contractSigned) {
+                    actionNeeded = 'Contract not signed (72h)';
+                    actionColor = '#dc2626';
+                } else if (!service.technician && service.status === 'scheduled') {
+                    actionNeeded = 'Auto-assignment failed';
+                    actionColor = '#dc2626';
+                } else if (service.status === 'awaiting_wcf') {
+                    actionNeeded = 'Awaiting WCF signature';
+                    actionColor = '#f59e0b';
+                }
+
+                return `
+                    <tr>
+                        <td style="font-weight: 600;">#${service.id}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${service.customer.name}<br><span style="font-size: 0.75rem; color: #6b7280;">${service.customer.phone}</span></td>
+                        <td style="font-size: 0.85rem;">${service.type}</td>
+                        <td style="font-weight: bold; color: #16a34a;">€${service.pricing.amount.toFixed(0)}</td>
+                        <td style="font-size: 0.8rem;">${formatDate(service.schedule.date)}<br>${service.technician ? '👷 ' + service.technician.name : '🔍 Not assigned'}</td>
+                        <td><span style="color: ${actionColor}; font-weight: 600; font-size: 0.8rem;">${actionNeeded}</span></td>
+                        <td>
+                            <div class="action-icons">
+                                <i class="fas fa-eye action-icon blue" title="View Details" onclick="openViewDetailsModal('${service.id}')"></i>
+                                <i class="fas fa-user-plus action-icon purple" title="Assign Pro" onclick="openAssignProModal('${service.id}')"></i>
+                                <i class="fas fa-calendar action-icon orange" title="Reschedule" onclick="openRescheduleModal('${service.id}')"></i>
+                                <i class="fas fa-sticky-note action-icon green" title="Add Note" onclick="openAddNoteModal('${service.id}')"></i>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('table-info').textContent = `Showing ${services.length} services`;
+        }
+
+        // Format date helper
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            if (date.toDateString() === today.toDateString()) {
+                return 'Today';
+            } else if (date.toDateString() === tomorrow.toDateString()) {
+                return 'Tomorrow';
+            } else {
+                return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+            }
+        }
+
+        // Modal Management
+        function showModal(html) {
+            const container = document.getElementById('modal-container');
+            container.innerHTML = html;
+        }
+
+        function closeModal() {
+            const container = document.getElementById('modal-container');
+            container.innerHTML = '';
+        }
+
+        // Handle Critical Action Click
+        function handleCriticalAction(actionType) {
+            const services = state.getAllServices();
+            let targetService = null;
+
+            switch(actionType) {
+                case 'unsigned-contracts':
+                    targetService = services.find(s => !s.contractSigned && s.status === 'scheduled');
+                    if (targetService) openSignContractModal(targetService.id);
+                    break;
+                case 'no-pro-assigned':
+                    targetService = services.find(s => !s.technician && s.status === 'scheduled');
+                    if (targetService) openAssignProModal(targetService.id);
+                    break;
+                case 'wcf-unsigned':
+                    targetService = services.find(s => s.status === 'awaiting_wcf');
+                    if (targetService) openHandleWCFModal(targetService.id);
+                    break;
+                default:
+                    alert('Feature coming soon!');
+            }
+        }
+
+        // Open Assign Pro Modal
+        function openAssignProModal(serviceId) {
+            const service = state.getService(serviceId);
+            const availableTechs = state.getAvailableTechnicians();
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Assign Technician - ${service.id}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Service Details</label>
+                                <div class="info-row">
+                                    <span class="info-label">Customer</span>
+                                    <span class="info-value">${service.customer.name}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Service</span>
+                                    <span class="info-value">${service.type}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Date</span>
+                                    <span class="info-value">${service.schedule.date} at ${service.schedule.startTime}</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Available Technicians</label>
+                                <div id="tech-list">
+                                    ${availableTechs.map(tech => `
+                                        <div class="tech-option" onclick="selectTechnician('${tech.id}', '${serviceId}')">
+                                            <div class="tech-name">${tech.name}</div>
+                                            <div class="tech-skills">${tech.skills.join(', ')}</div>
+                                            <div class="tech-rating">⭐ ${tech.rating} • ${tech.activeJobs.length} active jobs</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+        }
+
+        function selectTechnician(techId, serviceId) {
+            if (state.assignTechnician(serviceId, techId)) {
+                closeModal();
+                alert('Technician assigned successfully!');
+            } else {
+                alert('Failed to assign technician');
+            }
+        }
+
+        // Open Reschedule Modal
+        function openRescheduleModal(serviceId) {
+            const service = state.getService(serviceId);
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Reschedule Service - ${service.id}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Current Schedule</label>
+                                <p>${service.schedule.date} at ${service.schedule.startTime}</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">New Date</label>
+                                <input type="date" class="form-input" id="new-date" value="${service.schedule.date}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">New Time</label>
+                                <input type="time" class="form-input" id="new-time" value="${service.schedule.startTime}">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                            <button class="btn btn-blue" onclick="rescheduleService('${serviceId}')">Reschedule</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+        }
+
+        function rescheduleService(serviceId) {
+            const newDate = document.getElementById('new-date').value;
+            const newTime = document.getElementById('new-time').value;
+
+            if (state.rescheduleService(serviceId, { date: newDate, startTime: newTime })) {
+                closeModal();
+                alert('Service rescheduled successfully!');
+            } else {
+                alert('Failed to reschedule service');
+            }
+        }
+
+        // Open Contact Customer Modal
+        function openContactCustomerModal(serviceId) {
+            const service = state.getService(serviceId);
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Contact Customer</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Customer Details</label>
+                                <div class="info-row">
+                                    <span class="info-label">Name</span>
+                                    <span class="info-value">${service.customer.name}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Phone</span>
+                                    <span class="info-value">${service.customer.phone}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Email</span>
+                                    <span class="info-value">${service.customer.email}</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Choose Contact Method</label>
+                                <div class="contact-options">
+                                    <div class="contact-option" onclick="contactCustomer('${serviceId}', 'call')">
+                                        <div class="contact-icon" style="color: #2563eb;">📞</div>
+                                        <div class="contact-label">Call</div>
+                                    </div>
+                                    <div class="contact-option" onclick="contactCustomer('${serviceId}', 'sms')">
+                                        <div class="contact-icon" style="color: #8b5cf6;">💬</div>
+                                        <div class="contact-label">SMS</div>
+                                    </div>
+                                    <div class="contact-option" onclick="contactCustomer('${serviceId}', 'whatsapp')">
+                                        <div class="contact-icon" style="color: #16a34a;">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </div>
+                                        <div class="contact-label">WhatsApp</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+        }
+
+        function contactCustomer(serviceId, method) {
+            const service = state.getService(serviceId);
+            closeModal();
+
+            switch(method) {
+                case 'call':
+                    alert(`Calling ${service.customer.name} at ${service.customer.phone}`);
+                    break;
+                case 'sms':
+                    alert(`Opening SMS to ${service.customer.name}`);
+                    break;
+                case 'whatsapp':
+                    alert(`Opening WhatsApp chat with ${service.customer.name}`);
+                    break;
+            }
+        }
+
+        // Open View Details Modal
+        function openViewDetailsModal(serviceId) {
+            const service = state.getService(serviceId);
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Service Details - ${service.id}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Customer Information</label>
+                                <div class="info-row">
+                                    <span class="info-label">Name</span>
+                                    <span class="info-value">${service.customer.name}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Phone</span>
+                                    <span class="info-value">${service.customer.phone}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Email</span>
+                                    <span class="info-value">${service.customer.email}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Address</span>
+                                    <span class="info-value">${service.customer.address}</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Service Information</label>
+                                <div class="info-row">
+                                    <span class="info-label">Type</span>
+                                    <span class="info-value">${service.type}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Status</span>
+                                    <span class="info-value">${service.status}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Date</span>
+                                    <span class="info-value">${service.schedule.date} at ${service.schedule.startTime}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Technician</span>
+                                    <span class="info-value">${service.technician ? service.technician.name : 'Not assigned'}</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Pricing</label>
+                                <div class="info-row">
+                                    <span class="info-label">Amount</span>
+                                    <span class="info-value">€${service.pricing.amount.toFixed(2)}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Payment Status</span>
+                                    <span class="info-value">${service.pricing.paid ? 'Paid' : 'Pending'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-blue" onclick="closeModal()">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+        }
+
+        // Open Sign Contract Modal
+        function openSignContractModal(serviceId) {
+            const service = state.getService(serviceId);
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Sign Contract - ${service.id}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Service Agreement</label>
+                                <p>Service: ${service.type}</p>
+                                <p>Customer: ${service.customer.name}</p>
+                                <p>Amount: €${service.pricing.amount.toFixed(2)}</p>
+                                <p>Date: ${service.schedule.date}</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Terms & Conditions</label>
+                                <p style="font-size: 0.875rem; color: #6b7280;">
+                                    By signing this contract, the customer agrees to the terms and conditions of the service agreement.
+                                    Payment is due upon completion of service.
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Customer Signature</label>
+                                <canvas class="signature-pad" id="signature-pad" width="540" height="200"></canvas>
+                                <button class="btn btn-secondary" onclick="clearSignature()" style="margin-top: 0.5rem;">Clear</button>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                            <button class="btn btn-blue" onclick="signContract('${serviceId}')">Sign Contract</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+
+            // Initialize signature pad
+            setTimeout(() => {
+                initSignaturePad();
+            }, 100);
+        }
+
+        let signaturePad = null;
+        function initSignaturePad() {
+            const canvas = document.getElementById('signature-pad');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDrawing) {
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDrawing = false;
+            });
+
+            signaturePad = canvas;
+        }
+
+        function clearSignature() {
+            if (signaturePad) {
+                const ctx = signaturePad.getContext('2d');
+                ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+            }
+        }
+
+        function signContract(serviceId) {
+            if (state.signContract(serviceId)) {
+                closeModal();
+                alert('Contract signed successfully!');
+            } else {
+                alert('Failed to sign contract');
+            }
+        }
+
+        // Open Handle WCF Modal
+        function openHandleWCFModal(serviceId) {
+            const service = state.getService(serviceId);
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Handle WCF - ${service.id}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Service Information</label>
+                                <div class="info-row">
+                                    <span class="info-label">Service</span>
+                                    <span class="info-value">${service.type}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Customer</span>
+                                    <span class="info-value">${service.customer.name}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Technician</span>
+                                    <span class="info-value">${service.technician ? service.technician.name : 'N/A'}</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Quality Assessment</label>
+                                <select class="form-select" id="wcf-quality">
+                                    <option value="approved">Approved - No Issues</option>
+                                    <option value="approved_with_reserves">Approved with Reserves</option>
+                                    <option value="rejected">Rejected - Needs Rework</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-textarea" id="wcf-notes" placeholder="Add any notes or observations..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                            <button class="btn btn-danger" onclick="handleWCF('${serviceId}', 'rejected')">Reject</button>
+                            <button class="btn btn-blue" onclick="handleWCF('${serviceId}', 'approved')">Approve</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+        }
+
+        function handleWCF(serviceId, action) {
+            const quality = document.getElementById('wcf-quality').value;
+            const notes = document.getElementById('wcf-notes').value;
+
+            if (state.signWCF(serviceId, { quality, notes, customerApproval: action === 'approved' })) {
+                closeModal();
+                alert(`WCF ${action === 'approved' ? 'approved' : 'rejected'} successfully!`);
+            } else {
+                alert('Failed to process WCF');
+            }
+        }
+
+        // Open Add Note Modal
+        function openAddNoteModal(serviceId) {
+            const service = state.getService(serviceId);
+
+            const html = `
+                <div class="modal-overlay" onclick="if(event.target === this) closeModal()">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Add Note - ${service.id}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Service</label>
+                                <p>${service.type} - ${service.customer.name}</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Note</label>
+                                <textarea class="form-textarea" id="note-text" placeholder="Enter your note here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                            <button class="btn btn-blue" onclick="addNote('${serviceId}')">Add Note</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showModal(html);
+        }
+
+        function addNote(serviceId) {
+            const noteText = document.getElementById('note-text').value;
+
+            if (noteText.trim() && state.addNote(serviceId, noteText)) {
+                closeModal();
+                alert('Note added successfully!');
+            } else {
+                alert('Please enter a note');
+            }
+        }
+
+        // Chat Management
+        function toggleChat() {
+            const button = document.getElementById('chat-button');
+            const window = document.getElementById('chat-window');
+
+            if (window.classList.contains('hidden')) {
+                button.classList.add('hidden');
+                window.classList.remove('hidden');
+            } else {
+                button.classList.remove('hidden');
+                window.classList.add('hidden');
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addChatMessage('user', message);
+            input.value = '';
+
+            setTimeout(() => {
+                const botResponse = generateBotResponse(message);
+                addBotMessage(botResponse);
+            }, 800);
+        }
+
+        function sendQuickMessage(message) {
+            addChatMessage('user', message);
+            setTimeout(() => {
+                const botResponse = generateBotResponse(message);
+                addBotMessage(botResponse);
+            }, 800);
+        }
+
+        function addChatMessage(type, text) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+
+            if (type === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-text">${text}</div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="message-content">
+                        <div class="bot-label">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Assistant</span>
+                        </div>
+                        <div class="message-text">${text}</div>
+                    </div>
+                `;
+            }
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addBotMessage(text) {
+            addChatMessage('bot', text);
+        }
+
+        function generateBotResponse(message) {
+            const lower = message.toLowerCase();
+
+            if (lower.includes('daily summary') || lower.includes('summary')) {
+                return `<strong>Daily Summary</strong><br><br>
+                    <strong>Actions Completed Today:</strong><br>
+                    ✓ 5 projects resolved<br>
+                    ✓ €7,585 total value<br>
+                    ✓ 12 customer contacts<br>
+                    ✓ 95% resolution rate<br>
+                    <br><strong>Pending Actions:</strong><br>
+                    • 12 contracts awaiting signature<br>
+                    • 8 projects need Pro assignment<br>
+                    • 7 WCF pending signatures`;
+            } else if (lower.includes('contract')) {
+                const services = state.getAllServices();
+                const unsigned = services.filter(s => !s.contractSigned && s.status === 'scheduled').length;
+                return `You have ${unsigned} contracts awaiting signature (>72h). Would you like me to help contact these customers?`;
+            } else if (lower.includes('pro') || lower.includes('assign')) {
+                const services = state.getAllServices();
+                const noTech = services.filter(s => !s.technician && s.status === 'scheduled').length;
+                return `Found ${noTech} projects needing Pro assignment. Would you like to see available technicians?`;
+            } else if (lower.includes('wcf')) {
+                const services = state.getAllServices();
+                const wcf = services.filter(s => s.status === 'awaiting_wcf').length;
+                return `You have ${wcf} services awaiting WCF signatures. Most urgent needs follow-up.`;
+            } else {
+                return 'I analyzed your workload:<br>🔴 <strong>12 urgent actions</strong> (next 4h)<br>🟡 <strong>23 attention needed</strong> (today)<br>🟢 <strong>34 on track</strong><br><br>Type "daily summary" to see what you\'ve accomplished!';
+            }
+        }
+    </script>
+</body>
+</html>

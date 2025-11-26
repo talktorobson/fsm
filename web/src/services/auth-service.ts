@@ -103,7 +103,10 @@ class AuthService {
    */
   async logout(): Promise<void> {
     try {
-      await apiClient.post('/auth/logout');
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        await apiClient.post('/auth/logout', { refreshToken });
+      }
     } catch (error) {
       console.error('Logout API call failed:', error);
       // Continue with local cleanup even if API call fails

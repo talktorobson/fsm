@@ -16,6 +16,7 @@ import CreateProviderPage from './pages/providers/CreateProviderPage';
 import CalendarPage from './pages/calendar/CalendarPage';
 import TasksPage from './pages/tasks/TasksPage';
 import PerformanceDashboardPage from './pages/performance/PerformanceDashboardPage';
+import { OperationsGridPage } from './pages/operations';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="operations-grid" element={<OperationsGridPage />} />
           <Route path="service-orders" element={<ServiceOrdersPage />} />
           <Route path="service-orders/:id" element={<ServiceOrderDetailPage />} />
           <Route path="assignments" element={<AssignmentsPage />} />

@@ -1,6 +1,6 @@
 /**
  * Dashboard Layout
- * Main layout with sidebar navigation and header
+ * Main layout with sidebar navigation, header, and AI assistant
  */
 
 import { Outlet, Link, useLocation } from 'react-router-dom';
@@ -15,26 +15,30 @@ import {
   LogOut,
   User,
   BarChart3,
+  Grid3X3,
 } from 'lucide-react';
 import clsx from 'clsx';
 import SearchButton from '@/components/search/SearchButton';
 import NotificationBadge from '@/components/notifications/NotificationBadge';
 import NotificationCenter from '@/components/NotificationCenter';
+import { AIAssistantButton, AIChatWidget } from '@/components/ai';
+import { useAIChat } from '@/hooks/useAIChat';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Operations Grid', href: '/operations-grid', icon: Grid3X3 },
   { name: 'Service Orders', href: '/service-orders', icon: ClipboardList },
   { name: 'Assignments', href: '/assignments', icon: UserCheck },
   { name: 'Providers', href: '/providers', icon: Users },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Performance', href: '/performance', icon: BarChart3 },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Tasks & Alerts', href: '/tasks', icon: CheckSquare },
 ];
 
 export default function DashboardLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { messages, isLoading, isOpen, sendMessage, toggleChat, closeChat } = useAIChat();
 
   const handleLogout = async () => {
     await logout();
@@ -128,6 +132,20 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* AI Assistant */}
+      <AIAssistantButton
+        onClick={toggleChat}
+        isOpen={isOpen}
+      />
+      <AIChatWidget
+        isOpen={isOpen}
+        onClose={closeChat}
+        messages={messages}
+        onSendMessage={sendMessage}
+        isLoading={isLoading}
+        userName={user?.firstName || 'Operator'}
+      />
     </div>
   );
 }
