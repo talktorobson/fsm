@@ -1,8 +1,8 @@
 # CLAUDE.md - AI Assistant Guide
 
-**Last Updated**: 2025-11-25
+**Last Updated**: 2025-11-26
 **Project**: Yellow Grid Platform
-**Status**: Phase 4 & 5 Complete (Integration & Event Streaming) - Production Ready
+**Status**: Phase 4 Complete - Production Deployed
 
 ---
 
@@ -11,13 +11,13 @@
 This is the **Yellow Grid Platform**, a comprehensive Field Service Management (FSM) system for multi-country operations.
 
 ### Critical Context
-- **Current State**: Production-ready Modular Monolith (Phase 4 & 5 Complete)
-- **Version**: 2.0 (includes AI/ML features)
-- **Implementation Status**: Active Development (Backend 100%, Web 95%, Mobile 50%)
+- **Current State**: Production-ready Modular Monolith (Deployed to VPS)
+- **Implementation Status**: Backend 100%, Web 95%, Mobile 50%
 - **Team Size**: 1 engineer (Solo development with AI assistance)
-- **Timeline**: ~19 weeks completed
+- **Timeline**: ~20 weeks completed
 - **Architecture Philosophy**: Modular Monolith (NestJS) with Event Sourcing (Kafka)
 - **Deployment**: Remote VPS (135.181.96.93) via `./deploy/deploy-remote.sh`
+- **Database**: 65+ Prisma models, 3,200+ lines schema
 
 ---
 
@@ -27,64 +27,73 @@ This is the **Yellow Grid Platform**, a comprehensive Field Service Management (
 yellow-grid/
 ├── README.md                          # Entry point
 ├── CLAUDE.md                          # This file - AI assistant guide
-├── AGENTS.md                          # Repository guidelines
-├── IMPORTANT_REPOSITORY_STRUCTURE.md  # Mockup vs Product separation
-├── DOCUMENTATION_CONSOLIDATION_PLAN.md # Latest consolidation details
+├── AGENTS.md                          # Repository guidelines (key reference!)
 │
 ├── src/                               # 🚀 PRODUCTION BACKEND (NestJS)
 ├── web/                               # 🌐 WEB APP (React + Vite)
 ├── mobile-app/                        # 📱 MOBILE APP (React Native)
 ├── deploy/                            # 🚀 DEPLOYMENT SCRIPTS
+├── prisma/                            # 📊 DATABASE SCHEMA
 │
 ├── business-requirements/             # Source business requirements (READ-ONLY)
-│   ├── README.md
-│   ├── Yellow Grid Platform - PRD.md
-│   └── [Source documents: Word, PDF, images]
 │
-├── product-docs/                      # ⭐ COMPLETE ENGINEERING SPECS (69 files)
+├── product-docs/                      # ⭐ ENGINEERING SPECS (69 files)
 │   ├── README.md                      # Master documentation index
-│   ├── 00-ENGINEERING_KIT_SUMMARY.md  # High-level project summary
-│   ├── DOCUMENTATION_STATUS.md        # Current status (SIMPLIFIED)
-│   ├── IMPLEMENTATION_GUIDE.md        # 28-week roadmap
-│   │
 │   ├── architecture/ (11 docs)        # System design & technical decisions
 │   ├── domain/ (13 docs)              # Business domain models & logic
 │   ├── api/ (9 docs)                  # REST API specifications
-│   ├── integration/ (8 docs)          # External system integrations
-│   ├── security/ (6 docs)             # Security, RBAC, GDPR
-│   ├── infrastructure/ (8 docs)       # Database, Kafka, ML, deployment
-│   ├── operations/ (6 docs)           # Monitoring, logging, incidents
-│   ├── testing/ (6 docs)              # Testing strategies & standards
-│   ├── development/ (9 docs)          # Dev workflows, coding standards
-│   └── implementation-artifacts/      # TypeScript models, OpenAPI, SQL, Avro
+│   └── ...
 │
-├── roadshow-mockup/                   # Demo ONLY (NOT for production)
-└── src/generated/                     # Generated code from OpenAPI specs
+├── docs/                              # 📋 IMPLEMENTATION TRACKING
+│   └── IMPLEMENTATION_TRACKING.md     # Authoritative progress tracker
+│
+└── roadshow-mockup/                   # ARCHIVED - Demo only
 ```
 
 ---
 
-## 🚨 IMPORTANT: Documentation Changes (v2.0 - Jan 2025)
+## 🗄️ Data Model Overview (November 2025)
 
-### What Changed
-✅ **DELETED** 6 obsolete analysis files (~5,400 lines):
-- COMPREHENSIVE_SPEC_REVIEW_2025-01-15.md
-- PRD_V2_GAP_ANALYSIS.md
-- DOCUMENTATION_CONSOLIDATION_SUMMARY.md
-- FEATURE_ADDITIONS_ANALYSIS.md
-- UX_FLOW_GAP_ANALYSIS.md
-- DOMAIN_MODEL_UPDATES.md
+### Provider Domain (AHS Business Rules)
 
-✅ **SIMPLIFIED** DOCUMENTATION_STATUS.md (540 → 225 lines)
+The Provider data model follows real AHS business rules with comprehensive hierarchy:
 
-✅ **REORGANIZED** business-to-product-docs → business-requirements/
+```
+Provider (legal entity)
+├── ProviderWorkingSchedule (1:1)     # Working days, shifts, capacity
+├── InterventionZone[] (1:N)          # Geographic coverage areas
+├── ServicePriorityConfig[] (1:N)     # Service preferences (P1/P2/OPT_OUT)
+├── ProviderStoreAssignment[] (N:M)   # Store coverage
+└── WorkTeam[] (1:N)                  # Field units
+    ├── WorkTeamZoneAssignment[] (N:M)  # Zone assignments
+    ├── WorkTeamCalendar (1:1)          # Calendar with inheritance
+    │   ├── PlannedAbsence[]            # Vacation, sick leave
+    │   └── DedicatedWorkingDay[]       # Extra capacity days
+    ├── Technician[] (1:N)              # Team members
+    └── TechnicianCertification[] (1:N) # Cert tracking
+```
 
-✅ **UPDATED** All navigation files (README.md, ENGINEERING_KIT_SUMMARY.md)
+### Key Enums
+```typescript
+ProviderTypeEnum: P1, P2
+RiskLevel: NONE, LOW, MEDIUM, HIGH, CRITICAL  
+ZoneType: PRIMARY, SECONDARY, OVERFLOW
+ServicePriorityType: P1 (Always Accept), P2 (Bundle Only), OPT_OUT
+WorkTeamStatus: ACTIVE, INACTIVE, ON_VACATION, SUSPENDED
+AbsenceType: VACATION, SICK_LEAVE, TRAINING, MAINTENANCE, STORE_CLOSURE, OTHER
+```
 
-### Why
-These were working documents used during documentation development. All their content has been **implemented** in the actual specifications. They added noise, not value.
+### Working Schedule Structure
+Provider-level schedules inherit to WorkTeams unless overridden:
+- **Working Days**: Array of day numbers (0=Sunday, 1=Monday, etc.)
+- **Shifts**: Morning, Afternoon, Evening (each with start/end times, capacity)
+- **Lunch Break**: Optional break period
+- **Capacity Limits**: maxDailyJobsTotal, maxWeeklyJobsTotal
 
-**Principle**: Keep only authoritative specifications, not analysis reports.
+### Key Schema Files
+- `prisma/schema.prisma` - Complete database schema (~3,200 lines)
+- `src/modules/providers/providers.service.ts` - Provider business logic
+- `src/modules/providers/dto/*.dto.ts` - API DTOs
 
 ---
 

@@ -2,11 +2,11 @@
 
 ## Orientation
 
-- **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). Phase 1 (Foundation) and Phase 2 (Scheduling) are complete. Phase 3 (Execution) is in progress.
-- **Mobile App**: `mobile-app/` (React Native + Expo). Phase 3 deliverable. Currently in scaffolding/early implementation.
-- **Web App**: `web/` (React + Vite). Phase 4 deliverable. Core FSM features are complete and deployed.
+- **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). Phases 1-4 complete. Production-ready.
+- **Mobile App**: `mobile-app/` (React Native + Expo). Phase 3 deliverable. ~50% complete.
+- **Web App**: `web/` (React + Vite). Phase 4 deliverable. Core FSM features complete and deployed.
 - **Documentation**: `product-docs/` holds v2.0 production-ready specs. `docs/IMPLEMENTATION_TRACKING.md` is the authoritative progress tracker.
-- **Legacy/Reference**: `roadshow-mockup/` is archived. `business-requirements/` are read-only source materials. `mobile/` and `web-app/` may contain reference implementations or alternative scaffolds but `mobile-app/` and `web/` are the active targets.
+- **Legacy/Reference**: `roadshow-mockup/` is archived. `business-requirements/` are read-only source materials.
 
 ## Build, Run, and Test
 
@@ -15,16 +15,16 @@
 - **Setup**: `npm ci`, `docker-compose up -d`, `npm run prisma:migrate`, `npm run prisma:generate`.
 - **Run**: `npm run start:dev`.
 - **Test**:
-  - Unit: `npm test -- --runInBand` (expect some noise from mocks).
+  - Unit: `npm test -- --runInBand`.
   - E2E: `npm run test:e2e` (requires DB setup, see `test/README.md`).
   - Coverage: `npm run test:cov`.
-- **Deploy**: `./deploy/deploy-remote.sh` (deploys to VPS).
+- **Deploy**: `./deploy/deploy-remote.sh` (deploys to VPS at 135.181.96.93).
 
 ### Mobile App (`mobile-app/`)
 
 - **Setup**: `cd mobile-app && npm install`.
 - **Run**: `npx expo start`.
-- **Test**: Jest setup pending (check `package.json`).
+- **Test**: Jest setup pending.
 
 ### Web App (`web/`)
 
@@ -32,11 +32,29 @@
 - **Run**: `npm run dev`.
 - **Test**: `npm run test` (Vitest).
 
+## Data Model (Key Entities)
+
+### Provider Hierarchy (AHS Business Rules - Nov 2025)
+- **Provider**: Main entity with P1/P2 types, risk levels, working schedules
+- **ProviderWorkingSchedule**: 1:1 with Provider - working days, shifts (morning/afternoon/evening), lunch breaks, capacity limits
+- **InterventionZone**: Geographic coverage (PRIMARY/SECONDARY/OVERFLOW) with postal codes, GeoJSON boundaries
+- **ServicePriorityConfig**: Provider service preferences (P1=Always Accept, P2=Bundle Only, OPT_OUT)
+- **WorkTeam**: Teams under providers with zone assignments and calendar inheritance
+- **WorkTeamCalendar**: Team-level calendar overrides with planned absences and dedicated working days
+- **TechnicianCertification**: Certification tracking with expiry dates
+
+### Key Enums
+- `ProviderTypeEnum`: P1, P2
+- `RiskLevel`: NONE, LOW, MEDIUM, HIGH, CRITICAL
+- `ZoneType`: PRIMARY, SECONDARY, OVERFLOW
+- `ServicePriorityType`: P1, P2, OPT_OUT
+- `WorkTeamStatus`: ACTIVE, INACTIVE, ON_VACATION, SUSPENDED
+
 ## Coding Style & Conventions
 
-- **Backend**: Strict TypeScript, NestJS patterns (`*.module.ts`, `*.service.ts`), DTOs with `class-validator`. Follow REST naming.
-  - **API Responses**: All endpoints must return `{ data: T, meta: any }`. Frontend services must unwrap this.
-  - **Auth**: `GET /auth/me` is the standard for user info.
+- **Backend**: Strict TypeScript, NestJS patterns (`*.module.ts`, `*.service.ts`), DTOs with `class-validator`.
+  - **API Responses**: All endpoints return `{ data: T, meta: any }`. Frontend services unwrap this.
+  - **Auth**: `GET /auth/me` for current user info.
 - **Mobile**: React Native with Expo. Functional components, hooks, strong typing.
 - **Web**: React with Vite. Functional components, hooks.
 - **General**: 2-space formatting, Prettier/ESLint.
@@ -46,9 +64,11 @@
 - **Backend**: Aim for ≥80% coverage. Unit specs alongside code (`*.spec.ts`). E2E suites in `test/`.
 - **Frontend**: Component testing (React Testing Library) and logic testing.
 
-## Documentation Guardrails & Active Notes
+## Documentation
 
-- **Specs are authoritative**: Align code with `product-docs`.
+- **Specs are authoritative**: Align code with `product-docs/`.
 - **Track Progress**: Update `docs/IMPLEMENTATION_TRACKING.md` when completing tasks.
-- **Avoid Deletions**: Append to tracking docs rather than deleting history.
-
+- **Key Files**:
+  - `prisma/schema.prisma` - Database schema (~3,200 lines, 65+ models)
+  - `product-docs/domain/02-provider-capacity-domain.md` - Provider domain spec
+  - `docs/IMPLEMENTATION_TRACKING.md` - Progress tracker

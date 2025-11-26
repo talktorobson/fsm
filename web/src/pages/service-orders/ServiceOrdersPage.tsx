@@ -138,8 +138,9 @@ export default function ServiceOrdersPage() {
   };
 
   const getRiskLevelBadge = (risk?: RiskLevel) => {
-    if (!risk) return <span className="text-xs text-gray-400">Not assessed</span>;
-    const colors = {
+    if (!risk || risk === RiskLevel.NONE) return <span className="text-xs text-gray-400">Not assessed</span>;
+    const colors: Record<RiskLevel, string> = {
+      [RiskLevel.NONE]: 'badge-gray',
       [RiskLevel.CRITICAL]: 'badge-danger',
       [RiskLevel.HIGH]: 'badge-danger',
       [RiskLevel.MEDIUM]: 'badge-warning',

@@ -1,4 +1,4 @@
-import { PrismaClient, ServiceCategory, ContractProvider, RateType, ExperienceLevel, ServiceType, ServiceStatus, ProviderStatus, BookingType, AssignmentState, AssignmentMode, ServicePriority, ServiceOrderState, BookingStatus, SalesChannel, PaymentStatus, DeliveryStatus, LineItemType, LineExecutionStatus, ContactType, ContactMethod } from '@prisma/client';
+import { PrismaClient, ServiceCategory, ContractProvider, RateType, ExperienceLevel, ServiceType, ServiceStatus, ProviderStatus, BookingType, AssignmentState, AssignmentMode, ServicePriority, ServiceOrderState, BookingStatus, SalesChannel, PaymentStatus, DeliveryStatus, LineItemType, LineExecutionStatus, ContactType, ContactMethod, ProviderTypeEnum, RiskLevel, ServicePriorityType, ZoneType, StoreAssignmentType, WorkTeamStatus, AbsenceType, AbsenceStatus, CertificationType } from '@prisma/client';
 // @ts-ignore
 import * as bcrypt from 'bcrypt';
 
@@ -1044,7 +1044,7 @@ async function main() {
   console.log(`✅ Created ${skillRequirements.length} service skill requirements`);
 
   // ============================================================================
-  // 8. SEED PROVIDERS
+  // 8. SEED PROVIDERS (Enhanced with new fields)
   // ============================================================================
   console.log('\n👷 Seeding providers...');
 
@@ -1059,6 +1059,16 @@ async function main() {
       email: 'contact@paris-installers.fr',
       phone: '+33123456789',
       status: ProviderStatus.ACTIVE,
+      providerType: ProviderTypeEnum.P1,
+      riskLevel: RiskLevel.NONE,
+      addressStreet: '123 Rue de Paris',
+      addressCity: 'Paris',
+      addressPostalCode: '75001',
+      addressRegion: 'Île-de-France',
+      addressCountry: 'FR',
+      coordinates: { lat: 48.8566, lng: 2.3522 },
+      contractStartDate: new Date('2023-01-01'),
+      paymentTermsDays: 30,
       address: {
         street: '123 Rue de Paris',
         city: 'Paris',
@@ -1076,6 +1086,16 @@ async function main() {
       email: 'support@fastfix.fr',
       phone: '+33987654321',
       status: ProviderStatus.ACTIVE,
+      providerType: ProviderTypeEnum.P1,
+      riskLevel: RiskLevel.LOW,
+      addressStreet: '456 Avenue de Lyon',
+      addressCity: 'Lyon',
+      addressPostalCode: '69001',
+      addressRegion: 'Auvergne-Rhône-Alpes',
+      addressCountry: 'FR',
+      coordinates: { lat: 45.7640, lng: 4.8357 },
+      contractStartDate: new Date('2022-06-15'),
+      paymentTermsDays: 45,
       address: {
         street: '456 Avenue de Lyon',
         city: 'Lyon',
@@ -1093,6 +1113,16 @@ async function main() {
       email: 'info@madrid-servicios.es',
       phone: '+34912345678',
       status: ProviderStatus.ACTIVE,
+      providerType: ProviderTypeEnum.P1,
+      riskLevel: RiskLevel.NONE,
+      addressStreet: 'Calle Mayor 1',
+      addressCity: 'Madrid',
+      addressPostalCode: '28001',
+      addressRegion: 'Comunidad de Madrid',
+      addressCountry: 'ES',
+      coordinates: { lat: 40.4168, lng: -3.7038 },
+      contractStartDate: new Date('2021-03-01'),
+      paymentTermsDays: 30,
       address: {
         street: 'Calle Mayor 1',
         city: 'Madrid',
@@ -1162,6 +1192,203 @@ async function main() {
   }
 
   console.log(`✅ Created ${providers.length} providers`);
+
+  // ============================================================================
+  // 8.1 SEED PROVIDER WORKING SCHEDULES
+  // ============================================================================
+  console.log('\n⏰ Seeding provider working schedules...');
+
+  const allProviders = await prisma.provider.findMany();
+  const esCalendarConfig = await prisma.calendarConfig.findFirst({
+    where: { countryCode: 'ES', businessUnit: 'LEROY_MERLIN' }
+  });
+  const frCalendarConfig = await prisma.calendarConfig.findFirst({
+    where: { countryCode: 'FR', businessUnit: 'LEROY_MERLIN' }
+  });
+
+  for (const provider of allProviders) {
+    const calendarConfigId = provider.countryCode === 'ES' ? esCalendarConfig?.id 
+      : provider.countryCode === 'FR' ? frCalendarConfig?.id 
+      : null;
+
+    // Create working schedule for provider
+    await prisma.providerWorkingSchedule.upsert({
+      where: { providerId: provider.id },
+      update: {},
+      create: {
+        providerId: provider.id,
+        calendarConfigId: calendarConfigId,
+        // Provider works Mon-Sat (overrides BU default Mon-Fri)
+        workingDays: provider.externalId === 'PROV_ES_001' ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5],
+        morningShiftEnabled: true,
+        morningShiftStart: '07:30',
+        morningShiftEnd: '13:30',
+        afternoonShiftEnabled: true,
+        afternoonShiftStart: '14:00',
+        afternoonShiftEnd: '19:30',
+        eveningShiftEnabled: false,
+        lunchBreakEnabled: true,
+        lunchBreakStart: '13:30',
+        lunchBreakEnd: '14:00',
+        maxDailyJobsTotal: 15,
+        maxWeeklyJobsTotal: 60,
+        allowCrossDayJobs: false,
+        allowCrossShiftJobs: true,
+        updatedBy: 'seed',
+      },
+    });
+  }
+
+  console.log(`✅ Created ${allProviders.length} provider working schedules`);
+
+  // ============================================================================
+  // 8.2 SEED INTERVENTION ZONES
+  // ============================================================================
+  console.log('\n🗺️ Seeding intervention zones...');
+
+  const madridProvider = await prisma.provider.findFirst({ where: { externalId: 'PROV_ES_001' } });
+  const parisProvider = await prisma.provider.findFirst({ where: { externalId: 'PROV_FR_001' } });
+
+  if (madridProvider) {
+    // Madrid Centro zone
+    await prisma.interventionZone.upsert({
+      where: { providerId_zoneCode: { providerId: madridProvider.id, zoneCode: 'MAD-CENTRO' } },
+      update: {},
+      create: {
+        providerId: madridProvider.id,
+        name: 'Madrid Centro',
+        zoneCode: 'MAD-CENTRO',
+        zoneType: ZoneType.PRIMARY,
+        postalCodes: ['28001', '28002', '28003', '28004', '28005', '28006', '28007', '28008'],
+        postalCodeVectors: [{ from: '28001', to: '28020' }],
+        maxCommuteMinutes: 45,
+        defaultTravelBuffer: 30,
+        maxDailyJobsInZone: 10,
+        assignmentPriority: 1,
+      },
+    });
+
+    // Madrid Norte zone
+    await prisma.interventionZone.upsert({
+      where: { providerId_zoneCode: { providerId: madridProvider.id, zoneCode: 'MAD-NORTE' } },
+      update: {},
+      create: {
+        providerId: madridProvider.id,
+        name: 'Madrid Norte',
+        zoneCode: 'MAD-NORTE',
+        zoneType: ZoneType.SECONDARY,
+        postalCodes: ['28030', '28031', '28032', '28033', '28034'],
+        postalCodeVectors: [{ from: '28030', to: '28050' }],
+        maxCommuteMinutes: 60,
+        defaultTravelBuffer: 45,
+        maxDailyJobsInZone: 6,
+        assignmentPriority: 2,
+      },
+    });
+  }
+
+  if (parisProvider) {
+    // Paris Intra-Muros zone
+    await prisma.interventionZone.upsert({
+      where: { providerId_zoneCode: { providerId: parisProvider.id, zoneCode: 'PAR-INTRA' } },
+      update: {},
+      create: {
+        providerId: parisProvider.id,
+        name: 'Paris Intra-Muros',
+        zoneCode: 'PAR-INTRA',
+        zoneType: ZoneType.PRIMARY,
+        postalCodes: ['75001', '75002', '75003', '75004', '75005', '75006', '75007', '75008'],
+        postalCodeVectors: [{ from: '75001', to: '75020' }],
+        maxCommuteMinutes: 40,
+        defaultTravelBuffer: 30,
+        maxDailyJobsInZone: 8,
+        assignmentPriority: 1,
+      },
+    });
+  }
+
+  console.log(`✅ Created intervention zones`);
+
+  // ============================================================================
+  // 8.3 SEED SERVICE PRIORITY CONFIGS (P1/P2/Opt-out)
+  // ============================================================================
+  console.log('\n🎯 Seeding service priority configurations...');
+
+  const hvacSpecialty = await prisma.providerSpecialty.findFirst({ where: { code: 'HVAC_INSTALL' } });
+  const plumbingSpecialty = await prisma.providerSpecialty.findFirst({ where: { code: 'PLUMBING_REPAIR' } });
+  const electricalSpecialty = await prisma.providerSpecialty.findFirst({ where: { code: 'ELECTRICAL_INSTALL' } });
+
+  if (madridProvider && hvacSpecialty) {
+    // Madrid provider: HVAC is P1 (core competency)
+    await prisma.servicePriorityConfig.upsert({
+      where: { providerId_specialtyId: { providerId: madridProvider.id, specialtyId: hvacSpecialty.id } },
+      update: {},
+      create: {
+        providerId: madridProvider.id,
+        specialtyId: hvacSpecialty.id,
+        priority: ServicePriorityType.P1,
+        maxMonthlyVolume: 100,
+        priceOverridePercent: -5, // 5% discount for P1 services
+        validFrom: new Date('2024-01-01'),
+      },
+    });
+  }
+
+  if (madridProvider && plumbingSpecialty) {
+    // Madrid provider: Plumbing is P2 (only if HVAC service in same order)
+    await prisma.servicePriorityConfig.upsert({
+      where: { providerId_specialtyId: { providerId: madridProvider.id, specialtyId: plumbingSpecialty.id } },
+      update: {},
+      create: {
+        providerId: madridProvider.id,
+        specialtyId: plumbingSpecialty.id,
+        priority: ServicePriorityType.P2,
+        bundledWithSpecialtyIds: hvacSpecialty ? [hvacSpecialty.id] : [],
+        maxMonthlyVolume: 30,
+        validFrom: new Date('2024-01-01'),
+      },
+    });
+  }
+
+  if (madridProvider && electricalSpecialty) {
+    // Madrid provider: Electrical is Opt-out (they don't do this)
+    await prisma.servicePriorityConfig.upsert({
+      where: { providerId_specialtyId: { providerId: madridProvider.id, specialtyId: electricalSpecialty.id } },
+      update: {},
+      create: {
+        providerId: madridProvider.id,
+        specialtyId: electricalSpecialty.id,
+        priority: ServicePriorityType.OPT_OUT,
+        validFrom: new Date('2024-01-01'),
+      },
+    });
+  }
+
+  console.log(`✅ Created service priority configurations`);
+
+  // ============================================================================
+  // 8.4 SEED PROVIDER STORE ASSIGNMENTS
+  // ============================================================================
+  console.log('\n🏪 Seeding provider store assignments...');
+
+  const stores = await prisma.store.findMany({ take: 3 });
+  
+  if (madridProvider && stores.length > 0) {
+    for (const store of stores.filter(s => s.countryCode === 'ES')) {
+      await prisma.providerStoreAssignment.upsert({
+        where: { providerId_storeId: { providerId: madridProvider.id, storeId: store.id } },
+        update: {},
+        create: {
+          providerId: madridProvider.id,
+          storeId: store.id,
+          assignmentType: StoreAssignmentType.PRIMARY,
+          activeFrom: new Date('2024-01-01'),
+        },
+      });
+    }
+  }
+
+  console.log(`✅ Created provider store assignments`);
 
   // ============================================================================
   // 9. SEED CALENDAR CONFIGS (PRD BR-5 Compliant Buffer Settings)
@@ -1323,11 +1550,11 @@ async function main() {
   console.log('\n👷 Seeding work teams and transactional data...');
 
   // Fetch providers to link
-  const allProviders = await prisma.provider.findMany();
+  const allProvidersForTeams = await prisma.provider.findMany();
   
   // Create Work Teams for each provider
   const workTeams = [];
-  for (const provider of allProviders) {
+  for (const provider of allProvidersForTeams) {
     let team = await prisma.workTeam.findFirst({
       where: { 
         providerId: provider.id,
@@ -1341,6 +1568,9 @@ async function main() {
           providerId: provider.id,
           countryCode: provider.countryCode,
           name: `${provider.name} - Team A`,
+          status: WorkTeamStatus.ACTIVE,
+          minTechnicians: 1,
+          maxTechnicians: 2,
           maxDailyJobs: 5,
           skills: ["installation", "repair"],
           serviceTypes: ["P1", "P2"],
@@ -1351,8 +1581,125 @@ async function main() {
       });
     }
     workTeams.push(team);
+
+    // Create WorkTeamCalendar for each team
+    const existingCalendar = await prisma.workTeamCalendar.findUnique({
+      where: { workTeamId: team.id }
+    });
+
+    if (!existingCalendar) {
+      await prisma.workTeamCalendar.create({
+        data: {
+          workTeamId: team.id,
+          inheritFromProvider: true,
+          // Team-specific overrides (subset of provider's schedule)
+          workingDays: [1, 2, 3, 4, 5], // Mon-Fri only (even if provider works Sat)
+          morningShiftEnabled: true,
+          morningShiftStart: '08:00',
+          morningShiftEnd: '13:00',
+          morningCapacity: 3,
+          afternoonShiftEnabled: true,
+          afternoonShiftStart: '14:00',
+          afternoonShiftEnd: '19:00',
+          afternoonCapacity: 3,
+          eveningShiftEnabled: false,
+          lunchBreakEnabled: true,
+          lunchBreakStart: '13:00',
+          lunchBreakEnd: '14:00',
+          maxDailyJobs: 6,
+          maxWeeklyJobs: 28,
+          travelBufferMinutes: 30,
+          allowCrossDayJobs: false,
+          allowCrossShiftJobs: true,
+          updatedBy: 'seed',
+        },
+      });
+
+      // Create sample planned absence
+      const calendar = await prisma.workTeamCalendar.findUnique({
+        where: { workTeamId: team.id }
+      });
+
+      if (calendar) {
+        const christmasStart = new Date('2025-12-24');
+        const christmasEnd = new Date('2025-12-26');
+        
+        await prisma.plannedAbsence.create({
+          data: {
+            workTeamCalendarId: calendar.id,
+            startDate: christmasStart,
+            endDate: christmasEnd,
+            absenceType: AbsenceType.VACATION,
+            reason: 'Christmas holidays',
+            status: AbsenceStatus.APPROVED,
+            approvedBy: 'admin',
+            approvedAt: new Date(),
+            createdBy: 'seed',
+          },
+        });
+      }
+    }
+
+    // Create Technician for each team
+    const existingTech = await prisma.technician.findFirst({
+      where: { workTeamId: team.id }
+    });
+
+    if (!existingTech) {
+      const technicianData = {
+        workTeamId: team.id,
+        firstName: ['Juan', 'Pierre', 'Marco', 'Manuel'][Math.floor(Math.random() * 4)],
+        lastName: ['García', 'Dupont', 'Rossi', 'Silva'][Math.floor(Math.random() * 4)],
+        email: `tech${Date.now()}@example.com`,
+        phone: '+34600000000',
+        isActive: true,
+        isTeamLead: true,
+      };
+
+      const technician = await prisma.technician.create({
+        data: technicianData,
+      });
+
+      // Create certification for technician
+      await prisma.technicianCertification.create({
+        data: {
+          technicianId: technician.id,
+          certificationType: CertificationType.HVAC_CERTIFICATION,
+          certificateName: 'HVAC Installation Certification',
+          certificateNumber: `HVAC-${Date.now()}`,
+          issuingAuthority: 'National HVAC Board',
+          issuedAt: new Date('2023-01-15'),
+          expiresAt: new Date('2026-01-15'),
+          coveredSpecialtyIds: [],
+          isVerified: true,
+          verifiedAt: new Date(),
+          verifiedBy: 'admin',
+        },
+      });
+    }
+
+    // Assign team to intervention zones
+    const zones = await prisma.interventionZone.findMany({
+      where: { providerId: provider.id }
+    });
+
+    for (const zone of zones) {
+      const existing = await prisma.workTeamZoneAssignment.findUnique({
+        where: { workTeamId_interventionZoneId: { workTeamId: team.id, interventionZoneId: zone.id } }
+      });
+
+      if (!existing) {
+        await prisma.workTeamZoneAssignment.create({
+          data: {
+            workTeamId: team.id,
+            interventionZoneId: zone.id,
+            activeFrom: new Date(),
+          },
+        });
+      }
+    }
   }
-  console.log(`✅ Created/Verified ${workTeams.length} work teams`);
+  console.log(`✅ Created/Verified ${workTeams.length} work teams with calendars, technicians, and certifications`);
 
   // Create Service Orders & Bookings for Heatmap/Calendar
   // We'll create orders around the major cities we seeded
@@ -1416,7 +1763,7 @@ async function main() {
     
     for (const loc of locations) {
       // Find a provider in this country
-      const localProvider = allProviders.find(p => p.countryCode === loc.country);
+      const localProvider = allProvidersForTeams.find(p => p.countryCode === loc.country);
       const localTeam = workTeams.find(t => t.providerId === localProvider?.id);
       
       // Get a store for this country

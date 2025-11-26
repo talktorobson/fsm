@@ -1,7 +1,32 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsInt, IsArray, IsOptional, Min, ArrayMinSize, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsInt, IsArray, IsOptional, Min, ArrayMinSize, MinLength, MaxLength, IsEnum, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { WorkTeamStatus } from './create-work-team.dto';
+
+class ShiftDto {
+  @ApiProperty({ example: 'M', description: 'Shift code (M=Morning, T=Afternoon, J=Full Day)' })
+  @IsString()
+  code: string;
+
+  @ApiProperty({ example: '08:00', description: 'Shift start time (HH:mm)' })
+  @IsString()
+  startLocal: string;
+
+  @ApiProperty({ example: '13:00', description: 'Shift end time (HH:mm)' })
+  @IsString()
+  endLocal: string;
+}
 
 export class UpdateWorkTeamDto {
+  @ApiProperty({
+    description: 'External ID (from SAP or other system)',
+    example: 'WT-12345',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  externalId?: string;
+
   @ApiProperty({
     description: 'Work team name',
     example: 'Team Alpha',
@@ -14,6 +39,15 @@ export class UpdateWorkTeamDto {
   name?: string;
 
   @ApiProperty({
+    description: 'Work team status',
+    enum: WorkTeamStatus,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(WorkTeamStatus)
+  status?: WorkTeamStatus;
+
+  @ApiProperty({
     description: 'Maximum daily jobs capacity',
     example: 5,
     required: false,
@@ -22,6 +56,26 @@ export class UpdateWorkTeamDto {
   @IsInt()
   @Min(1)
   maxDailyJobs?: number;
+
+  @ApiProperty({
+    description: 'Minimum required technicians for the team',
+    example: 1,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  minTechnicians?: number;
+
+  @ApiProperty({
+    description: 'Maximum allowed technicians for the team',
+    example: 5,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxTechnicians?: number;
 
   @ApiProperty({
     description: 'Team skills',
@@ -77,11 +131,13 @@ export class UpdateWorkTeamDto {
       { code: 'M', startLocal: '08:00', endLocal: '13:00' },
       { code: 'T', startLocal: '14:00', endLocal: '19:00' },
     ],
-    type: Array,
+    type: [ShiftDto],
     required: false,
   })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
-  shifts?: Array<{ code: string; startLocal: string; endLocal: string }>;
+  @ValidateNested({ each: true })
+  @Type(() => ShiftDto)
+  shifts?: ShiftDto[];
 }

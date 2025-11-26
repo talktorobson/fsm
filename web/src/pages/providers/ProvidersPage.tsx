@@ -1,29 +1,43 @@
 /**
  * Providers List Page
- * Provider management with CRUD operations
+ * Enhanced Provider management with AHS business rules support
  */
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { providerService } from '@/services/provider-service';
-import { Search, Filter, Plus, X, Users } from 'lucide-react';
+import { Search, Filter, Plus, X, Users, AlertTriangle, Building } from 'lucide-react';
 import clsx from 'clsx';
-import { ProviderStatus } from '@/types';
+import { ProviderStatus, ProviderTypeEnum, RiskLevel } from '@/types';
 import { TableSkeleton } from '@/components/LoadingSkeleton';
 
 export default function ProvidersPage() {
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    status: string;
+    countryCode: string;
+    providerType: string;
+    riskLevel: string;
+    search: string;
+    page: number;
+    limit: number;
+  }>({
     status: '',
     countryCode: '',
-    serviceType: '',
+    providerType: '',
+    riskLevel: '',
+    search: '',
     page: 1,
     limit: 20,
   });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['providers', filters],
-    queryFn: () => providerService.getAll(filters),
+    queryFn: () => providerService.getAll({
+      ...filters,
+      providerType: filters.providerType ? filters.providerType as ProviderTypeEnum : undefined,
+      riskLevel: filters.riskLevel ? filters.riskLevel as RiskLevel : undefined,
+    }),
   });
 
   const providers = data?.data || [];
@@ -36,6 +50,32 @@ export default function ProvidersPage() {
       [ProviderStatus.SUSPENDED]: 'badge-danger',
     };
     return <span className={clsx('badge', colors[status])}>{status}</span>;
+  };
+
+  const getProviderTypeBadge = (type?: ProviderTypeEnum) => {
+    if (!type) return null;
+    return (
+      <span className={clsx('badge text-xs', type === ProviderTypeEnum.P1 ? 'badge-primary' : 'badge-secondary')}>
+        {type}
+      </span>
+    );
+  };
+
+  const getRiskBadge = (risk?: RiskLevel) => {
+    if (!risk || risk === RiskLevel.NONE) return null;
+    const colors: Record<RiskLevel, string> = {
+      [RiskLevel.NONE]: 'badge-gray',
+      [RiskLevel.LOW]: 'badge-success',
+      [RiskLevel.MEDIUM]: 'badge-warning',
+      [RiskLevel.HIGH]: 'badge-danger',
+      [RiskLevel.CRITICAL]: 'bg-red-900 text-white',
+    };
+    return (
+      <span className={clsx('badge text-xs', colors[risk])}>
+        <AlertTriangle className="w-3 h-3 mr-1" />
+        {risk}
+      </span>
+    );
   };
 
   return (
@@ -65,13 +105,15 @@ export default function ProvidersPage() {
                 type="text"
                 placeholder="Search providers by name, email..."
                 className="input pl-10"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
               />
             </div>
           </div>
 
           {/* Status filter */}
           <select
-            className="input w-48"
+            className="input w-40"
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
           >
@@ -79,6 +121,31 @@ export default function ProvidersPage() {
             {Object.values(ProviderStatus).map((status) => (
               <option key={status} value={status}>
                 {status}
+              </option>
+            ))}
+          </select>
+
+          {/* Provider Type filter */}
+          <select
+            className="input w-40"
+            value={filters.providerType}
+            onChange={(e) => setFilters({ ...filters, providerType: e.target.value, page: 1 })}
+          >
+            <option value="">All Types</option>
+            <option value="P1">P1 - Primary</option>
+            <option value="P2">P2 - Secondary</option>
+          </select>
+
+          {/* Risk Level filter */}
+          <select
+            className="input w-40"
+            value={filters.riskLevel}
+            onChange={(e) => setFilters({ ...filters, riskLevel: e.target.value, page: 1 })}
+          >
+            <option value="">All Risk Levels</option>
+            {Object.values(RiskLevel).map((risk) => (
+              <option key={risk} value={risk}>
+                {risk}
               </option>
             ))}
           </select>
@@ -137,11 +204,13 @@ export default function ProvidersPage() {
               <thead className="table-header">
                 <tr>
                   <th className="px-6 py-3 text-left">Provider</th>
+                  <th className="px-6 py-3 text-left">Type</th>
                   <th className="px-6 py-3 text-left">Contact</th>
-                  <th className="px-6 py-3 text-left">Country</th>
+                  <th className="px-6 py-3 text-left">Country / BU</th>
                   <th className="px-6 py-3 text-left">Status</th>
-                  <th className="px-6 py-3 text-left">Service Types</th>
-                  <th className="px-6 py-3 text-left">Coverage Zones</th>
+                  <th className="px-6 py-3 text-left">Risk</th>
+                  <th className="px-6 py-3 text-left">Work Teams</th>
+                  <th className="px-6 py-3 text-left">Zones</th>
                   <th className="px-6 py-3 text-left">Actions</th>
                 </tr>
               </thead>
@@ -149,34 +218,35 @@ export default function ProvidersPage() {
                 {providers.map((provider) => (
                   <tr key={provider.id} className="table-row">
                     <td className="table-cell">
-                      <div className="text-sm font-medium text-gray-900">{provider.name}</div>
-                      <div className="text-xs text-gray-500">{provider.externalId}</div>
+                      <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{provider.name}</div>
+                          <div className="text-xs text-gray-500">{provider.externalId || provider.legalName}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="table-cell">
-                      <div className="text-sm text-gray-900">{provider.email}</div>
-                      <div className="text-xs text-gray-500">{provider.phone}</div>
+                      {getProviderTypeBadge(provider.providerType)}
+                    </td>
+                    <td className="table-cell">
+                      <div className="text-sm text-gray-900">{provider.email || '-'}</div>
+                      <div className="text-xs text-gray-500">{provider.phone || '-'}</div>
                     </td>
                     <td className="table-cell">
                       <span className="text-sm text-gray-900">{provider.countryCode}</span>
+                      <span className="text-xs text-gray-500 ml-1">/ {provider.businessUnit}</span>
                     </td>
                     <td className="table-cell">{getStatusBadge(provider.status)}</td>
+                    <td className="table-cell">{getRiskBadge(provider.riskLevel)}</td>
                     <td className="table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {(provider.serviceTypes || []).slice(0, 2).map((type) => (
-                          <span key={type} className="badge badge-info text-xs">
-                            {type}
-                          </span>
-                        ))}
-                        {(provider.serviceTypes || []).length > 2 && (
-                          <span className="text-xs text-gray-500">
-                            +{(provider.serviceTypes || []).length - 2} more
-                          </span>
-                        )}
+                      <div className="text-sm text-gray-900">
+                        {provider.workTeams?.length || 0} teams
                       </div>
                     </td>
                     <td className="table-cell">
                       <div className="text-sm text-gray-900">
-                        {(provider.coverageZones || []).length} zones
+                        {provider.interventionZones?.length || 0} zones
                       </div>
                     </td>
                     <td className="table-cell">

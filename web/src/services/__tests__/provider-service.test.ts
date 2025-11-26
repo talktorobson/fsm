@@ -48,9 +48,11 @@ describe('ProviderService', () => {
       const newProvider = {
         externalId: 'EXT-12345',
         name: 'New Provider',
+        legalName: 'New Provider SL',
         email: 'new@provider.com',
         phone: '+33111222333',
         countryCode: 'FR',
+        businessUnit: 'ELEC',
         serviceTypes: ['Installation'],
         coverageZones: ['Paris'],
       };

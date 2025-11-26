@@ -3,6 +3,223 @@
 ## Document Purpose
 This document defines the complete domain model for Provider Capacity management, including provider hierarchies (P1/P2), geographic zones, skills, certifications, calendars, and capacity calculation logic. This serves as the authoritative specification for all provider-related business logic.
 
+**Last Updated**: 2025-11-26  
+**Implementation Status**: ✅ IMPLEMENTED in `prisma/schema.prisma`
+
+---
+
+## 📊 Implemented Data Model Summary (November 2025)
+
+This section documents the **actual Prisma schema** implementation based on AHS business rules.
+
+### Provider Entity (Database Schema)
+```prisma
+model Provider {
+  id                String           @id @default(uuid())
+  countryCode       String           // Multi-tenancy: ES, FR, IT, PL
+  businessUnit      String           // LM_ES, BD_FR
+  externalId        String?          // Integration with external systems
+  
+  // Classification
+  providerType      ProviderTypeEnum @default(P1)  // P1, P2
+  parentProviderId  String?          // For P2 linking to P1
+  
+  // Risk Management
+  riskLevel         RiskLevel        @default(NONE)  // NONE, LOW, MEDIUM, HIGH, CRITICAL
+  
+  // Geographic
+  coordinates       Json?            // {lat, lng}
+  address           Json?            // Full address object
+  
+  // Relations (1:1)
+  workingSchedule   ProviderWorkingSchedule?
+  
+  // Relations (1:N)
+  interventionZones InterventionZone[]
+  servicePriorities ServicePriorityConfig[]
+  workTeams         WorkTeam[]
+  storeAssignments  ProviderStoreAssignment[]
+  subProviders      Provider[]       // P2s under this P1
+}
+
+enum ProviderTypeEnum { P1, P2 }
+enum RiskLevel { NONE, LOW, MEDIUM, HIGH, CRITICAL }
+```
+
+### ProviderWorkingSchedule (1:1 with Provider)
+```prisma
+model ProviderWorkingSchedule {
+  id                     String   @id @default(uuid())
+  providerId             String   @unique  // 1:1 relationship
+  
+  // Working Days (array of day numbers: 0=Sun, 1=Mon, ..., 6=Sat)
+  workingDays            Json     // [1, 2, 3, 4, 5] = Mon-Fri
+  
+  // Morning Shift
+  morningShiftEnabled    Boolean  @default(true)
+  morningShiftStart      String?  // "08:00"
+  morningShiftEnd        String?  // "12:00"
+  morningMaxJobs         Int?
+  
+  // Afternoon Shift  
+  afternoonShiftEnabled  Boolean  @default(true)
+  afternoonShiftStart    String?  // "14:00"
+  afternoonShiftEnd      String?  // "18:00"
+  afternoonMaxJobs       Int?
+  
+  // Evening Shift
+  eveningShiftEnabled    Boolean  @default(false)
+  eveningShiftStart      String?  // "18:00"
+  eveningShiftEnd        String?  // "21:00"
+  eveningMaxJobs         Int?
+  
+  // Lunch Break
+  lunchBreakEnabled      Boolean  @default(true)
+  lunchBreakStart        String?  // "12:00"
+  lunchBreakEnd          String?  // "14:00"
+  
+  // Total Capacity Limits
+  maxDailyJobsTotal      Int?
+  maxWeeklyJobsTotal     Int?
+}
+```
+
+### InterventionZone (Geographic Coverage)
+```prisma
+model InterventionZone {
+  id                 String   @id @default(uuid())
+  providerId         String
+  name               String
+  zoneCode           String?
+  
+  zoneType           ZoneType @default(PRIMARY)  // PRIMARY, SECONDARY, OVERFLOW
+  
+  // Geographic Coverage
+  postalCodes        Json?    // ["28001", "28002", ...]
+  postalCodeVectors  Json?    // [{from: "28000", to: "28999"}]
+  boundaryGeoJson    Json?    // GeoJSON Polygon
+  
+  // Commute Parameters
+  maxCommuteMinutes  Int      @default(60)
+  defaultTravelBuffer Int     @default(30)
+  
+  // Capacity & Priority
+  maxDailyJobsInZone Int?
+  assignmentPriority Int      @default(1)  // 1 = highest
+  
+  // Relations
+  workTeamZoneAssignments WorkTeamZoneAssignment[]
+  
+  @@unique([providerId, zoneCode])
+}
+
+enum ZoneType { PRIMARY, SECONDARY, OVERFLOW }
+```
+
+### ServicePriorityConfig (Service Preferences)
+```prisma
+model ServicePriorityConfig {
+  id                    String              @id @default(uuid())
+  providerId            String
+  specialtyId           String              // Links to ProviderSpecialty
+  
+  priority              ServicePriorityType @default(P2)
+  
+  // Bundle Rules (for P2 services)
+  bundledWithSpecialtyIds Json?             // String[] - which P1 services unlock this
+  
+  // Volume Constraints
+  maxMonthlyVolume      Int?
+  currentMonthlyVolume  Int                 @default(0)
+  
+  // Pricing Override
+  priceOverridePercent  Decimal?
+  
+  // Validity Period
+  validFrom             DateTime
+  validUntil            DateTime?
+  
+  @@unique([providerId, specialtyId])
+}
+
+enum ServicePriorityType { P1, P2, OPT_OUT }
+// P1 = Always Accept (core competency)
+// P2 = Bundle Only (requires P1 service in same order)
+// OPT_OUT = Never Accept (provider declines this service)
+```
+
+### WorkTeam & Calendar Inheritance
+```prisma
+model WorkTeam {
+  id             String         @id @default(uuid())
+  providerId     String
+  name           String
+  status         WorkTeamStatus @default(ACTIVE)
+  
+  // Zone Assignments (subset of provider's zones)
+  zoneAssignments WorkTeamZoneAssignment[]
+  
+  // Calendar (inherits from provider unless overridden)
+  calendar        WorkTeamCalendar?
+}
+
+model WorkTeamCalendar {
+  id                   String  @id @default(uuid())
+  workTeamId           String  @unique
+  
+  inheritFromProvider  Boolean @default(true)
+  
+  // Override fields (NULL = inherit from provider)
+  workingDays          Json?
+  morningShiftEnabled  Boolean?
+  // ... other shift fields ...
+  
+  // Team-specific capacity
+  maxDailyJobs         Int?
+  maxWeeklyJobs        Int?
+  
+  // Relations
+  plannedAbsences      PlannedAbsence[]
+  dedicatedWorkingDays DedicatedWorkingDay[]
+}
+
+model PlannedAbsence {
+  id                 String      @id @default(uuid())
+  workTeamCalendarId String
+  startDate          DateTime
+  endDate            DateTime
+  absenceType        AbsenceType
+  status             AbsenceStatus @default(PENDING)
+}
+
+enum WorkTeamStatus { ACTIVE, INACTIVE, ON_VACATION, SUSPENDED }
+enum AbsenceType { VACATION, SICK_LEAVE, TRAINING, MAINTENANCE, STORE_CLOSURE, OTHER }
+enum AbsenceStatus { PENDING, APPROVED, REJECTED, CANCELLED }
+```
+
+### API Endpoints (Implemented)
+```
+Provider Working Schedule:
+  GET  /providers/:providerId/working-schedule
+  PUT  /providers/:providerId/working-schedule
+
+Intervention Zones:
+  GET  /providers/:providerId/intervention-zones
+  POST /providers/:providerId/intervention-zones
+  PUT  /providers/intervention-zones/:zoneId
+  DELETE /providers/intervention-zones/:zoneId
+
+Service Priorities:
+  GET  /providers/:providerId/service-priorities
+  POST /providers/:providerId/service-priorities
+  PUT  /providers/:providerId/service-priorities/bulk
+  DELETE /providers/:providerId/service-priorities/:specialtyId
+
+Work Team Zone Assignment:
+  POST /providers/work-teams/:workTeamId/zones/:interventionZoneId
+  DELETE /providers/work-teams/:workTeamId/zones/:interventionZoneId
+```
+
 ---
 
 ## 1. Provider Aggregate

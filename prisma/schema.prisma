@@ -231,42 +231,86 @@ model BusinessUnitConfig {
 // ============================================================================
 
 model Provider {
-  id          String @id @default(uuid())
-  externalId  String? @unique @map("external_id") // SAP ID
+  id                      String           @id @default(uuid())
+  externalId              String?          @unique @map("external_id") // SAP ID
 
   // Multi-tenancy
-  countryCode String @map("country_code") @db.VarChar(3)
-  businessUnit String @map("business_unit") @db.VarChar(50)
+  countryCode             String           @map("country_code") @db.VarChar(3)
+  businessUnit            String           @map("business_unit") @db.VarChar(50)
 
   // Basic info
-  name        String @db.VarChar(255)
-  legalName   String @map("legal_name") @db.VarChar(255)
-  taxId       String? @map("tax_id") @db.VarChar(50)
+  name                    String           @db.VarChar(255)
+  legalName               String           @map("legal_name") @db.VarChar(255)
+  taxId                   String?          @map("tax_id") @db.VarChar(50)
 
   // Contact
-  email       String?
-  phone       String?
-  address     Json? // {street, city, postalCode, country}
+  email                   String?
+  phone                   String?
+  
+  // Address (enhanced - flattened for better querying)
+  addressStreet           String?          @map("address_street") @db.VarChar(255)
+  addressCity             String?          @map("address_city") @db.VarChar(100)
+  addressPostalCode       String?          @map("address_postal_code") @db.VarChar(20)
+  addressRegion           String?          @map("address_region") @db.VarChar(50)
+  addressCountry          String?          @map("address_country") @db.VarChar(3)
+  coordinates             Json?            // {lat: number, lng: number}
+  
+  // Legacy JSON address (deprecated, kept for migration)
+  address                 Json?            // DEPRECATED - use flattened fields
 
-  // Status
-  status      ProviderStatus @default(ACTIVE)
+  // Provider type & hierarchy
+  providerType            ProviderTypeEnum @default(P1) @map("provider_type")
+  parentProviderId        String?          @map("parent_provider_id")
+  parentProvider          Provider?        @relation("ProviderHierarchy", fields: [parentProviderId], references: [id])
+  subProviders            Provider[]       @relation("ProviderHierarchy")
+
+  // Status & Risk
+  status                  ProviderStatus   @default(ACTIVE)
+  riskLevel               RiskLevel        @default(NONE) @map("risk_level")
+  riskReason              String?          @map("risk_reason") @db.Text
+  riskAssessedAt          DateTime?        @map("risk_assessed_at")
+
+  // Commercial terms
+  contractStartDate       DateTime?        @map("contract_start_date") @db.Date
+  contractEndDate         DateTime?        @map("contract_end_date") @db.Date
+  paymentTermsDays        Int              @default(30) @map("payment_terms_days")
 
   // Relations
-  workTeams   WorkTeam[]
-  users       User[] // Provider managers/admins
+  workTeams               WorkTeam[]
+  users                   User[]
+
+  // Working schedule (provider-level calendar settings)
+  workingSchedule         ProviderWorkingSchedule?
+
+  // Service priorities (P1/P2/Opt-out)
+  servicePriorities       ServicePriorityConfig[]
+
+  // Intervention zones (geographic coverage)
+  interventionZones       InterventionZone[]
+
+  // Store assignments
+  storeAssignments        ProviderStoreAssignment[]
 
   // Phase 2 relations
-  serviceOrders ServiceOrder[]
-  assignments   Assignment[]
-  bookings      Booking[]
+  serviceOrders           ServiceOrder[]
+  assignments             Assignment[]
+  bookings                Booking[]
 
   // Audit
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt               DateTime         @default(now()) @map("created_at")
+  updatedAt               DateTime         @updatedAt @map("updated_at")
 
   @@index([countryCode, businessUnit])
   @@index([status])
+  @@index([providerType])
+  @@index([parentProviderId])
+  @@index([riskLevel])
   @@map("providers")
+}
+
+enum ProviderTypeEnum {
+  P1    // Primary Provider - direct contracts, primary zones
+  P2    // Subcontractor - works under P1 supervision
 }
 
 enum ProviderStatus {
@@ -275,70 +319,549 @@ enum ProviderStatus {
   SUSPENDED
 }
 
-model WorkTeam {
-  id         String @id @default(uuid())
-  providerId String @map("provider_id")
+enum RiskLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
 
-  // Multi-tenancy (inherited from provider)
-  countryCode String @map("country_code") @db.VarChar(3)
+// ============================================================================
+// PROVIDER WORKING SCHEDULE (Provider-level calendar declaration)
+// ============================================================================
 
-  name       String @db.VarChar(255)
+model ProviderWorkingSchedule {
+  id                          String           @id @default(uuid())
+  providerId                  String           @unique @map("provider_id")
 
-  // Capacity
-  maxDailyJobs Int @default(5) @map("max_daily_jobs")
+  // Reference BU calendar config for defaults
+  calendarConfigId            String?          @map("calendar_config_id")
 
-  // Skills (DEPRECATED - will be migrated to ProviderSpecialtyAssignment)
-  skills     Json // ["installation", "repair", "tv"]
-  serviceTypes Json @map("service_types") // ["P1", "P2"]
+  // Working days: 0=Sunday, 1=Monday, ..., 6=Saturday
+  // NULL = inherit from CalendarConfig
+  workingDays                 Json?            @map("working_days") // [1,2,3,4,5,6] for Mon-Sat
 
-  // Geographic coverage
-  postalCodes Json @map("postal_codes") // ["28001", "28002", ...]
+  // Morning shift
+  morningShiftEnabled         Boolean?         @map("morning_shift_enabled")
+  morningShiftStart           String?          @map("morning_shift_start") @db.VarChar(5)
+  morningShiftEnd             String?          @map("morning_shift_end") @db.VarChar(5)
+
+  // Afternoon shift
+  afternoonShiftEnabled       Boolean?         @map("afternoon_shift_enabled")
+  afternoonShiftStart         String?          @map("afternoon_shift_start") @db.VarChar(5)
+  afternoonShiftEnd           String?          @map("afternoon_shift_end") @db.VarChar(5)
+
+  // Evening shift (optional)
+  eveningShiftEnabled         Boolean?         @map("evening_shift_enabled")
+  eveningShiftStart           String?          @map("evening_shift_start") @db.VarChar(5)
+  eveningShiftEnd             String?          @map("evening_shift_end") @db.VarChar(5)
+
+  // Lunch break
+  lunchBreakEnabled           Boolean          @default(true) @map("lunch_break_enabled")
+  lunchBreakStart             String?          @map("lunch_break_start") @db.VarChar(5)
+  lunchBreakEnd               String?          @map("lunch_break_end") @db.VarChar(5)
+
+  // Capacity limits (provider-wide)
+  maxDailyJobsTotal           Int?             @map("max_daily_jobs_total")
+  maxWeeklyJobsTotal          Int?             @map("max_weekly_jobs_total")
+
+  // Buffer overrides
+  globalBufferDaysOverride    Int?             @map("global_buffer_days_override")
+  staticBufferDaysOverride    Int?             @map("static_buffer_days_override")
+  travelBufferMinutesOverride Int?             @map("travel_buffer_minutes_override")
+
+  // Cross-day/shift jobs
+  allowCrossDayJobs           Boolean?         @map("allow_cross_day_jobs")
+  allowCrossShiftJobs         Boolean?         @map("allow_cross_shift_jobs")
+
+  // Timezone override
+  timezoneOverride            String?          @map("timezone_override") @db.VarChar(50)
 
   // Relations
-  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  technicians Technician[]
-  users       User[] // Technician users
+  provider                    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  calendarConfig              CalendarConfig?  @relation(fields: [calendarConfigId], references: [id])
 
-  // Structured specialties (replaces JSON skills)
-  specialtyAssignments ProviderSpecialtyAssignment[]
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  updatedBy                   String?          @map("updated_by") @db.VarChar(100)
+
+  @@index([providerId])
+  @@map("provider_working_schedules")
+}
+
+// ============================================================================
+// SERVICE PRIORITY CONFIG (P1/P2/Opt-out - Critical Business Rule)
+// ============================================================================
+
+model ServicePriorityConfig {
+  id                          String              @id @default(uuid())
+  providerId                  String              @map("provider_id")
+
+  // Service Reference (links to ProviderSpecialty)
+  specialtyId                 String              @map("specialty_id")
+
+  // Priority Classification
+  priority                    ServicePriorityType @default(P2)
+
+  // Bundling rules: For P2, which P1 service(s) can unlock this P2 service
+  bundledWithSpecialtyIds     Json?               @map("bundled_with_specialty_ids") // String[]
+
+  // Volume constraints
+  maxMonthlyVolume            Int?                @map("max_monthly_volume")
+  currentMonthlyVolume        Int                 @default(0) @map("current_monthly_volume")
+
+  // Pricing override
+  priceOverridePercent        Decimal?            @map("price_override_percent") @db.Decimal(5, 2)
+
+  // Validity period
+  validFrom                   DateTime            @default(now()) @map("valid_from") @db.Date
+  validUntil                  DateTime?           @map("valid_until") @db.Date
+
+  // Relations
+  provider                    Provider            @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  specialty                   ProviderSpecialty   @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  // Audit
+  createdAt                   DateTime            @default(now()) @map("created_at")
+  updatedAt                   DateTime            @updatedAt @map("updated_at")
+
+  @@unique([providerId, specialtyId])
+  @@index([providerId])
+  @@index([priority])
+  @@map("service_priority_configs")
+}
+
+enum ServicePriorityType {
+  P1       // Always Accept - core competency
+  P2       // Bundle Only - requires P1 service in same order
+  OPT_OUT  // Never Accept - provider declines this service
+}
+
+// ============================================================================
+// INTERVENTION ZONE (Geographic Coverage)
+// ============================================================================
+
+model InterventionZone {
+  id                          String           @id @default(uuid())
+  providerId                  String           @map("provider_id")
+
+  // Zone identification
+  name                        String           @db.VarChar(255)
+  zoneCode                    String?          @map("zone_code") @db.VarChar(50)
+
+  // Zone type
+  zoneType                    ZoneType         @default(PRIMARY) @map("zone_type")
+
+  // Geographic coverage
+  postalCodes                 Json?            @map("postal_codes") // String[] of postal codes
+  postalCodeVectors           Json?            @map("postal_code_vectors") // [{from, to}]
+  boundaryGeoJson             Json?            @map("boundary_geojson") // GeoJSON Polygon
+
+  // Commute parameters
+  maxCommuteMinutes           Int              @default(60) @map("max_commute_minutes")
+  defaultTravelBuffer         Int              @default(30) @map("default_travel_buffer")
+
+  // Capacity in this zone
+  maxDailyJobsInZone          Int?             @map("max_daily_jobs_in_zone")
+
+  // Assignment priority (1 = highest)
+  assignmentPriority          Int              @default(1) @map("assignment_priority")
+
+  // Relations
+  provider                    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workTeamZoneAssignments     WorkTeamZoneAssignment[]
+
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+
+  @@unique([providerId, zoneCode])
+  @@index([providerId])
+  @@index([zoneType])
+  @@map("intervention_zones")
+}
+
+enum ZoneType {
+  PRIMARY    // Main coverage area - prioritized
+  SECONDARY  // Extended coverage - lower priority
+  OVERFLOW   // Emergency coverage only
+}
+
+// ============================================================================
+// PROVIDER STORE ASSIGNMENT (N:M Provider ↔ Store)
+// ============================================================================
+
+model ProviderStoreAssignment {
+  id                          String              @id @default(uuid())
+  providerId                  String              @map("provider_id")
+  storeId                     String              @map("store_id")
+
+  // Assignment type
+  assignmentType              StoreAssignmentType @default(PRIMARY) @map("assignment_type")
+
+  // Service scope (optional filter)
+  serviceSpecialtyIds         Json?               @map("service_specialty_ids") // String[]
+
+  // Active period
+  activeFrom                  DateTime            @default(now()) @map("active_from") @db.Date
+  activeUntil                 DateTime?           @map("active_until") @db.Date
+
+  // Relations
+  provider                    Provider            @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  store                       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Audit
+  createdAt                   DateTime            @default(now()) @map("created_at")
+  updatedAt                   DateTime            @updatedAt @map("updated_at")
+
+  @@unique([providerId, storeId])
+  @@index([providerId])
+  @@index([storeId])
+  @@map("provider_store_assignments")
+}
+
+enum StoreAssignmentType {
+  PRIMARY    // Main provider for this store
+  BACKUP     // Backup provider (when primary unavailable)
+  OVERFLOW   // Overflow capacity only
+}
+
+// ============================================================================
+// WORK TEAM (Enhanced)
+// ============================================================================
+
+model WorkTeam {
+  id                          String           @id @default(uuid())
+  providerId                  String           @map("provider_id")
+
+  // Multi-tenancy (inherited from provider)
+  countryCode                 String           @map("country_code") @db.VarChar(3)
+
+  // Identification
+  name                        String           @db.VarChar(255)
+  externalId                  String?          @unique @map("external_id")
+
+  // Status
+  status                      WorkTeamStatus   @default(ACTIVE)
+
+  // Team composition
+  minTechnicians              Int              @default(1) @map("min_technicians")
+  maxTechnicians              Int              @default(2) @map("max_technicians")
+
+  // Capacity (deprecated - use WorkTeamCalendar)
+  maxDailyJobs                Int              @default(5) @map("max_daily_jobs")
+
+  // Skills (DEPRECATED - will be migrated to ProviderSpecialtyAssignment)
+  skills                      Json?            // ["installation", "repair", "tv"]
+  serviceTypes                Json?            @map("service_types") // ["P1", "P2"]
+
+  // Geographic coverage (DEPRECATED - use WorkTeamZoneAssignment)
+  postalCodes                 Json?            @map("postal_codes") // ["28001", "28002", ...]
+
+  // Calendar (DEPRECATED - use WorkTeamCalendar)
+  workingDays                 Json?            @map("working_days") // ["MON", "TUE", ...]
+  shifts                      Json?            // [{code:"M", startLocal:"08:00", endLocal:"13:00"}]
+
+  // Relations
+  provider                    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  technicians                 Technician[]
+  users                       User[]
+
+  // Zone assignments (subset of provider's zones)
+  zoneAssignments             WorkTeamZoneAssignment[]
+
+  // Structured specialties
+  specialtyAssignments        ProviderSpecialtyAssignment[]
+
+  // Calendar (with inheritance from provider)
+  calendar                    WorkTeamCalendar?
 
   // Phase 2 relations
-  serviceOrders ServiceOrder[]
-  assignments   Assignment[]
-  bookings      Booking[]
+  serviceOrders               ServiceOrder[]
+  assignments                 Assignment[]
+  bookings                    Booking[]
 
-  // Calendar
-  workingDays Json @map("working_days") // ["MON", "TUE", ...]
-  shifts      Json // [{code:"M", startLocal:"08:00", endLocal:"13:00"}]
-
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
 
   @@index([providerId])
   @@index([countryCode])
+  @@index([status])
   @@map("work_teams")
 }
 
-model Technician {
-  id         String @id @default(uuid())
-  workTeamId String @map("work_team_id")
+enum WorkTeamStatus {
+  ACTIVE
+  INACTIVE
+  ON_VACATION
+  SUSPENDED
+}
 
-  firstName  String @map("first_name") @db.VarChar(255)
-  lastName   String @map("last_name") @db.VarChar(255)
+// ============================================================================
+// WORK TEAM ZONE ASSIGNMENT (N:M WorkTeam ↔ InterventionZone)
+// ============================================================================
 
-  email      String?
-  phone      String
+model WorkTeamZoneAssignment {
+  id                          String           @id @default(uuid())
+  workTeamId                  String           @map("work_team_id")
+  interventionZoneId          String           @map("intervention_zone_id")
 
-  isActive   Boolean @default(true) @map("is_active")
+  // Override provider's zone settings
+  maxDailyJobsOverride        Int?             @map("max_daily_jobs_override")
+  travelBufferOverride        Int?             @map("travel_buffer_override")
+  assignmentPriorityOverride  Int?             @map("assignment_priority_override")
+
+  // Active period
+  activeFrom                  DateTime         @default(now()) @map("active_from") @db.Date
+  activeUntil                 DateTime?        @map("active_until") @db.Date
 
   // Relations
-  workTeam   WorkTeam @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  workTeam                    WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  interventionZone            InterventionZone @relation(fields: [interventionZoneId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+
+  @@unique([workTeamId, interventionZoneId])
+  @@index([workTeamId])
+  @@index([interventionZoneId])
+  @@map("work_team_zone_assignments")
+}
+
+// ============================================================================
+// WORK TEAM CALENDAR (Team-level overrides, inherits from Provider)
+// ============================================================================
+
+model WorkTeamCalendar {
+  id                          String           @id @default(uuid())
+  workTeamId                  String           @unique @map("work_team_id")
+
+  // Inheritance flag
+  inheritFromProvider         Boolean          @default(true) @map("inherit_from_provider")
+
+  // Working days (NULL = inherit from provider)
+  workingDays                 Json?            @map("working_days") // [1,2,3,4,5]
+
+  // Morning shift
+  morningShiftEnabled         Boolean?         @map("morning_shift_enabled")
+  morningShiftStart           String?          @map("morning_shift_start") @db.VarChar(5)
+  morningShiftEnd             String?          @map("morning_shift_end") @db.VarChar(5)
+  morningCapacity             Int?             @map("morning_capacity")
+
+  // Afternoon shift
+  afternoonShiftEnabled       Boolean?         @map("afternoon_shift_enabled")
+  afternoonShiftStart         String?          @map("afternoon_shift_start") @db.VarChar(5)
+  afternoonShiftEnd           String?          @map("afternoon_shift_end") @db.VarChar(5)
+  afternoonCapacity           Int?             @map("afternoon_capacity")
+
+  // Evening shift
+  eveningShiftEnabled         Boolean?         @map("evening_shift_enabled")
+  eveningShiftStart           String?          @map("evening_shift_start") @db.VarChar(5)
+  eveningShiftEnd             String?          @map("evening_shift_end") @db.VarChar(5)
+  eveningCapacity             Int?             @map("evening_capacity")
+
+  // Lunch break
+  lunchBreakEnabled           Boolean?         @map("lunch_break_enabled")
+  lunchBreakStart             String?          @map("lunch_break_start") @db.VarChar(5)
+  lunchBreakEnd               String?          @map("lunch_break_end") @db.VarChar(5)
+
+  // Capacity limits (team-level)
+  maxDailyJobs                Int?             @map("max_daily_jobs")
+  maxWeeklyJobs               Int?             @map("max_weekly_jobs")
+
+  // Buffer overrides
+  travelBufferMinutes         Int?             @map("travel_buffer_minutes")
+
+  // Cross-day/shift jobs
+  allowCrossDayJobs           Boolean?         @map("allow_cross_day_jobs")
+  allowCrossShiftJobs         Boolean?         @map("allow_cross_shift_jobs")
+
+  // Relations
+  workTeam                    WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  plannedAbsences             PlannedAbsence[]
+  dedicatedWorkingDays        DedicatedWorkingDay[]
+
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  updatedBy                   String?          @map("updated_by") @db.VarChar(100)
+
+  @@index([workTeamId])
+  @@map("work_team_calendars")
+}
+
+// ============================================================================
+// PLANNED ABSENCE (Vacation/Off Days)
+// ============================================================================
+
+model PlannedAbsence {
+  id                          String           @id @default(uuid())
+  workTeamCalendarId          String           @map("work_team_calendar_id")
+
+  // Absence period
+  startDate                   DateTime         @map("start_date") @db.Date
+  endDate                     DateTime         @map("end_date") @db.Date
+
+  // Absence type
+  absenceType                 AbsenceType      @map("absence_type")
+  reason                      String?          @db.VarChar(500)
+
+  // Approval
+  status                      AbsenceStatus    @default(PENDING)
+  approvedBy                  String?          @map("approved_by") @db.VarChar(100)
+  approvedAt                  DateTime?        @map("approved_at")
+
+  // Relations
+  workTeamCalendar            WorkTeamCalendar @relation(fields: [workTeamCalendarId], references: [id], onDelete: Cascade)
+
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  createdBy                   String           @map("created_by") @db.VarChar(100)
+
+  @@index([workTeamCalendarId])
+  @@index([startDate, endDate])
+  @@map("planned_absences")
+}
+
+enum AbsenceType {
+  VACATION
+  SICK_LEAVE
+  TRAINING
+  MAINTENANCE
+  STORE_CLOSURE
+  OTHER
+}
+
+enum AbsenceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// ============================================================================
+// DEDICATED WORKING DAY (Extra Capacity Days)
+// ============================================================================
+
+model DedicatedWorkingDay {
+  id                          String           @id @default(uuid())
+  workTeamCalendarId          String           @map("work_team_calendar_id")
+
+  // The special working day
+  date                        DateTime         @db.Date
+
+  // Override capacity for this day
+  morningCapacity             Int?             @map("morning_capacity")
+  afternoonCapacity           Int?             @map("afternoon_capacity")
+  eveningCapacity             Int?             @map("evening_capacity")
+
+  // Reason for extra capacity
+  reason                      String?          @db.VarChar(500)
+
+  // Relations
+  workTeamCalendar            WorkTeamCalendar @relation(fields: [workTeamCalendarId], references: [id], onDelete: Cascade)
+
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  createdBy                   String           @map("created_by") @db.VarChar(100)
+
+  @@unique([workTeamCalendarId, date])
+  @@index([workTeamCalendarId])
+  @@index([date])
+  @@map("dedicated_working_days")
+}
+
+// ============================================================================
+// TECHNICIAN (Enhanced)
+// ============================================================================
+
+model Technician {
+  id                          String           @id @default(uuid())
+  workTeamId                  String           @map("work_team_id")
+
+  // Identification
+  externalId                  String?          @unique @map("external_id")
+  firstName                   String           @map("first_name") @db.VarChar(255)
+  lastName                    String           @map("last_name") @db.VarChar(255)
+
+  // Contact
+  email                       String?
+  phone                       String
+
+  // Status
+  isActive                    Boolean          @default(true) @map("is_active")
+  isTeamLead                  Boolean          @default(false) @map("is_team_lead")
+
+  // Certifications
+  certifications              TechnicianCertification[]
+
+  // Relations
+  workTeam                    WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
 
   @@index([workTeamId])
   @@map("technicians")
+}
+
+// ============================================================================
+// TECHNICIAN CERTIFICATION
+// ============================================================================
+
+model TechnicianCertification {
+  id                          String           @id @default(uuid())
+  technicianId                String           @map("technician_id")
+
+  // Certification details
+  certificationType           CertificationType @map("certification_type")
+  certificateName             String           @map("certificate_name") @db.VarChar(255)
+  certificateNumber           String?          @map("certificate_number") @db.VarChar(100)
+  issuingAuthority            String?          @map("issuing_authority") @db.VarChar(255)
+
+  // Validity
+  issuedAt                    DateTime         @map("issued_at") @db.Date
+  expiresAt                   DateTime?        @map("expires_at") @db.Date
+
+  // Skills covered
+  coveredSpecialtyIds         Json             @map("covered_specialty_ids") // String[]
+
+  // Document
+  documentUrl                 String?          @map("document_url") @db.VarChar(500)
+
+  // Status
+  isVerified                  Boolean          @default(false) @map("is_verified")
+  verifiedAt                  DateTime?        @map("verified_at")
+  verifiedBy                  String?          @map("verified_by") @db.VarChar(100)
+
+  // Relations
+  technician                  Technician       @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  // Audit
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+
+  @@index([technicianId])
+  @@index([expiresAt])
+  @@index([certificationType])
+  @@map("technician_certifications")
+}
+
+enum CertificationType {
+  ELECTRICAL_LICENSE
+  GAS_CERTIFICATION
+  HVAC_CERTIFICATION
+  PLUMBING_LICENSE
+  APPLIANCE_BRAND
+  SAFETY_TRAINING
+  FIRST_AID
+  OTHER
 }
 
 // ============================================================================
@@ -500,6 +1023,7 @@ model Store {
   // Relations
   serviceOrders     ServiceOrder[]
   projects          Project[]
+  providerAssignments ProviderStoreAssignment[]
   
   // Audit
   createdAt         DateTime @default(now()) @map("created_at")
@@ -699,6 +1223,7 @@ model ProviderSpecialty {
   serviceRequirements ServiceSkillRequirement[]
   serviceMappings     SpecialtyServiceMapping[]
   providerAssignments ProviderSpecialtyAssignment[]
+  servicePriorityConfigs ServicePriorityConfig[]
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -1287,13 +1812,6 @@ enum SalesPotential {
   HIGH
 }
 
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
 // ============================================================================
 // v2.1 ENUMS - Sales, Delivery, Payment, Contacts
 // ============================================================================
@@ -1669,6 +2187,16 @@ model Booking {
   endSlot          Int      @map("end_slot")   // 0-95
   durationMinutes  Int      @map("duration_minutes")
 
+  // Shift info
+  shift            ShiftCode?
+  maySpanShifts    Boolean   @default(false) @map("may_span_shifts")
+  maySpanDays      Boolean   @default(false) @map("may_span_days")
+  slotSpan         Json?     @map("slot_span") // [{date, startSlot, endSlot}] for multi-day
+
+  // Travel buffers applied
+  travelBufferBefore Int     @default(0) @map("travel_buffer_before")
+  travelBufferAfter  Int     @default(0) @map("travel_buffer_after")
+
   // Booking type
   bookingType      BookingType @map("booking_type")
 
@@ -1699,6 +2227,12 @@ model Booking {
   @@index([status])
   @@index([expiresAt])
   @@map("bookings")
+}
+
+enum ShiftCode {
+  M   // Morning
+  A   // Afternoon
+  E   // Evening
 }
 
 enum BookingType {
@@ -1750,6 +2284,9 @@ model CalendarConfig {
 
   // Holiday region code for Nager.Date API (supports regional holidays)
   holidayRegion              String?  @map("holiday_region") @db.VarChar(10) // e.g., "MD" for Madrid
+
+  // Providers using this config as default
+  providerWorkingSchedules   ProviderWorkingSchedule[]
 
   // Audit
   createdAt                  DateTime @default(now()) @map("created_at")

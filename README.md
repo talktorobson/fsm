@@ -24,7 +24,7 @@
 - [ ] Mobile App (Phase 3 - 50% complete)
 - [ ] AI/ML Features (Phase 6 - Not Started)
 
-**For detailed progress**: See [docs/PROGRESS_SUMMARY.md](docs/PROGRESS_SUMMARY.md) and [docs/IMPLEMENTATION_TRACKING.md](docs/IMPLEMENTATION_TRACKING.md)
+**For detailed progress**: See [docs/IMPLEMENTATION_TRACKING.md](docs/IMPLEMENTATION_TRACKING.md)
 
 ---
 
@@ -51,7 +51,7 @@ yellow-grid-platform/
 │   └── ...
 │
 ├── prisma/                💾 Database schema and migrations
-│   ├── schema.prisma      57 models, multi-tenancy support
+│   ├── schema.prisma      70+ models, multi-tenancy support
 │   └── migrations/        Version-controlled database changes
 │
 ├── product-docs/          📚 ENGINEERING SPECIFICATIONS (69 files)
@@ -66,8 +66,7 @@ yellow-grid-platform/
 │   └── development/       Dev workflows, coding standards
 │
 ├── docs/                  📋 Implementation tracking & progress
-│   ├── IMPLEMENTATION_TRACKING.md  24-week roadmap with status
-│   └── PROGRESS_SUMMARY.md         Detailed accomplishments
+│   └── IMPLEMENTATION_TRACKING.md  24-week roadmap with status
 │
 ├── roadshow-mockup/       🎬 DEMO ONLY - For presentations (archived)
 │

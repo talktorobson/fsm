@@ -361,6 +361,7 @@ export enum SalesPotential {
 }
 
 export enum RiskLevel {
+  NONE = 'NONE',
   CRITICAL = 'CRITICAL',
   HIGH = 'HIGH',
   MEDIUM = 'MEDIUM',
@@ -390,24 +391,275 @@ export enum WCFStatus {
 }
 
 // Provider types
-export interface Provider {
-  id: UUID;
-  externalId: string;
-  name: string;
-  countryCode: CountryCode;
-  status: ProviderStatus;
-  email: string;
-  phone: string;
-  serviceTypes: ServiceType[];
-  coverageZones: string[];
-  createdAt: ISODateString;
-  updatedAt: ISODateString;
-}
-
 export enum ProviderStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
   SUSPENDED = 'SUSPENDED',
+}
+
+export enum ProviderTypeEnum {
+  P1 = 'P1',
+  P2 = 'P2',
+}
+
+export enum ZoneType {
+  PRIMARY = 'PRIMARY',
+  SECONDARY = 'SECONDARY',
+  EXTENDED = 'EXTENDED',
+  EMERGENCY = 'EMERGENCY',
+}
+
+export enum ServicePriorityType {
+  P1_ALWAYS_ACCEPT = 'P1_ALWAYS_ACCEPT',
+  P2_BUNDLE_ONLY = 'P2_BUNDLE_ONLY',
+  OPT_OUT = 'OPT_OUT',
+}
+
+export enum WorkTeamStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  ON_LEAVE = 'ON_LEAVE',
+}
+
+export enum AbsenceType {
+  VACATION = 'VACATION',
+  SICK_LEAVE = 'SICK_LEAVE',
+  PUBLIC_HOLIDAY = 'PUBLIC_HOLIDAY',
+  TRAINING = 'TRAINING',
+  OTHER = 'OTHER',
+}
+
+export enum AbsenceStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum CertificationType {
+  ELECTRICAL = 'ELECTRICAL',
+  PLUMBING = 'PLUMBING',
+  GAS = 'GAS',
+  HVAC = 'HVAC',
+  SAFETY = 'SAFETY',
+  PRODUCT_SPECIFIC = 'PRODUCT_SPECIFIC',
+  OTHER = 'OTHER',
+}
+
+// Provider Working Schedule
+export interface ProviderWorkingSchedule {
+  id: UUID;
+  providerId: UUID;
+  dayOfWeek: string;
+  isWorkingDay: boolean;
+  startTime?: string;
+  endTime?: string;
+  maxCapacity?: number;
+  breaks: Array<{ startTime: string; endTime: string }>;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Intervention Zone
+export interface InterventionZone {
+  id: UUID;
+  providerId: UUID;
+  name: string;
+  zoneType: ZoneType;
+  postalCodes: string[];
+  polygonCoordinates: Array<{ lat: number; lng: number }>;
+  maxTravelTimeMinutes?: number;
+  maxDistanceKm?: number;
+  priority: number;
+  isActive: boolean;
+  workTeamAssignments?: WorkTeamZoneAssignment[];
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Service Priority Config
+export interface ServicePriorityConfig {
+  id: UUID;
+  providerId: UUID;
+  serviceId: UUID;
+  priorityType: ServicePriorityType;
+  isActive: boolean;
+  notes?: string;
+  service?: {
+    id: UUID;
+    name: string;
+    code: string;
+    category?: string;
+  };
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Work Team Zone Assignment
+export interface WorkTeamZoneAssignment {
+  workTeamId: UUID;
+  zoneId: UUID;
+  maxCapacityOverride?: number;
+  priorityOverride?: number;
+  zone?: InterventionZone;
+  workTeam?: WorkTeam;
+}
+
+// Work Team Calendar
+export interface WorkTeamCalendar {
+  id: UUID;
+  workTeamId: UUID;
+  overridesProviderSchedule: boolean;
+  workingDays: string[];
+  shifts: Array<{ code: string; startLocal: string; endLocal: string }>;
+  maxDailyJobsOverride?: number;
+  effectiveFrom?: ISODateString;
+  effectiveTo?: ISODateString;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Planned Absence
+export interface PlannedAbsence {
+  id: UUID;
+  workTeamId: UUID;
+  startDate: ISODateString;
+  endDate: ISODateString;
+  absenceType: AbsenceType;
+  status: AbsenceStatus;
+  reason?: string;
+  affectsCapacity: boolean;
+  capacityReduction: number;
+  approvedBy?: UUID;
+  approvedAt?: ISODateString;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Dedicated Working Day
+export interface DedicatedWorkingDay {
+  id: UUID;
+  workTeamId: UUID;
+  date: ISODateString;
+  reason: string;
+  maxCapacity: number;
+  shifts: Array<{ code: string; startLocal: string; endLocal: string }>;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Technician Certification
+export interface TechnicianCertification {
+  id: UUID;
+  technicianId: UUID;
+  certificationType: CertificationType;
+  certificationName: string;
+  issuedBy?: string;
+  issuedDate?: ISODateString;
+  expiryDate?: ISODateString;
+  certificationNumber?: string;
+  isActive: boolean;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Technician
+export interface Technician {
+  id: UUID;
+  workTeamId: UUID;
+  externalId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  isTeamLead: boolean;
+  certifications?: TechnicianCertification[];
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Work Team
+export interface WorkTeam {
+  id: UUID;
+  providerId: UUID;
+  externalId?: string;
+  countryCode: CountryCode;
+  name: string;
+  status: WorkTeamStatus;
+  maxDailyJobs: number;
+  minTechnicians: number;
+  maxTechnicians?: number;
+  skills: string[];
+  serviceTypes: string[];
+  postalCodes: string[];
+  workingDays: string[];
+  shifts: Array<{ code: string; startLocal: string; endLocal: string }>;
+  technicians?: Technician[];
+  calendar?: WorkTeamCalendar;
+  zoneAssignments?: WorkTeamZoneAssignment[];
+  plannedAbsences?: PlannedAbsence[];
+  dedicatedWorkingDays?: DedicatedWorkingDay[];
+  provider?: Provider;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// Provider Store Assignment
+export interface ProviderStoreAssignment {
+  providerId: UUID;
+  storeId: UUID;
+  assignmentType: 'PRIMARY' | 'SECONDARY' | 'BACKUP';
+  priority: number;
+  isActive: boolean;
+  effectiveFrom?: ISODateString;
+  effectiveTo?: ISODateString;
+  store?: Store;
+}
+
+// Enhanced Provider interface
+export interface Provider {
+  id: UUID;
+  externalId?: string;
+  countryCode: CountryCode;
+  businessUnit: BusinessUnit;
+  name: string;
+  legalName: string;
+  taxId?: string;
+  email?: string;
+  phone?: string;
+  address?: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  status: ProviderStatus;
+  
+  // AHS Business Rule Fields
+  providerType: ProviderTypeEnum;
+  parentProviderId?: UUID;
+  riskLevel: RiskLevel;
+  latitude?: number;
+  longitude?: number;
+  contractStartDate?: ISODateString;
+  contractEndDate?: ISODateString;
+  
+  // Relations
+  workTeams?: WorkTeam[];
+  workingSchedules?: ProviderWorkingSchedule[];
+  servicePriorities?: ServicePriorityConfig[];
+  interventionZones?: InterventionZone[];
+  storeAssignments?: ProviderStoreAssignment[];
+  parentProvider?: { id: UUID; name: string };
+  childProviders?: Array<{ id: UUID; name: string; providerType: ProviderTypeEnum }>;
+  
+  // Legacy fields (kept for backwards compatibility)
+  serviceTypes?: ServiceType[];
+  coverageZones?: string[];
+  
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
 }
 
 // Assignment types
