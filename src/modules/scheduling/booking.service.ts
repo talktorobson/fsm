@@ -288,6 +288,98 @@ export class BookingService {
     return metrics;
   }
 
+  async getProviderAvailability(params: {
+    startDate: string;
+    endDate: string;
+    providerIds?: string[];
+    countryCode?: string;
+  }) {
+    const { startDate, endDate, providerIds, countryCode } = params;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const providers = await this.prisma.provider.findMany({
+      where: {
+        ...(providerIds && providerIds.length > 0 && { id: { in: providerIds } }),
+        ...(countryCode && { countryCode }),
+        status: 'ACTIVE',
+      },
+      include: {
+        workTeams: true,
+      },
+    });
+
+    const result = [];
+
+    // Iterate days
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      
+      for (const provider of providers) {
+        // Simplified: Use the first work team's shift or default 08:00-17:00
+        const workTeam = provider.workTeams[0];
+        let shifts = [{ start: '08:00', end: '17:00' }];
+        
+        if (workTeam && workTeam.shifts && Array.isArray(workTeam.shifts)) {
+             const teamShifts = workTeam.shifts as any[];
+             if (teamShifts.length > 0) {
+                 shifts = teamShifts.map(s => ({ start: s.startLocal, end: s.endLocal }));
+             }
+        }
+
+        // Get orders for this day
+        const orders = await this.prisma.serviceOrder.findMany({
+          where: {
+            assignedProviderId: provider.id,
+            scheduledDate: {
+              gte: new Date(dateStr + 'T00:00:00Z'),
+              lt: new Date(dateStr + 'T23:59:59Z'),
+            },
+            state: { in: ['SCHEDULED', 'IN_PROGRESS'] }
+          }
+        });
+
+        const slots = [];
+        // Create available slots from shifts
+        for (const shift of shifts) {
+            slots.push({
+                id: `slot-${provider.id}-${dateStr}-${shift.start}`,
+                providerId: provider.id,
+                startTime: `${dateStr}T${shift.start}:00`,
+                endTime: `${dateStr}T${shift.end}:00`,
+                status: 'available'
+            });
+        }
+
+        // Mark busy slots
+        for (const order of orders) {
+             if (!order.scheduledDate) continue;
+             const orderStart = new Date(order.scheduledDate);
+             const orderEnd = new Date(orderStart.getTime() + (order.estimatedDurationMinutes || 60) * 60000);
+             
+             slots.push({
+                id: `order-${order.id}`,
+                providerId: provider.id,
+                startTime: orderStart.toISOString(),
+                endTime: orderEnd.toISOString(),
+                status: 'busy'
+             });
+        }
+
+        result.push({
+            providerId: provider.id,
+            providerName: provider.name,
+            date: dateStr,
+            slots,
+            totalAvailableHours: 8, // Mock
+            utilization: orders.length > 0 ? 0.5 : 0 // Mock
+        });
+      }
+    }
+
+    return result;
+  }
+
   private async findBooking(request: ConfirmBookingRequest) {
     if (request.bookingId) {
       return this.prisma.booking.findUnique({ where: { id: request.bookingId } });

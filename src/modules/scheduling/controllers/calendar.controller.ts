@@ -39,10 +39,52 @@ class UtilizationQueryDto {
   providerIds?: string[];
 }
 
+class ProviderAvailabilityQueryDto {
+  @IsString()
+  startDate: string;
+
+  @IsString()
+  endDate: string;
+
+  @IsOptional()
+  @IsString()
+  providerId?: string;
+
+  @IsOptional()
+  @IsArray()
+  providerIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
+}
+
 @ApiTags('Calendar')
 @Controller('calendar')
 export class CalendarController {
   constructor(private readonly bookingService: BookingService) {}
+
+  @Get('provider-availability')
+  @ApiOperation({ summary: 'Get provider availability for calendar view' })
+  @ApiResponse({
+    status: 200,
+    description: 'Provider availability fetched',
+  })
+  async getProviderAvailability(@Query() query: ProviderAvailabilityQueryDto) {
+    let providerIds = query.providerIds;
+    if (!providerIds && query.providerId) {
+      providerIds = [query.providerId];
+    } else if (providerIds && !Array.isArray(providerIds)) {
+      providerIds = [providerIds];
+    }
+
+    return this.bookingService.getProviderAvailability({
+      startDate: query.startDate,
+      endDate: query.endDate,
+      providerIds,
+      countryCode: query.countryCode,
+    });
+  }
 
   @Get('scheduled-orders')
   @ApiOperation({ summary: 'Get scheduled service orders for calendar view' })

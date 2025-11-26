@@ -57,7 +57,7 @@ class CalendarService {
     endDate: string;
     countryCode?: string;
   }): Promise<ProviderAvailability[]> {
-    const response = await apiClient.get<ApiResponse<ProviderAvailability[]>>('/calendar/availability', {
+    const response = await apiClient.get<ApiResponse<ProviderAvailability[]>>('/calendar/provider-availability', {
       params,
     });
     return response.data.data;

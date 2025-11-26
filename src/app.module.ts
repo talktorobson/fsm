@@ -22,6 +22,7 @@ import { TechnicalVisitsModule } from './modules/technical-visits/technical-visi
 import { TasksModule } from './modules/tasks/tasks.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { PerformanceModule } from './modules/performance/performance.module';
 import { SalesIntegrationModule } from './modules/sales-integration/sales-integration.module';
 
 // Controllers
@@ -71,6 +72,7 @@ import { AppController } from './app.controller';
     TasksModule,
     NotificationsModule,
     DashboardModule,
+    PerformanceModule,
 
     // Integration modules
     SalesIntegrationModule,

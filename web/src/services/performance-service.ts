@@ -5,6 +5,11 @@
 
 import apiClient from './api-client';
 
+interface ApiResponse<T> {
+  data: T;
+  meta: any;
+}
+
 export interface OperatorPerformance {
   operatorId: string;
   operatorName: string;
@@ -103,10 +108,13 @@ class PerformanceService {
     operators: OperatorPerformance[];
     total: number;
   }> {
-    const response = await apiClient.get('/performance/operators', {
+    const response = await apiClient.get<ApiResponse<{
+      operators: OperatorPerformance[];
+      total: number;
+    }>>('/performance/operators', {
       params: filters,
     });
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -116,10 +124,13 @@ class PerformanceService {
     providers: ProviderPerformance[];
     total: number;
   }> {
-    const response = await apiClient.get('/performance/providers', {
+    const response = await apiClient.get<ApiResponse<{
+      providers: ProviderPerformance[];
+      total: number;
+    }>>('/performance/providers', {
       params: filters,
     });
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -129,10 +140,13 @@ class PerformanceService {
     teams: TeamPerformance[];
     total: number;
   }> {
-    const response = await apiClient.get('/performance/teams', {
+    const response = await apiClient.get<ApiResponse<{
+      teams: TeamPerformance[];
+      total: number;
+    }>>('/performance/teams', {
       params: filters,
     });
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -143,10 +157,10 @@ class PerformanceService {
     metric: string,
     filters: PerformanceFilters = {}
   ): Promise<PerformanceTrends> {
-    const response = await apiClient.get(`/performance/trends/${type}/${metric}`, {
+    const response = await apiClient.get<ApiResponse<PerformanceTrends>>(`/performance/trends/${type}/${metric}`, {
       params: filters,
     });
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -168,10 +182,25 @@ class PerformanceService {
       entityId: string;
     }>;
   }> {
-    const response = await apiClient.get('/performance/dashboard', {
+    const response = await apiClient.get<ApiResponse<{
+      totalServiceOrders: number;
+      completedServiceOrders: number;
+      overallCompletionRate: number;
+      averageCustomerSatisfaction: number;
+      topPerformers: {
+        operators: Array<{ id: string; name: string; score: number }>;
+        providers: Array<{ id: string; name: string; score: number }>;
+      };
+      alerts: Array<{
+        type: 'warning' | 'error' | 'info';
+        message: string;
+        entity: string;
+        entityId: string;
+      }>;
+    }>>('/performance/dashboard', {
       params: filters,
     });
-    return response.data;
+    return response.data.data;
   }
 
   /**
