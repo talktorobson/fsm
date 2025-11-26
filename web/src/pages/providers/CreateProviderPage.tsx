@@ -44,6 +44,7 @@ export default function CreateProviderPage() {
   const onSubmit = async (data: ProviderForm) => {
     setIsSubmitting(true);
     try {
+      console.log('Submitting provider data:', data);
       // TODO: Integrate with providerService.create(data)
       // For now, just simulate success
       await new Promise((resolve) => setTimeout(resolve, 1000));
