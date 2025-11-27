@@ -78,8 +78,25 @@ class AuthService {
    * Get current user info
    */
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<ApiResponse<User>>('/auth/me');
-    return response.data.data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await apiClient.get<ApiResponse<any>>('/auth/me');
+    const data = response.data.data;
+    
+    // Transform API response to match frontend User type
+    // API returns: userId, roles[], userType
+    // Frontend expects: id, role (single), permissions[]
+    return {
+      id: data.userId || data.id,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: Array.isArray(data.roles) ? data.roles[0] : data.role,
+      countryCode: data.countryCode || 'FR',
+      businessUnit: data.businessUnit || 'RETAIL',
+      permissions: data.permissions || [],
+      createdAt: data.createdAt || new Date().toISOString(),
+      updatedAt: data.updatedAt || new Date().toISOString(),
+    } as User;
   }
 
   /**

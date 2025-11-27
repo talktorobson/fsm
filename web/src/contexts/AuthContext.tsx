@@ -52,7 +52,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
-      setUser(loggedInUser);
+      
+      // Transform user data to match frontend User type
+      // API returns: roles[] array, frontend expects: role (single)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userData = loggedInUser as any;
+      const normalizedUser: User = {
+        id: userData.id || userData.userId,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: Array.isArray(userData.roles) ? userData.roles[0] : userData.role,
+        countryCode: userData.countryCode || 'FR',
+        businessUnit: userData.businessUnit || 'RETAIL',
+        permissions: userData.permissions || [],
+        createdAt: userData.createdAt || new Date().toISOString(),
+        updatedAt: userData.updatedAt || new Date().toISOString(),
+      };
+      
+      setUser(normalizedUser);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
