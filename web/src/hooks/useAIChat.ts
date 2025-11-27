@@ -1,123 +1,72 @@
 /**
  * AI Chat Hook
- * Manages AI chat state and simulates responses
- * In production, this would connect to an actual AI service
+ * Manages AI chat state and integrates with AI chat service
+ * Supports quick actions that can trigger modals
  */
 
 import { useState, useCallback } from 'react';
 import { ChatMessage } from '../components/ai/AIChatWidget';
+import { aiChatService } from '../services/ai-chat-service';
 
 // Simple ID generator
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-// Simulated AI responses based on keywords
-const getAIResponse = (prompt: string): string => {
-  const lowerPrompt = prompt.toLowerCase();
+// Modal action types that can be triggered by AI
+export type ModalActionType = 
+  | 'assign_technician'
+  | 'reschedule'
+  | 'contact_customer'
+  | 'sign_contract'
+  | 'handle_wcf'
+  | 'daily_summary'
+  | 'view_service_order';
 
-  if (lowerPrompt.includes('contract') || lowerPrompt.includes('pending contracts')) {
-    return `I found 3 contracts that need attention:
+export interface ModalAction {
+  type: ModalActionType;
+  data?: Record<string, unknown>;
+}
 
-1. **Contract #SO-2024-001** - Customer: Marie Dupont
-   Status: Awaiting signature
-   Service: Plumbing repair
-   Due: Today at 5:00 PM
+// Quick action definition
+export interface QuickAction {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+}
 
-2. **Contract #SO-2024-002** - Customer: Jean Martin
-   Status: Pending review
-   Service: Electrical installation
-   Due: Tomorrow
-
-3. **Contract #SO-2024-003** - Customer: Sophie Bernard
-   Status: Awaiting approval
-   Service: HVAC maintenance
-   Due: In 2 days
-
-Would you like me to send reminders or take action on any of these?`;
-  }
-
-  if (lowerPrompt.includes('assign') || lowerPrompt.includes('pro')) {
-    return `I can help you assign a professional. Here are the available pros for today:
-
-**Available Now:**
-• Pierre Durand (Plumbing) - 2 slots free
-• Marc Leblanc (Electrical) - 3 slots free
-• Anne Moreau (HVAC) - 1 slot free
-
-**Partially Available:**
-• Claude Petit (Multi-skill) - 1 slot at 4 PM
-
-Please tell me which service order you'd like to assign, or I can suggest the best match based on skills and location.`;
-  }
-
-  if (lowerPrompt.includes('summary') || lowerPrompt.includes('today')) {
-    return `📊 **Daily Operations Summary**
-
-**Completed Today:** 12 service orders
-**In Progress:** 5 active interventions
-**Scheduled:** 8 remaining appointments
-
-**Highlights:**
-✅ 95% on-time arrival rate
-✅ 2 contracts signed
-⚠️ 1 rescheduling required (customer request)
-
-**Attention Needed:**
-• 2 WCF forms pending signature
-• 1 customer follow-up required
-
-Overall, operations are running smoothly today!`;
-  }
-
-  if (lowerPrompt.includes('wcf') || lowerPrompt.includes('work completion')) {
-    return `I found 2 Work Completion Forms that need signatures:
-
-1. **WCF #WCF-2024-045**
-   Service Order: #SO-2024-015
-   Customer: Philippe Robert
-   Pro: Pierre Durand
-   Work completed: Today at 2:30 PM
-   Status: ⏳ Awaiting customer signature
-
-2. **WCF #WCF-2024-046**
-   Service Order: #SO-2024-016
-   Customer: Isabelle Leroy
-   Pro: Marc Leblanc
-   Work completed: Today at 3:15 PM
-   Status: ⏳ Awaiting pro confirmation
-
-Would you like me to send signature reminders?`;
-  }
-
-  if (lowerPrompt.includes('help') || lowerPrompt.includes('what can you do')) {
-    return `I'm your AI operations assistant. Here's what I can help you with:
-
-🔹 **Contracts** - Review pending contracts, send reminders
-🔹 **Assignments** - Find available pros, suggest best matches
-🔹 **Daily Summary** - Get an overview of operations
-🔹 **WCF Status** - Track work completion forms
-🔹 **Scheduling** - Check availability, manage conflicts
-🔹 **Customer Info** - Look up customer history
-
-Just ask me anything about your operations!`;
-  }
-
-  // Default response
-  return `I understand you're asking about "${prompt.slice(0, 50)}${prompt.length > 50 ? '...' : ''}". 
-
-Let me help you with that. You can ask me about:
-• Pending contracts and signatures
-• Available professionals and assignments
-• Daily operations summary
-• Work completion form status
-• Customer information
-
-How can I assist you further?`;
-};
+// Define available quick actions
+const quickActionsConfig: QuickAction[] = [
+  {
+    id: 'pending_contracts',
+    label: 'Pending Contracts',
+    icon: '📋',
+    description: 'View contracts awaiting signature',
+  },
+  {
+    id: 'available_pros',
+    label: 'Available Pros',
+    icon: '👷',
+    description: 'See available professionals',
+  },
+  {
+    id: 'daily_summary',
+    label: 'Daily Summary',
+    icon: '📊',
+    description: 'Today\'s operations overview',
+  },
+  {
+    id: 'pending_wcf',
+    label: 'Pending WCF',
+    icon: '📝',
+    description: 'Work completion forms status',
+  },
+];
 
 export function useAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [currentAction, setCurrentAction] = useState<ModalAction | null>(null);
 
   const sendMessage = useCallback(async (content: string) => {
     // Add user message
@@ -143,25 +92,131 @@ export function useAIChat() {
     ]);
     setIsLoading(true);
 
-    // Simulate AI response delay
-    await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
+    try {
+      // Get AI response from service
+      const response = await aiChatService.sendMessage(content);
 
-    // Get AI response
-    const response = getAIResponse(content);
+      // Replace loading message with actual response
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === loadingId
+            ? {
+                ...msg,
+                content: response.content,
+                isLoading: false,
+              }
+            : msg
+        )
+      );
 
-    // Replace loading message with actual response
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === loadingId
-          ? {
-              ...msg,
-              content: response,
-              isLoading: false,
-            }
-          : msg
-      )
-    );
-    setIsLoading(false);
+      // Check for suggested modal actions based on content
+      const lowerContent = content.toLowerCase();
+      if (lowerContent.includes('assign') || lowerContent.includes('pro')) {
+        setCurrentAction({ type: 'assign_technician' });
+      } else if (lowerContent.includes('contract')) {
+        setCurrentAction({ type: 'sign_contract' });
+      } else if (lowerContent.includes('wcf') || lowerContent.includes('completion')) {
+        setCurrentAction({ type: 'handle_wcf' });
+      } else if (lowerContent.includes('summary') || lowerContent.includes('today')) {
+        setCurrentAction({ type: 'daily_summary' });
+      }
+    } catch (error) {
+      console.error('AI Chat error:', error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === loadingId
+            ? {
+                ...msg,
+                content: 'Sorry, I encountered an error. Please try again.',
+                isLoading: false,
+              }
+            : msg
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const executeQuickAction = useCallback(async (actionId: string) => {
+    const action = quickActionsConfig.find((a) => a.id === actionId);
+    if (!action) return;
+
+    // Add a message indicating the action
+    const actionMessage: ChatMessage = {
+      id: generateId(),
+      role: 'user',
+      content: `${action.icon} ${action.label}`,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, actionMessage]);
+
+    // Add loading message
+    const loadingId = generateId();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: loadingId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isLoading: true,
+      },
+    ]);
+    setIsLoading(true);
+
+    try {
+      // Map action IDs to message prompts
+      const promptMap: Record<string, string> = {
+        pending_contracts: 'Show pending contracts',
+        available_pros: 'Show available professionals',
+        daily_summary: 'Give me a daily summary',
+        pending_wcf: 'Show pending WCF status',
+      };
+
+      const response = await aiChatService.sendMessage(promptMap[actionId] || action.label);
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === loadingId
+            ? {
+                ...msg,
+                content: response.content,
+                isLoading: false,
+              }
+            : msg
+        )
+      );
+
+      // Map quick action to modal action
+      const modalMapping: Record<string, ModalActionType> = {
+        pending_contracts: 'sign_contract',
+        available_pros: 'assign_technician',
+        daily_summary: 'daily_summary',
+        pending_wcf: 'handle_wcf',
+      };
+
+      if (modalMapping[actionId]) {
+        setCurrentAction({
+          type: modalMapping[actionId],
+        });
+      }
+    } catch (error) {
+      console.error('Quick action error:', error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === loadingId
+            ? {
+                ...msg,
+                content: 'Sorry, I couldn\'t complete that action. Please try again.',
+                isLoading: false,
+              }
+            : msg
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const clearMessages = useCallback(() => {
@@ -180,14 +235,27 @@ export function useAIChat() {
     setIsOpen(false);
   }, []);
 
+  const clearCurrentAction = useCallback(() => {
+    setCurrentAction(null);
+  }, []);
+
+  const triggerAction = useCallback((type: ModalActionType, data?: Record<string, unknown>) => {
+    setCurrentAction({ type, data });
+  }, []);
+
   return {
     messages,
     isLoading,
     isOpen,
+    quickActions: quickActionsConfig,
+    currentAction,
     sendMessage,
+    executeQuickAction,
     clearMessages,
     toggleChat,
     openChat,
     closeChat,
+    clearCurrentAction,
+    triggerAction,
   };
 }
