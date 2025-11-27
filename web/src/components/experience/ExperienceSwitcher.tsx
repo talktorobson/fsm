@@ -7,12 +7,10 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { UserExperience, EXPERIENCE_CONFIGS } from '../types/experiences';
+import { useAuth } from '../../contexts/AuthContext';
+import { UserExperience } from '../../types/experiences';
 import {
-  LayoutDashboard,
   Building2,
-  Users,
   ShoppingCart,
   Package,
   Shield,
