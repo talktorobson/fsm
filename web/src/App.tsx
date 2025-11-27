@@ -7,12 +7,8 @@ import LoginPage from './pages/auth/LoginPage';
 import CallbackPage from './pages/auth/CallbackPage';
 
 // Layouts
-import DashboardLayout from './components/layout/DashboardLayout';
-import ProviderLayout from './layouts/ProviderLayout';
+import UnifiedPortalLayout from './components/layout/UnifiedPortalLayout';
 import CustomerLayout from './layouts/CustomerLayout';
-import PSMLayout from './layouts/PSMLayout';
-import SellerLayout from './layouts/SellerLayout';
-import AdminLayout from './layouts/AdminLayout';
 
 // Pages - Service Operator (default) Experience
 import DashboardPage from './pages/DashboardPage';
@@ -101,57 +97,101 @@ function App() {
           <Route path="/auth/callback" element={<CallbackPage />} />
 
           {/* ============================================================ */}
-          {/* SERVICE OPERATOR / CONTROL TOWER (default experience) */}
+          {/* ALL PORTALS USE UNIFIED LAYOUT */}
           {/* ============================================================ */}
           <Route
             path="/"
             element={
               <ProtectedRoute>
-                <DashboardLayout />
+                <UnifiedPortalLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="operations-grid" element={<OperationsGridPage />} />
-            <Route path="service-orders" element={<ServiceOrdersPage />} />
-            <Route path="service-orders/:id" element={<ServiceOrderDetailPage />} />
-            <Route path="assignments" element={<AssignmentsPage />} />
-            <Route path="assignments/:id" element={<AssignmentDetailPage />} />
-            <Route path="providers" element={<ProvidersPage />} />
-            <Route path="providers/new" element={<CreateProviderPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="tasks" element={<TasksPage />} />
-            <Route path="performance" element={<PerformanceDashboardPage />} />
+            {/* Root redirect to operator dashboard */}
+            <Route index element={<Navigate to="/operator/dashboard" replace />} />
+
+            {/* Legacy routes redirect to operator paths */}
+            <Route path="dashboard" element={<Navigate to="/operator/dashboard" replace />} />
+            <Route path="operations-grid" element={<Navigate to="/operator/grid" replace />} />
+            <Route path="service-orders" element={<Navigate to="/operator/orders" replace />} />
+            <Route path="service-orders/:id" element={<Navigate to="/operator/orders" replace />} />
+
+            {/* ============================================================ */}
+            {/* SERVICE OPERATOR / CONTROL TOWER */}
+            {/* ============================================================ */}
+            <Route path="operator/dashboard" element={<DashboardPage />} />
+            <Route path="operator/grid" element={<OperationsGridPage />} />
+            <Route path="operator/orders" element={<ServiceOrdersPage />} />
+            <Route path="operator/orders/:id" element={<ServiceOrderDetailPage />} />
+            <Route path="operator/assignments" element={<AssignmentsPage />} />
+            <Route path="operator/assignments/:id" element={<AssignmentDetailPage />} />
+            <Route path="operator/providers" element={<ProvidersPage />} />
+            <Route path="operator/providers/new" element={<CreateProviderPage />} />
+            <Route path="operator/calendar" element={<CalendarPage />} />
+            <Route path="operator/tasks" element={<TasksPage />} />
+            <Route path="operator/analytics" element={<AnalyticsPage />} />
+            <Route path="operator/performance" element={<PerformanceDashboardPage />} />
+
+            {/* ============================================================ */}
+            {/* PROVIDER PORTAL */}
+            {/* ============================================================ */}
+            <Route path="provider/dashboard" element={<ProviderDashboardPage />} />
+            <Route path="provider/jobs" element={<ProviderJobsPage />} />
+            <Route path="provider/jobs/:id" element={<ProviderJobDetailPage />} />
+            <Route path="provider/calendar" element={<ProviderCalendarPage />} />
+            <Route path="provider/teams" element={<ProviderTeamsPage />} />
+            <Route path="provider/teams/:id" element={<ProviderTeamDetailPage />} />
+            <Route path="provider/financial" element={<ProviderFinancialPage />} />
+            <Route path="provider/performance" element={<ProviderPerformancePage />} />
+            <Route path="provider/settings" element={<ProviderSettingsPage />} />
+            <Route path="provider/messages" element={<ProviderMessagesPage />} />
+
+            {/* ============================================================ */}
+            {/* PSM (Provider Success Manager) PORTAL */}
+            {/* ============================================================ */}
+            <Route path="psm/dashboard" element={<PSMDashboardPage />} />
+            <Route path="psm/pipeline" element={<PSMPipelinePage />} />
+            <Route path="psm/providers" element={<PSMProvidersPage />} />
+            <Route path="psm/providers/:id" element={<PSMProviderDetailPage />} />
+            <Route path="psm/coverage" element={<PSMCoveragePage />} />
+            <Route path="psm/verification" element={<PSMVerificationPage />} />
+            <Route path="psm/analytics" element={<AnalyticsPage />} />
+
+            {/* ============================================================ */}
+            {/* SELLER PORTAL */}
+            {/* ============================================================ */}
+            <Route path="seller/dashboard" element={<SellerDashboardPage />} />
+            <Route path="seller/availability" element={<SellerAvailabilityPage />} />
+            <Route path="seller/projects" element={<SellerProjectsPage />} />
+            <Route path="seller/projects/:id" element={<SellerProjectsPage />} />
+            <Route path="seller/reports" element={<SellerTVReportPage />} />
+            <Route path="seller/reports/:id" element={<SellerTVReportPage />} />
+            <Route path="seller/quotations" element={<SellerQuotationsPage />} />
+            <Route path="seller/quotations/:id" element={<SellerQuotationsPage />} />
+
+            {/* ============================================================ */}
+            {/* ADMIN PORTAL */}
+            {/* ============================================================ */}
+            <Route path="admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="admin/users" element={<AdminUsersPage />} />
+            <Route path="admin/users/:id" element={<AdminUserDetailPage />} />
+            <Route path="admin/roles" element={<AdminRolesPage />} />
+            <Route path="admin/config" element={<AdminConfigPage />} />
+            <Route path="admin/audit" element={<AdminAuditPage />} />
+            <Route path="admin/analytics" element={<AnalyticsPage />} />
+
+            {/* ============================================================ */}
+            {/* OFFER MANAGER / CATALOG */}
+            {/* ============================================================ */}
+            <Route path="catalog/services" element={<OfferManagerServicesPage />} />
+            <Route path="catalog/services/:id" element={<CatalogServiceDetailPage />} />
+            <Route path="catalog/pricing" element={<OfferManagerPricingPage />} />
+            <Route path="catalog/checklists" element={<OfferManagerChecklistsPage />} />
+            <Route path="catalog/analytics" element={<AnalyticsPage />} />
           </Route>
 
           {/* ============================================================ */}
-          {/* PROVIDER PORTAL */}
-          {/* ============================================================ */}
-          <Route
-            path="/provider"
-            element={
-              <ProtectedRoute>
-                <ProviderLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/provider/dashboard" replace />} />
-            <Route path="dashboard" element={<ProviderDashboardPage />} />
-            <Route path="jobs" element={<ProviderJobsPage />} />
-            <Route path="jobs/:id" element={<ProviderJobDetailPage />} />
-            <Route path="calendar" element={<ProviderCalendarPage />} />
-            <Route path="teams" element={<ProviderTeamsPage />} />
-            <Route path="teams/:id" element={<ProviderTeamDetailPage />} />
-            <Route path="financial" element={<ProviderFinancialPage />} />
-            <Route path="performance" element={<ProviderPerformancePage />} />
-            <Route path="settings" element={<ProviderSettingsPage />} />
-            <Route path="messages" element={<ProviderMessagesPage />} />
-          </Route>
-
-          {/* ============================================================ */}
-          {/* CUSTOMER PORTAL (deep-link authenticated) */}
+          {/* CUSTOMER PORTAL (deep-link authenticated - separate layout) */}
           {/* ============================================================ */}
           <Route path="/customer/:token" element={<CustomerLayout />}>
             <Route index element={<Navigate to="status" replace />} />
@@ -161,89 +201,6 @@ function App() {
             <Route path="photos" element={<CustomerPhotosPage />} />
             <Route path="wcf" element={<CustomerWCFPage />} />
             <Route path="evaluate" element={<CustomerEvaluatePage />} />
-          </Route>
-
-          {/* ============================================================ */}
-          {/* PSM (Provider Success Manager) PORTAL */}
-          {/* ============================================================ */}
-          <Route
-            path="/psm"
-            element={
-              <ProtectedRoute>
-                <PSMLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/psm/dashboard" replace />} />
-            <Route path="dashboard" element={<PSMDashboardPage />} />
-            <Route path="pipeline" element={<PSMPipelinePage />} />
-            <Route path="providers" element={<PSMProvidersPage />} />
-            <Route path="providers/:id" element={<PSMProviderDetailPage />} />
-            <Route path="coverage" element={<PSMCoveragePage />} />
-            <Route path="verification" element={<PSMVerificationPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-          </Route>
-
-          {/* ============================================================ */}
-          {/* SELLER PORTAL */}
-          {/* ============================================================ */}
-          <Route
-            path="/seller"
-            element={
-              <ProtectedRoute>
-                <SellerLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/seller/dashboard" replace />} />
-            <Route path="dashboard" element={<SellerDashboardPage />} />
-            <Route path="availability" element={<SellerAvailabilityPage />} />
-            <Route path="projects" element={<SellerProjectsPage />} />
-            <Route path="projects/:id" element={<SellerProjectsPage />} />
-            <Route path="reports" element={<SellerTVReportPage />} />
-            <Route path="reports/:id" element={<SellerTVReportPage />} />
-            <Route path="quotations" element={<SellerQuotationsPage />} />
-            <Route path="quotations/:id" element={<SellerQuotationsPage />} />
-          </Route>
-
-          {/* ============================================================ */}
-          {/* ADMIN PORTAL */}
-          {/* ============================================================ */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboardPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="users/:id" element={<AdminUserDetailPage />} />
-            <Route path="roles" element={<AdminRolesPage />} />
-            <Route path="config" element={<AdminConfigPage />} />
-            <Route path="audit" element={<AdminAuditPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-          </Route>
-
-          {/* ============================================================ */}
-          {/* OFFER MANAGER / CATALOG */}
-          {/* ============================================================ */}
-          <Route
-            path="/catalog"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/catalog/services" replace />} />
-            <Route path="services" element={<OfferManagerServicesPage />} />
-            <Route path="services/:id" element={<CatalogServiceDetailPage />} />
-            <Route path="pricing" element={<OfferManagerPricingPage />} />
-            <Route path="checklists" element={<OfferManagerChecklistsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
           </Route>
 
           {/* 404 */}
