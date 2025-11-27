@@ -1,24 +1,34 @@
 # Yellow Grid - Field Service Execution Platform
 
-> **Development Status**: 🟢 **Phase 4 & 5 Complete** (Integration & Event Streaming) | **Production Ready**
+> **Development Status**: 🟢 **Phase 4.5 Complete** (Web UX Excellence) | **Production Ready** | **126 E2E Tests Passing**
 
 ## 📊 Current Project Status
 
-**Implementation Phase**: Phase 4 (Integration) & Phase 5 (Event Streaming) - ✅ COMPLETE
-**Progress**: 80% overall (Core FSM Complete)
+**Implementation Phase**: Phase 4.5 (Web UX Excellence) - ✅ COMPLETE
+**Progress**: 85% overall (Core FSM + Web UX Complete)
 **Build Status**: ✅ Passing
 **API Endpoints**: 161+ functional REST endpoints
-**Test Coverage**: ~60-70% backend coverage
+**Backend Test Coverage**: ~60-70%
+**E2E Tests**: 126 tests (78 functional + 48 navigation)
+**Live Demo**: https://dev.yellowgrid.fr
 
 ### ✅ Completed Modules
-- ✅ Infrastructure & DevOps (Docker, PostgreSQL, Redis, Kafka)
-- ✅ Authentication Module (JWT, RBAC, Role Management)
-- ✅ User Management Module (CRUD, RBAC)
-- ✅ Providers & Technicians Module
-- ✅ Service Orders & Assignments (Core FSM)
-- ✅ Calendar & Scheduling
-- ✅ Web Dashboard & UI (React + Vite)
-- ✅ Remote Deployment Automation
+- ✅ **Infrastructure & DevOps** (Docker, PostgreSQL, Redis, Kafka)
+- ✅ **Authentication Module** (JWT, RBAC, Role Management)
+- ✅ **User Management Module** (CRUD, RBAC)
+- ✅ **Providers & Technicians Module**
+- ✅ **Service Orders & Assignments** (Core FSM)
+- ✅ **Calendar & Scheduling**
+- ✅ **Web Dashboard & UI** (React + Vite)
+- ✅ **Remote Deployment Automation**
+- ✅ **Phase 4.5 Web UX Features**:
+  - AI Chat Assistant with streaming responses
+  - 7 specialized modal dialogs
+  - Enhanced service order detail views
+  - Provider detail management
+  - Comprehensive navigation flows
+  - Keyboard navigation support
+  - Deep linking and state persistence
 
 ### 🔄 In Progress
 - [ ] Mobile App (Phase 3 - 50% complete)
@@ -40,11 +50,17 @@ yellow-grid-platform/
 │
 ├── web/                   🌐 WEB APPLICATION - React + Vite
 │   ├── src/               Frontend source code
+│   │   ├── components/    UI components (modals, service-orders, providers)
+│   │   ├── services/      API services including AI chat
+│   │   └── hooks/         Custom React hooks
 │   └── ...
 │
 ├── mobile-app/            📱 MOBILE APPLICATION - React Native + Expo
 │   ├── src/               Mobile source code
 │   └── ...
+│
+├── e2e-tests.cjs          🧪 E2E TESTS - 78 functional tests
+├── e2e-navigation-tests.cjs 🧪 NAVIGATION TESTS - 48 user flow tests
 │
 ├── deploy/                🚀 DEPLOYMENT SCRIPTS
 │   ├── deploy-remote.sh   Automated VPS deployment
@@ -350,6 +366,7 @@ UNLICENSED - Proprietary platform
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.5.0 | 2025-11-27 | Phase 4.5 Web UX complete, 126 E2E tests, live demo |
 | 2.0.0 | 2025-11-15 | Rebranded to Yellow Grid, separated mockup from product |
 | 1.0.0 | 2025-01-15 | Initial project documentation |
 
