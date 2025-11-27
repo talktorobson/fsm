@@ -1,11 +1,20 @@
 /**
  * MSW Request Handlers
  * Mock API responses for testing
+ * 
+ * IMPORTANT: All responses are wrapped in { data: ..., meta: ... } 
+ * to match the real API response structure.
  */
 
 import { http, HttpResponse } from 'msw';
 
 const API_BASE_URL = 'http://localhost:3001/api/v1';
+
+// Helper to wrap response in standard API format
+const wrapResponse = <T>(data: T, meta?: any) => ({
+  data,
+  meta: meta || { timestamp: new Date().toISOString(), correlationId: 'test-correlation-id' },
+});
 
 // Mock data
 const mockUser = {
@@ -13,10 +22,17 @@ const mockUser = {
   email: 'operator@yellowgrid.com',
   firstName: 'John',
   lastName: 'Doe',
-  role: 'OPERATOR',
+  role: 'OPERATOR', // Singular for backward compatibility
+  roles: ['OPERATOR'], // Array for API compatibility
   countryCode: 'FR',
-  businessUnit: 'Leroy Merlin',
+  businessUnit: 'LEROY_MERLIN',
+  userType: 'INTERNAL',
   permissions: ['service-orders:read', 'service-orders:write', 'assignments:read'],
+  providerId: null,
+  workTeamId: null,
+  mfaEnabled: false,
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
 };
 
 const mockServiceOrders = [
@@ -67,29 +83,42 @@ export const handlers = [
     const body = await request.json() as { email: string; password: string };
 
     if (body.email === 'operator@yellowgrid.com' && body.password === 'password123') {
-      return HttpResponse.json({
+      return HttpResponse.json(wrapResponse({
         accessToken: 'mock-access-token',
         refreshToken: 'mock-refresh-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
         user: mockUser,
-      });
+      }));
     }
 
     return HttpResponse.json({ message: 'Invalid credentials' }, { status: 401 });
   }),
 
   http.get(`${API_BASE_URL}/auth/me`, () => {
-    return HttpResponse.json(mockUser);
+    return HttpResponse.json(wrapResponse({
+      userId: mockUser.id,
+      email: mockUser.email,
+      firstName: mockUser.firstName,
+      lastName: mockUser.lastName,
+      userType: mockUser.userType,
+      countryCode: mockUser.countryCode,
+      businessUnit: mockUser.businessUnit,
+      providerId: mockUser.providerId,
+      workTeamId: mockUser.workTeamId,
+      roles: mockUser.roles,
+      authMethod: 'local',
+    }));
   }),
 
   http.post(`${API_BASE_URL}/auth/logout`, () => {
-    return HttpResponse.json({ message: 'Logged out successfully' });
+    return HttpResponse.json(wrapResponse({ message: 'Logged out successfully' }));
   }),
 
   http.post(`${API_BASE_URL}/auth/refresh`, () => {
-    return HttpResponse.json({
+    return HttpResponse.json(wrapResponse({
       accessToken: 'new-mock-access-token',
-      refreshToken: 'new-mock-refresh-token',
-    });
+    }));
   }),
 
   // Service Orders endpoints
@@ -102,15 +131,14 @@ export const handlers = [
       filtered = mockServiceOrders.filter((so) => so.status === status);
     }
 
-    return HttpResponse.json({
-      data: filtered,
+    return HttpResponse.json(wrapResponse(filtered, {
       pagination: {
         total: filtered.length,
         page: 1,
         limit: 20,
         totalPages: 1,
       },
-    });
+    }));
   }),
 
   http.get(`${API_BASE_URL}/service-orders/:id`, ({ params }) => {
@@ -120,7 +148,7 @@ export const handlers = [
       return HttpResponse.json({ message: 'Service order not found' }, { status: 404 });
     }
 
-    return HttpResponse.json({
+    return HttpResponse.json(wrapResponse({
       ...order,
       // Add additional detail fields
       countryCode: 'FR',
@@ -142,20 +170,19 @@ export const handlers = [
       goExecStatus: 'OK',
       paymentStatus: 'PAID',
       productDeliveryStatus: 'DELIVERED',
-    });
+    }));
   }),
 
   // Providers endpoints
   http.get(`${API_BASE_URL}/providers`, () => {
-    return HttpResponse.json({
-      data: mockProviders,
+    return HttpResponse.json(wrapResponse(mockProviders, {
       pagination: {
         total: mockProviders.length,
         page: 1,
         limit: 20,
         totalPages: 1,
       },
-    });
+    }));
   }),
 
   http.get(`${API_BASE_URL}/providers/:id`, ({ params }) => {
@@ -165,39 +192,38 @@ export const handlers = [
       return HttpResponse.json({ message: 'Provider not found' }, { status: 404 });
     }
 
-    return HttpResponse.json(provider);
+    return HttpResponse.json(wrapResponse(provider));
   }),
 
   http.post(`${API_BASE_URL}/providers`, async ({ request }) => {
     const body = await request.json() as any;
 
-    return HttpResponse.json({
+    return HttpResponse.json(wrapResponse({
       id: 'provider-new',
       ...body,
       status: 'ACTIVE',
       createdAt: new Date().toISOString(),
-    }, { status: 201 });
+    }), { status: 201 });
   }),
 
   // Assignments endpoints
   http.get(`${API_BASE_URL}/assignments`, () => {
-    return HttpResponse.json({
-      data: [
-        {
-          id: 'assignment-1',
-          serviceOrderId: 'so-1',
-          providerId: 'provider-1',
-          status: 'ACCEPTED',
-          mode: 'DIRECT',
-          createdAt: '2024-01-15T11:00:00Z',
-        },
-      ],
+    return HttpResponse.json(wrapResponse([
+      {
+        id: 'assignment-1',
+        serviceOrderId: 'so-1',
+        providerId: 'provider-1',
+        status: 'ACCEPTED',
+        mode: 'DIRECT',
+        createdAt: '2024-01-15T11:00:00Z',
+      },
+    ], {
       pagination: { total: 1, page: 1, limit: 20, totalPages: 1 },
-    });
+    }));
   }),
 
   http.get(`${API_BASE_URL}/assignments/:id`, ({ params }) => {
-    return HttpResponse.json({
+    return HttpResponse.json(wrapResponse({
       id: params.id,
       serviceOrderId: 'so-1',
       providerId: 'provider-1',
@@ -211,19 +237,19 @@ export const handlers = [
         factors: [
           {
             name: 'Distance',
-            score: 9.0,
+            score: 9,
             weight: 0.3,
             rationale: 'Provider is 5km from customer location',
           },
           {
             name: 'Skills Match',
-            score: 10.0,
+            score: 10,
             weight: 0.25,
             rationale: 'Provider has all required certifications',
           },
           {
             name: 'Availability',
-            score: 7.0,
+            score: 7,
             weight: 0.25,
             rationale: 'Provider has 60% availability',
           },
@@ -237,29 +263,29 @@ export const handlers = [
         id: 'so-1',
         externalId: 'SO-2024-001',
       },
-    });
+    }));
   }),
 
   http.post(`${API_BASE_URL}/assignments`, async ({ request }) => {
     const body = await request.json() as any;
 
-    return HttpResponse.json({
+    return HttpResponse.json(wrapResponse({
       id: 'assignment-new',
       ...body,
       status: 'PENDING',
       createdAt: new Date().toISOString(),
-    }, { status: 201 });
+    }), { status: 201 });
   }),
 
   // Calendar endpoints
   http.get(`${API_BASE_URL}/calendar/scheduled-orders`, () => {
-    return HttpResponse.json(
+    return HttpResponse.json(wrapResponse(
       mockServiceOrders.filter((so) => so.scheduledDate)
-    );
+    ));
   }),
 
   http.get(`${API_BASE_URL}/calendar/availability`, () => {
-    return HttpResponse.json([
+    return HttpResponse.json(wrapResponse([
       {
         providerId: 'provider-1',
         providerName: 'TechPro Services',
@@ -276,6 +302,6 @@ export const handlers = [
           },
         ],
       },
-    ]);
+    ]));
   }),
 ];
