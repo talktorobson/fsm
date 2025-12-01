@@ -18,6 +18,7 @@ interface ServiceOrderFilters {
   salesPotential?: string;
   riskLevel?: string;
   countryCode?: string;
+  assignedProviderId?: string;
   page?: number;
   limit?: number;
 }

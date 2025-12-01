@@ -68,6 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         permissions: userData.permissions || [],
         createdAt: userData.createdAt || new Date().toISOString(),
         updatedAt: userData.updatedAt || new Date().toISOString(),
+        providerId: userData.providerId,
+        workTeamId: userData.workTeamId,
+        userType: userData.userType,
       };
       
       setUser(normalizedUser);

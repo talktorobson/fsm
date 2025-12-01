@@ -6,6 +6,9 @@ export interface CurrentUserPayload {
   countryCode: string;
   businessUnit: string;
   roles: string[];
+  providerId?: string;
+  workTeamId?: string;
+  userType?: string;
 }
 
 export const CurrentUser = createParamDecorator(

@@ -3,7 +3,7 @@
  * Manage service catalog
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Package,
@@ -14,115 +14,27 @@ import {
   Trash2,
   Copy,
   Eye,
-  EyeOff,
   CheckCircle,
   Euro,
   Clock,
   Tag,
   ChevronDown,
-  Settings,
-  FileText,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { toast } from 'sonner';
+import { catalogService, CatalogService } from '@/services/catalog-service';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface Service {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  basePrice: number;
-  duration: string;
-  status: 'active' | 'draft' | 'archived';
-  checklistItems: number;
-  variations: number;
-  lastUpdated: string;
-}
-
-const mockServices: Service[] = [
-  {
-    id: '1',
-    name: 'Electrical Panel Upgrade',
-    category: 'Électricité',
-    description: 'Complete replacement of electrical panel to NFC 15-100 standards',
-    basePrice: 1250,
-    duration: '4-6 hours',
-    status: 'active',
-    checklistItems: 15,
-    variations: 3,
-    lastUpdated: '2 days ago',
-  },
-  {
-    id: '2',
-    name: 'Heat Pump Installation',
-    category: 'Chauffage',
-    description: 'Installation of air-to-air or air-to-water heat pump',
-    basePrice: 8500,
-    duration: '1-2 days',
-    status: 'active',
-    checklistItems: 22,
-    variations: 5,
-    lastUpdated: '1 week ago',
-  },
-  {
-    id: '3',
-    name: 'Roof Insulation',
-    category: 'Isolation',
-    description: 'Attic and roof insulation with mineral wool or spray foam',
-    basePrice: 3200,
-    duration: '1 day',
-    status: 'active',
-    checklistItems: 12,
-    variations: 4,
-    lastUpdated: '3 days ago',
-  },
-  {
-    id: '4',
-    name: 'Solar Panel Installation',
-    category: 'Énergie solaire',
-    description: 'Photovoltaic panel installation with grid connection',
-    basePrice: 12000,
-    duration: '2-3 days',
-    status: 'draft',
-    checklistItems: 8,
-    variations: 2,
-    lastUpdated: '5 hours ago',
-  },
-  {
-    id: '5',
-    name: 'Plumbing Overhaul',
-    category: 'Plomberie',
-    description: 'Complete replacement of pipes and fixtures',
-    basePrice: 4500,
-    duration: '2 days',
-    status: 'active',
-    checklistItems: 18,
-    variations: 3,
-    lastUpdated: '1 month ago',
-  },
-  {
-    id: '6',
-    name: 'Gas Boiler Replacement',
-    category: 'Chauffage',
-    description: 'Replacement of old gas boiler with high-efficiency model',
-    basePrice: 3800,
-    duration: '1 day',
-    status: 'archived',
-    checklistItems: 14,
-    variations: 2,
-    lastUpdated: '2 months ago',
-  },
-];
-
-const categories = ['All', 'Électricité', 'Chauffage', 'Isolation', 'Plomberie', 'Énergie solaire'];
-
-type StatusFilter = 'all' | 'active' | 'draft' | 'archived';
-
-const initialServices = mockServices;
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 export default function OfferManagerServicesPage() {
   const navigate = useNavigate();
-  const [services, setServices] = useState<Service[]>(initialServices);
+  const { user } = useAuth();
+  const [services, setServices] = useState<CatalogService[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -130,75 +42,142 @@ export default function OfferManagerServicesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newService, setNewService] = useState({ name: '', category: 'Électricité', description: '', basePrice: '' });
 
+  // Get unique categories from services
+  const categories = ['All', ...new Set(services.map(s => s.category).filter(Boolean))];
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await catalogService.getAll({
+          countryCode: user?.countryCode,
+          businessUnit: user?.businessUnit,
+          limit: 100,
+        });
+        setServices(response.data || []);
+      } catch (err) {
+        console.error('Failed to fetch services:', err);
+        setError('Failed to load services. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, [user?.countryCode, user?.businessUnit]);
+
   const filteredServices = services.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (service.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || service.category === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || service.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' ? service.isActive : !service.isActive);
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const stats = {
     total: services.length,
-    active: services.filter(s => s.status === 'active').length,
-    draft: services.filter(s => s.status === 'draft').length,
-    archived: services.filter(s => s.status === 'archived').length,
+    active: services.filter(s => s.isActive).length,
+    inactive: services.filter(s => !s.isActive).length,
   };
 
-  const handleAddService = () => {
+  const handleAddService = async () => {
     if (!newService.name || !newService.description || !newService.basePrice) {
       toast.error('Please fill in all required fields');
       return;
     }
-    const service: Service = {
-      id: String(services.length + 1),
-      name: newService.name,
-      category: newService.category,
-      description: newService.description,
-      basePrice: Number.parseInt(newService.basePrice),
-      duration: '1 day',
-      status: 'draft',
-      checklistItems: 0,
-      variations: 0,
-      lastUpdated: 'Just now',
-    };
-    setServices(prev => [...prev, service]);
-    setNewService({ name: '', category: 'Électricité', description: '', basePrice: '' });
-    setShowAddModal(false);
-    toast.success(`Service "${service.name}" created successfully`);
+    try {
+      const created = await catalogService.create({
+        externalCode: `SVC-${Date.now()}`,
+        name: newService.name,
+        category: newService.category,
+        description: newService.description,
+        basePrice: Number.parseFloat(newService.basePrice),
+        countryCode: user?.countryCode || 'FR',
+        businessUnit: user?.businessUnit || 'RETAIL',
+        isActive: false,
+      });
+      setServices(prev => [...prev, created]);
+      setNewService({ name: '', category: 'Électricité', description: '', basePrice: '' });
+      setShowAddModal(false);
+      toast.success(`Service "${created.name}" created successfully`);
+    } catch (err) {
+      console.error('Failed to create service:', err);
+      toast.error('Failed to create service');
+    }
   };
 
-  const handleViewService = (service: Service) => {
+  const handleViewService = (service: CatalogService) => {
     navigate(`/catalog/services/${service.id}`);
     setShowActions(null);
   };
 
-  const handleEditService = (service: Service) => {
+  const handleEditService = (service: CatalogService) => {
     navigate(`/catalog/services/${service.id}/edit`);
     setShowActions(null);
   };
 
-  const handleDuplicateService = (service: Service) => {
-    const duplicate: Service = {
-      ...service,
-      id: String(services.length + 1),
-      name: `${service.name} (Copy)`,
-      status: 'draft',
-      lastUpdated: 'Just now',
-    };
-    setServices(prev => [...prev, duplicate]);
-    toast.success(`Service duplicated successfully`);
-    setShowActions(null);
-  };
-
-  const handleDeleteService = (service: Service) => {
-    if (confirm(`Are you sure you want to delete "${service.name}"?`)) {
-      setServices(prev => prev.filter(s => s.id !== service.id));
-      toast.success('Service deleted');
+  const handleDuplicateService = async (service: CatalogService) => {
+    try {
+      const duplicate = await catalogService.create({
+        externalCode: `SVC-${Date.now()}`,
+        name: `${service.name} (Copy)`,
+        category: service.category,
+        description: service.description,
+        basePrice: service.basePrice,
+        countryCode: service.countryCode,
+        businessUnit: service.businessUnit,
+        estimatedDuration: service.estimatedDuration,
+        requiredSkills: service.requiredSkills,
+        isActive: false,
+      });
+      setServices(prev => [...prev, duplicate]);
+      toast.success('Service duplicated successfully');
+    } catch (err) {
+      console.error('Failed to duplicate service:', err);
+      toast.error('Failed to duplicate service');
     }
     setShowActions(null);
   };
+
+  const handleDeleteService = async (service: CatalogService) => {
+    if (confirm(`Are you sure you want to delete "${service.name}"?`)) {
+      try {
+        await catalogService.delete(service.id);
+        setServices(prev => prev.filter(s => s.id !== service.id));
+        toast.success('Service deleted');
+      } catch (err) {
+        console.error('Failed to delete service:', err);
+        toast.error('Failed to delete service');
+      }
+    }
+    setShowActions(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900">{error}</h3>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -234,20 +213,8 @@ export default function OfferManagerServicesPage() {
               <Edit className="w-5 h-5 text-yellow-600" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">{stats.draft}</div>
-              <div className="text-sm text-gray-500">Drafts</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <EyeOff className="w-5 h-5 text-gray-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{stats.archived}</div>
-              <div className="text-sm text-gray-500">Archived</div>
+              <div className="text-2xl font-bold text-gray-900">{stats.inactive}</div>
+              <div className="text-sm text-gray-500">Inactive</div>
             </div>
           </div>
         </div>
@@ -274,7 +241,7 @@ export default function OfferManagerServicesPage() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
               >
-                {categories.map(cat => (
+                {['All', ...new Set(services.map(s => s.category).filter(Boolean))].map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -282,7 +249,7 @@ export default function OfferManagerServicesPage() {
             </div>
             
             <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-              {(['all', 'active', 'draft', 'archived'] as StatusFilter[]).map(status => (
+              {(['all', 'active', 'inactive'] as StatusFilter[]).map(status => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
@@ -316,7 +283,7 @@ export default function OfferManagerServicesPage() {
             key={service.id}
             className={clsx(
               'bg-white rounded-xl shadow-sm border overflow-hidden',
-              service.status === 'archived' && 'opacity-60'
+              !service.isActive && 'opacity-60'
             )}
           >
             <div className="p-4">
@@ -324,11 +291,9 @@ export default function OfferManagerServicesPage() {
                 <div>
                   <span className={clsx(
                     'px-2 py-0.5 rounded-full text-xs font-medium',
-                    service.status === 'active' && 'bg-green-100 text-green-700',
-                    service.status === 'draft' && 'bg-yellow-100 text-yellow-700',
-                    service.status === 'archived' && 'bg-gray-100 text-gray-600',
+                    service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600',
                   )}>
-                    {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
+                    {service.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
                 <div className="relative">
@@ -376,7 +341,7 @@ export default function OfferManagerServicesPage() {
               </div>
 
               <h3 className="font-semibold text-gray-900 mt-3">{service.name}</h3>
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{service.description}</p>
+              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{service.description || 'No description'}</p>
 
               <div className="flex items-center gap-2 mt-3">
                 <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full flex items-center gap-1">
@@ -391,29 +356,29 @@ export default function OfferManagerServicesPage() {
                     <Euro className="w-3 h-3" />
                     Base Price
                   </div>
-                  <div className="font-semibold text-gray-900">€{service.basePrice.toLocaleString()}</div>
+                  <div className="font-semibold text-gray-900">
+                    {service.basePrice ? `€${service.basePrice.toLocaleString()}` : '-'}
+                  </div>
                 </div>
                 <div>
                   <div className="flex items-center gap-1 text-gray-500 text-xs">
                     <Clock className="w-3 h-3" />
                     Duration
                   </div>
-                  <div className="font-semibold text-gray-900">{service.duration}</div>
+                  <div className="font-semibold text-gray-900">
+                    {service.estimatedDuration ? `${service.estimatedDuration} min` : '-'}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 text-sm text-gray-500">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <FileText className="w-3 h-3" />
-                    {service.checklistItems} items
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Settings className="w-3 h-3" />
-                    {service.variations} variants
+                    <Package className="w-3 h-3" />
+                    {service.requiredSkills?.length || 0} skills
                   </span>
                 </div>
-                <span>{service.lastUpdated}</span>
+                <span>{new Date(service.updatedAt).toLocaleDateString()}</span>
               </div>
             </div>
           </div>

@@ -194,6 +194,9 @@ export interface User {
   permissions: Permission[];
   createdAt: ISODateString;
   updatedAt: ISODateString;
+  providerId?: string;
+  workTeamId?: string;
+  userType?: string;
 }
 
 export enum UserRole {
