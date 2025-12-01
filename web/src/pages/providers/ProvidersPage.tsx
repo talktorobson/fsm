@@ -88,7 +88,7 @@ export default function ProvidersPage() {
             {pagination ? `${pagination.total} total providers` : 'Loading...'}
           </p>
         </div>
-        <Link to="/providers/new" className="btn btn-primary">
+        <Link to="/operator/providers/new" className="btn btn-primary">
           <Plus className="w-4 h-4 mr-2" />
           Add Provider
         </Link>
@@ -251,7 +251,7 @@ export default function ProvidersPage() {
                     </td>
                     <td className="table-cell">
                       <Link
-                        to={`/providers/${provider.id}`}
+                        to={`/operator/providers/${provider.id}`}
                         className="text-primary-600 hover:text-primary-900 text-sm"
                       >
                         View Details

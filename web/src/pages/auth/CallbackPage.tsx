@@ -44,7 +44,7 @@ export default function CallbackPage() {
 
         // Redirect to dashboard
         toast.success('Login successful');
-        navigate('/dashboard', { replace: true });
+        navigate('/operator/dashboard', { replace: true });
       } catch (error) {
         console.error('Callback handling failed:', error);
         toast.error('Authentication failed. Please try again.');

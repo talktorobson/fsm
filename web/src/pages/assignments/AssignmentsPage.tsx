@@ -66,7 +66,7 @@ export default function AssignmentsPage() {
             {pagination ? `${pagination.total} total assignments` : 'Loading...'}
           </p>
         </div>
-        <Link to="/service-orders" className="btn btn-primary">
+        <Link to="/operator/orders" className="btn btn-primary">
           + Create Assignment
         </Link>
       </div>
@@ -192,7 +192,7 @@ export default function AssignmentsPage() {
                     </td>
                     <td className="table-cell">
                       <Link
-                        to={`/assignments/${assignment.id}`}
+                        to={`/operator/assignments/${assignment.id}`}
                         className="text-primary-600 hover:text-primary-900 text-sm"
                       >
                         View Details

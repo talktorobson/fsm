@@ -4,17 +4,20 @@
  */
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { serviceOrderService } from '@/services/service-order-service';
 import { assignmentService } from '@/services/assignment-service';
 import { providerService } from '@/services/provider-service';
-import { Search, Filter, X, CheckSquare, UserPlus, Download } from 'lucide-react';
+import { Search, Filter, X, CheckSquare, UserPlus, Download, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import { ServiceOrderStatus, SalesPotential, RiskLevel, AssignmentMode } from '@/types';
+import { CreateServiceOrderModal } from '@/components/modals/CreateServiceOrderModal';
 
 export default function ServiceOrdersPage() {
+  const navigate = useNavigate();
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     serviceType: '',
@@ -151,6 +154,13 @@ export default function ServiceOrdersPage() {
 
   return (
     <div>
+      {/* Create Service Order Modal */}
+      <CreateServiceOrderModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={(orderId) => navigate(`/operator/orders/${orderId}`)}
+      />
+
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -172,6 +182,13 @@ export default function ServiceOrdersPage() {
           <button className="btn btn-secondary flex items-center gap-2">
             <Download className="w-4 h-4" />
             Export
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Order
           </button>
         </div>
       </div>
@@ -491,7 +508,7 @@ export default function ServiceOrdersPage() {
                     </td>
                     <td className="table-cell">
                       <Link
-                        to={`/service-orders/${order.id}`}
+                        to={`/operator/orders/${order.id}`}
                         className="text-primary-600 hover:text-primary-900 text-sm"
                       >
                         View Details

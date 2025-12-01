@@ -49,7 +49,7 @@ export default function ServiceOrderDetailPage() {
       <div className="card">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-gray-900">Service Order Not Found</h3>
-          <Link to="/service-orders" className="text-primary-600 hover:text-primary-700 mt-4 inline-block">
+          <Link to="/operator/orders" className="text-primary-600 hover:text-primary-700 mt-4 inline-block">
             ← Back to Service Orders
           </Link>
         </div>
@@ -86,7 +86,7 @@ export default function ServiceOrderDetailPage() {
       {/* Header */}
       <div className="mb-8">
         <Link
-          to="/service-orders"
+          to="/operator/orders"
           className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />

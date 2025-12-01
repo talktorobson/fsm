@@ -42,7 +42,50 @@ interface UpdateGoExecDto {
   productDeliveryStatus?: string;
 }
 
+interface CreateServiceOrderDto {
+  projectId?: string;
+  serviceId: string;
+  countryCode: string;
+  businessUnit: string;
+  customerInfo: {
+    name: string;
+    email?: string;
+    phone?: string;
+    address: {
+      street: string;
+      city: string;
+      postalCode: string;
+      country: string;
+    };
+  };
+  serviceType: 'INSTALLATION' | 'REPAIR' | 'MAINTENANCE' | 'TECHNICAL_VISIT' | 'QUOTATION';
+  priority: 'P1' | 'P2';
+  estimatedDurationMinutes: number;
+  serviceAddress: {
+    street: string;
+    city: string;
+    postalCode: string;
+    lat?: number;
+    lng?: number;
+  };
+  requestedStartDate: string;
+  requestedEndDate: string;
+  requestedTimeSlot?: string;
+  externalServiceOrderId?: string;
+  externalSalesOrderId?: string;
+  externalProjectId?: string;
+  salesmanNotes?: string;
+}
+
 class ServiceOrderService {
+  /**
+   * Create a new service order
+   */
+  async create(data: CreateServiceOrderDto): Promise<ServiceOrder> {
+    const response = await apiClient.post<ApiResponse<ServiceOrder>>('/service-orders', data);
+    return response.data.data;
+  }
+
   /**
    * Get all service orders with filters
    */

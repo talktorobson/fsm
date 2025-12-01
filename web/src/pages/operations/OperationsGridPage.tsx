@@ -147,19 +147,19 @@ export default function OperationsGridPage() {
   const handleSlotClick = (slot: ScheduledSlot, row: GridRow) => {
     // Navigate to service order detail
     console.log('Slot clicked:', slot, row);
-    navigate(`/service-orders`);
+    navigate(`/operator/orders`);
   };
 
   const handleCreateSlot = (date: string, row: GridRow) => {
     // Open assignment modal
     console.log('Create slot for:', date, row);
-    navigate('/service-orders');
+    navigate('/operator/orders');
   };
 
   const handleRowClick = (row: GridRow) => {
     // Navigate to provider/team detail
     if (row.type === 'provider') {
-      navigate('/providers');
+      navigate('/operator/providers');
     }
   };
 

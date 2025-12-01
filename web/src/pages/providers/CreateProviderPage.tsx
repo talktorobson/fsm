@@ -49,7 +49,7 @@ export default function CreateProviderPage() {
       // For now, just simulate success
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success('Provider created successfully');
-      navigate('/providers');
+      navigate('/operator/providers');
     } catch (error) {
       toast.error('Failed to create provider');
     } finally {
@@ -60,7 +60,7 @@ export default function CreateProviderPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <Link to="/providers" className="text-gray-500 hover:text-gray-700 flex items-center mb-2">
+        <Link to="/operator/providers" className="text-gray-500 hover:text-gray-700 flex items-center mb-2">
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Providers
         </Link>
@@ -180,7 +180,7 @@ export default function CreateProviderPage() {
           <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <button
               type="button"
-              onClick={() => navigate('/providers')}
+              onClick={() => navigate('/operator/providers')}
               className="btn btn-secondary"
             >
               Cancel

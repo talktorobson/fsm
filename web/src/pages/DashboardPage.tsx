@@ -152,17 +152,17 @@ export default function DashboardPage() {
     // Find the original API action to get the link
     const apiAction = criticalActionsData?.find(a => a.id === action.id);
     if (apiAction?.link) {
-      navigate(apiAction.link);
+      navigate(`/operator${apiAction.link}`);
     } else {
-      navigate('/service-orders');
+      navigate('/operator/orders');
     }
   };
 
   const handleTaskClick = (task: PriorityTask) => {
     if (task.serviceOrderRef) {
-      navigate(`/service-orders/${task.serviceOrderRef}`);
+      navigate(`/operator/orders/${task.serviceOrderRef}`);
     } else {
-      navigate('/tasks');
+      navigate('/operator/tasks');
     }
   };
 
@@ -189,7 +189,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            to="/calendar"
+            to="/operator/calendar"
             className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Calendar className="w-4 h-4" />
@@ -237,28 +237,28 @@ export default function DashboardPage() {
               value={todayScheduled}
               icon={Calendar}
               variant="green-1"
-              onClick={() => navigate('/calendar')}
+              onClick={() => navigate('/operator/calendar')}
             />
             <MetricCard
               title="In Progress"
               value={inProgress}
               icon={Clock}
               variant="green-2"
-              onClick={() => navigate('/service-orders?status=IN_PROGRESS')}
+              onClick={() => navigate('/operator/orders?status=IN_PROGRESS')}
             />
             <MetricCard
               title="Completed Today"
               value={completedToday}
               icon={TrendingUp}
               variant="green-3"
-              onClick={() => navigate('/service-orders?status=COMPLETED')}
+              onClick={() => navigate('/operator/orders?status=COMPLETED')}
             />
             <MetricCard
               title="Pending Assignments"
               value={pendingAssignments}
               icon={UserCheck}
               variant="green-4"
-              onClick={() => navigate('/assignments?status=PENDING')}
+              onClick={() => navigate('/operator/assignments?status=PENDING')}
             />
           </>
         )}
@@ -271,7 +271,7 @@ export default function DashboardPage() {
           <CriticalActionsPanel
             actions={criticalActions}
             onActionClick={handleCriticalActionClick}
-            onViewAll={() => navigate('/service-orders')}
+            onViewAll={() => navigate('/operator/orders')}
             loading={actionsLoading}
           />
         </div>
@@ -281,7 +281,7 @@ export default function DashboardPage() {
           <PriorityTasksList
             tasks={priorityTasks}
             onTaskClick={handleTaskClick}
-            onViewAll={() => navigate('/tasks')}
+            onViewAll={() => navigate('/operator/tasks')}
             loading={tasksLoading}
           />
         </div>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
       {/* Quick Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link 
-          to="/service-orders" 
+          to="/operator/orders" 
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
         >
           <div className="flex items-center justify-between mb-3">
@@ -306,7 +306,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link 
-          to="/providers" 
+          to="/operator/providers" 
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
         >
           <div className="flex items-center justify-between mb-3">
@@ -322,7 +322,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link 
-          to="/tasks" 
+          to="/operator/tasks" 
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
         >
           <div className="flex items-center justify-between mb-3">

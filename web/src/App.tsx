@@ -18,6 +18,7 @@ import ServiceOrderDetailPage from './pages/service-orders/ServiceOrderDetailPag
 import AssignmentsPage from './pages/assignments/AssignmentsPage';
 import AssignmentDetailPage from './pages/assignments/AssignmentDetailPage';
 import ProvidersPage from './pages/providers/ProvidersPage';
+import ProviderDetailPage from './pages/providers/ProviderDetailPage';
 import CreateProviderPage from './pages/providers/CreateProviderPage';
 import CalendarPage from './pages/calendar/CalendarPage';
 import TasksPage from './pages/tasks/TasksPage';
@@ -128,6 +129,7 @@ function App() {
             <Route path="operator/assignments/:id" element={<AssignmentDetailPage />} />
             <Route path="operator/providers" element={<ProvidersPage />} />
             <Route path="operator/providers/new" element={<CreateProviderPage />} />
+            <Route path="operator/providers/:id" element={<ProviderDetailPage />} />
             <Route path="operator/calendar" element={<CalendarPage />} />
             <Route path="operator/tasks" element={<TasksPage />} />
             <Route path="operator/analytics" element={<AnalyticsPage />} />
