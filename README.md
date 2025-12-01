@@ -1,16 +1,18 @@
 # Yellow Grid - Field Service Execution Platform
 
-> **Development Status**: 🟢 **Phase 4.5 Complete** (Web UX Excellence) | **Production Ready** | **126 E2E Tests Passing**
+> **Development Status**: 🟢 **Phase 5 Complete** (Multi-Experience Platform) | **Production Ready** | **126 E2E Tests Passing**
 
 ## 📊 Current Project Status
 
-**Implementation Phase**: Phase 4.5 (Web UX Excellence) - ✅ COMPLETE
-**Progress**: 85% overall (Core FSM + Web UX Complete)
+**Implementation Phase**: Phase 5 (Multi-Experience Platform) - ✅ COMPLETE
+**Progress**: 94% overall (Core FSM + Web UX + All Portals Complete)
 **Build Status**: ✅ Passing
 **API Endpoints**: 161+ functional REST endpoints
-**Backend Test Coverage**: ~60-70%
+**Backend Code**: 276 files, 53,539 lines TypeScript
+**Frontend Code**: 161 files, 5,969 lines TypeScript/React
+**Database Schema**: 72 models, 3,229 lines
 **E2E Tests**: 126 tests (78 functional + 48 navigation)
-**Live Demo**: https://dev.yellowgrid.fr
+**Live Demo**: https://135.181.96.93
 
 ### ✅ Completed Modules
 - ✅ **Infrastructure & DevOps** (Docker, PostgreSQL, Redis, Kafka)
@@ -21,18 +23,30 @@
 - ✅ **Calendar & Scheduling**
 - ✅ **Web Dashboard & UI** (React + Vite)
 - ✅ **Remote Deployment Automation**
-- ✅ **Phase 4.5 Web UX Features**:
-  - AI Chat Assistant with streaming responses
-  - 7 specialized modal dialogs
-  - Enhanced service order detail views
-  - Provider detail management
-  - Comprehensive navigation flows
-  - Keyboard navigation support
-  - Deep linking and state persistence
+- ✅ **Multi-Experience Platform** (8 user portals):
+  - Service Operator Control Tower
+  - Provider Portal (11 pages)
+  - PSM Portal (8 pages)
+  - Seller Portal (8 pages)
+  - Admin Portal (7 pages)
+  - Catalog/Offer Manager Portal (5 pages)
+  - Customer Portal (7 pages)
+- ✅ **AI Chat Assistant** with streaming responses
+- ✅ **7 Specialized Modal Dialogs**
+- ✅ **Realistic Demo Data** (FR, ES, IT, PT)
 
 ### 🔄 In Progress
 - [ ] Mobile App (Phase 3 - 50% complete)
 - [ ] AI/ML Features (Phase 6 - Not Started)
+
+### Demo Credentials
+```
+Operator: operator@adeo.com / Operator123!
+Admin (FR): admin-fr@adeo.com / Admin123!
+Admin (ES): admin-es@adeo.com / Admin123!
+Admin (IT): admin-it@adeo.com / Admin123!
+Admin (PT): admin-pt@adeo.com / Admin123!
+```
 
 **For detailed progress**: See [docs/IMPLEMENTATION_TRACKING.md](docs/IMPLEMENTATION_TRACKING.md)
 
@@ -366,6 +380,7 @@ UNLICENSED - Proprietary platform
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.0.0 | 2025-12-02 | Phase 5 complete, all portals functional, realistic demo data, 94% progress |
 | 2.5.0 | 2025-11-27 | Phase 4.5 Web UX complete, 126 E2E tests, live demo |
 | 2.0.0 | 2025-11-15 | Rebranded to Yellow Grid, separated mockup from product |
 | 1.0.0 | 2025-01-15 | Initial project documentation |

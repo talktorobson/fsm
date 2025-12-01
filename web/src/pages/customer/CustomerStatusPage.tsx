@@ -6,95 +6,38 @@
 import {
   Clock,
   CheckCircle,
-  Truck,
   User,
   Calendar,
   Phone,
   MapPin,
   MessageCircle,
-  Star,
+  Wrench,
+  FileCheck,
+  XCircle,
 } from 'lucide-react';
 import clsx from 'clsx';
-
-interface ServiceOrder {
-  id: string;
-  state: string;
-  service: {
-    name: string;
-    category: string;
-  };
-  scheduledDate: string | null;
-  scheduledTime: string | null;
-  provider?: {
-    name: string;
-    phone: string;
-    rating: number;
-  };
-  technician?: {
-    name: string;
-    phone: string;
-    avatar?: string;
-  };
-  address: {
-    street: string;
-    postalCode: string;
-    city: string;
-  };
-  timeline: Array<{
-    state: string;
-    timestamp: string;
-    description: string;
-  }>;
-}
-
-const mockServiceOrder: ServiceOrder = {
-  id: 'SO-2024-001',
-  state: 'IN_PROGRESS',
-  service: {
-    name: 'Installation électrique complète',
-    category: 'Électricité',
-  },
-  scheduledDate: '2025-11-28',
-  scheduledTime: '09:00',
-  provider: {
-    name: 'Électricité Pro Paris',
-    phone: '01 23 45 67 89',
-    rating: 4.8,
-  },
-  technician: {
-    name: 'Marc Lefebvre',
-    phone: '06 12 34 56 78',
-  },
-  address: {
-    street: '15 Rue de la Paix',
-    postalCode: '75015',
-    city: 'Paris',
-  },
-  timeline: [
-    { state: 'CREATED', timestamp: '2025-11-20 10:30', description: 'Service request created' },
-    { state: 'SCHEDULED', timestamp: '2025-11-21 14:15', description: 'Appointment scheduled' },
-    { state: 'ASSIGNED', timestamp: '2025-11-22 09:00', description: 'Technician assigned' },
-    { state: 'ACCEPTED', timestamp: '2025-11-22 09:30', description: 'Provider confirmed' },
-    { state: 'IN_PROGRESS', timestamp: '2025-11-28 09:05', description: 'Work started' },
-  ],
-};
+import { useCustomerPortalContext } from '@/hooks/useCustomerAccess';
 
 const stateConfig: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
   CREATED: { label: 'Request Created', color: 'text-gray-600', icon: Clock },
   SCHEDULED: { label: 'Scheduled', color: 'text-blue-600', icon: Calendar },
   ASSIGNED: { label: 'Technician Assigned', color: 'text-indigo-600', icon: User },
   ACCEPTED: { label: 'Confirmed', color: 'text-purple-600', icon: CheckCircle },
-  IN_PROGRESS: { label: 'In Progress', color: 'text-yellow-600', icon: Truck },
+  IN_PROGRESS: { label: 'In Progress', color: 'text-yellow-600', icon: Wrench },
+  WORK_COMPLETED: { label: 'Work Completed', color: 'text-green-500', icon: FileCheck },
   COMPLETED: { label: 'Completed', color: 'text-green-600', icon: CheckCircle },
   VALIDATED: { label: 'Validated', color: 'text-green-700', icon: CheckCircle },
   CLOSED: { label: 'Closed', color: 'text-gray-700', icon: CheckCircle },
+  CANCELLED: { label: 'Cancelled', color: 'text-red-600', icon: XCircle },
+  ON_HOLD: { label: 'On Hold', color: 'text-orange-600', icon: Clock },
 };
 
-const stateOrder = ['CREATED', 'SCHEDULED', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'VALIDATED', 'CLOSED'];
+const stateOrder = ['CREATED', 'SCHEDULED', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'WORK_COMPLETED', 'COMPLETED', 'VALIDATED', 'CLOSED'];
 
 function ProgressBar({ currentState }: { currentState: string }) {
   const currentIndex = stateOrder.indexOf(currentState);
-  const progress = ((currentIndex + 1) / stateOrder.length) * 100;
+  // If state is not in order list (e.g., CANCELLED), show 0 progress
+  const progress = currentIndex >= 0 ? ((currentIndex + 1) / stateOrder.length) * 100 : 0;
 
   return (
     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -121,7 +64,7 @@ function TimelineItem({
   isCompleted: boolean;
   isCurrent: boolean;
 }) {
-  const config = stateConfig[state] || { label: state, color: 'text-gray-600', icon: Clock };
+  const config = stateConfig[state] || { label: state.replace(/_/g, ' '), color: 'text-gray-600', icon: Clock };
   const Icon = config.icon;
 
   return (
@@ -156,8 +99,24 @@ function TimelineItem({
 }
 
 export default function CustomerStatusPage() {
-  const serviceOrder = mockServiceOrder;
-  const currentState = stateConfig[serviceOrder.state];
+  const { serviceOrder, customer } = useCustomerPortalContext();
+  const currentState = stateConfig[serviceOrder.state] || { label: serviceOrder.state.replace(/_/g, ' '), color: 'text-gray-600', icon: Clock };
+
+  // Build timeline from stateHistory
+  const timeline = serviceOrder.stateHistory?.map((entry) => ({
+    state: entry.state,
+    timestamp: new Date(entry.timestamp).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }),
+    description: stateConfig[entry.state]?.label || entry.state.replace(/_/g, ' '),
+  })) || [
+    {
+      state: serviceOrder.state,
+      timestamp: new Date().toLocaleString('fr-FR'),
+      description: currentState.label,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -166,11 +125,11 @@ export default function CustomerStatusPage() {
         <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm">Order #{serviceOrder.id}</p>
-              <h2 className="text-xl font-semibold mt-0.5">{currentState?.label || serviceOrder.state}</h2>
+              <p className="text-green-100 text-sm">Order #{serviceOrder.orderNumber || serviceOrder.id.substring(0, 8)}</p>
+              <h2 className="text-xl font-semibold mt-0.5">{currentState.label}</h2>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-              {currentState && <currentState.icon className="w-6 h-6 text-white" />}
+              <currentState.icon className="w-6 h-6 text-white" />
             </div>
           </div>
           <div className="mt-4">
@@ -181,8 +140,8 @@ export default function CustomerStatusPage() {
         <div className="p-6 space-y-4">
           {/* Service Info */}
           <div>
-            <h3 className="font-semibold text-gray-900">{serviceOrder.service.name}</h3>
-            <p className="text-sm text-gray-500">{serviceOrder.service.category}</p>
+            <h3 className="font-semibold text-gray-900">{serviceOrder.serviceName}</h3>
+            <p className="text-sm text-gray-500">{serviceOrder.serviceType?.replace(/_/g, ' ')}</p>
           </div>
 
           {/* Schedule */}
@@ -199,7 +158,9 @@ export default function CustomerStatusPage() {
                     month: 'long' 
                   })}
                 </p>
-                <p className="text-sm text-gray-500">at {serviceOrder.scheduledTime}</p>
+                {serviceOrder.scheduledTimeSlot && (
+                  <p className="text-sm text-gray-500">Time: {serviceOrder.scheduledTimeSlot}</p>
+                )}
               </div>
             </div>
           )}
@@ -208,40 +169,40 @@ export default function CustomerStatusPage() {
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
             <div>
-              <p className="text-sm text-gray-700">{serviceOrder.address.street}</p>
-              <p className="text-sm text-gray-500">{serviceOrder.address.postalCode} {serviceOrder.address.city}</p>
+              <p className="text-sm text-gray-700">{serviceOrder.serviceAddress?.street || 'Address not provided'}</p>
+              <p className="text-sm text-gray-500">
+                {serviceOrder.serviceAddress?.postalCode} {serviceOrder.serviceAddress?.city}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Technician Card */}
-      {serviceOrder.technician && (
+      {/* Provider Card */}
+      {serviceOrder.assignedProvider && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Your Technician</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">Your Provider</h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
                 <User className="w-7 h-7 text-green-600" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">{serviceOrder.technician.name}</p>
-                <p className="text-sm text-gray-500">{serviceOrder.provider?.name}</p>
-                {serviceOrder.provider?.rating && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-medium text-gray-700">{serviceOrder.provider.rating}</span>
-                  </div>
+                <p className="font-semibold text-gray-900">{serviceOrder.assignedProvider.name}</p>
+                {serviceOrder.assignedWorkTeam && (
+                  <p className="text-sm text-gray-500">{serviceOrder.assignedWorkTeam.name}</p>
                 )}
               </div>
             </div>
             <div className="flex gap-2">
-              <a 
-                href={`tel:${serviceOrder.technician.phone}`}
-                className="p-3 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 transition-colors"
-              >
-                <Phone className="w-5 h-5" />
-              </a>
+              {serviceOrder.assignedProvider.phone && (
+                <a 
+                  href={`tel:${serviceOrder.assignedProvider.phone}`}
+                  className="p-3 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 transition-colors"
+                >
+                  <Phone className="w-5 h-5" />
+                </a>
+              )}
               <button className="p-3 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 transition-colors">
                 <MessageCircle className="w-5 h-5" />
               </button>
@@ -250,23 +211,37 @@ export default function CustomerStatusPage() {
         </div>
       )}
 
-      {/* Timeline */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <h3 className="font-semibold text-gray-900 mb-6">Service Timeline</h3>
-        <div>
-          {serviceOrder.timeline.map((event, index) => (
-            <TimelineItem
-              key={index}
-              state={event.state}
-              timestamp={event.timestamp}
-              description={event.description}
-              isLast={index === serviceOrder.timeline.length - 1}
-              isCompleted={stateOrder.indexOf(event.state) <= stateOrder.indexOf(serviceOrder.state)}
-              isCurrent={event.state === serviceOrder.state}
-            />
-          ))}
+      {/* Customer Info */}
+      {customer && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Your Information</h3>
+          <div className="space-y-2">
+            <p className="text-gray-700">{customer.name}</p>
+            {customer.email && <p className="text-sm text-gray-500">{customer.email}</p>}
+            {customer.phone && <p className="text-sm text-gray-500">{customer.phone}</p>}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Timeline */}
+      {timeline.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h3 className="font-semibold text-gray-900 mb-6">Service Timeline</h3>
+          <div>
+            {timeline.map((event, index) => (
+              <TimelineItem
+                key={index}
+                state={event.state}
+                timestamp={event.timestamp}
+                description={event.description}
+                isLast={index === timeline.length - 1}
+                isCompleted={stateOrder.indexOf(event.state) <= stateOrder.indexOf(serviceOrder.state)}
+                isCurrent={event.state === serviceOrder.state}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4">

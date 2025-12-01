@@ -27,4 +27,14 @@ export class PerformanceController {
   async getOperatorPerformance(@Query() query: PerformanceQueryDto) {
     return this.performanceService.getOperatorPerformance(query);
   }
+
+  @Get('providers')
+  @ApiOperation({ summary: 'Get provider performance metrics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Provider performance fetched',
+  })
+  async getProviderPerformance(@Query() query: PerformanceQueryDto) {
+    return this.performanceService.getProviderPerformance(query);
+  }
 }

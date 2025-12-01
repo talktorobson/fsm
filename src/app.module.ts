@@ -24,6 +24,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PerformanceModule } from './modules/performance/performance.module';
 import { SalesIntegrationModule } from './modules/sales-integration/sales-integration.module';
+import { CustomerPortalModule } from './modules/customer-portal/customer-portal.module';
 
 // Controllers
 import { AppController } from './app.controller';
@@ -76,6 +77,9 @@ import { AppController } from './app.controller';
 
     // Integration modules
     SalesIntegrationModule,
+
+    // Customer facing modules
+    CustomerPortalModule,
   ],
   controllers: [AppController],
 })

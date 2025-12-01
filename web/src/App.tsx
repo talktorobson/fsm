@@ -187,6 +187,8 @@ function App() {
             {/* ============================================================ */}
             {/* OFFER MANAGER / CATALOG */}
             {/* ============================================================ */}
+            <Route path="catalog" element={<Navigate to="/catalog/services" replace />} />
+            <Route path="catalog/dashboard" element={<Navigate to="/catalog/services" replace />} />
             <Route path="catalog/services" element={<OfferManagerServicesPage />} />
             <Route path="catalog/services/:id" element={<CatalogServiceDetailPage />} />
             <Route path="catalog/pricing" element={<OfferManagerPricingPage />} />

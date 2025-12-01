@@ -3,8 +3,9 @@
  * View and edit service details, pricing, checklists
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Edit2,
@@ -23,8 +24,11 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { catalogService, CatalogService } from '@/services/catalog-service';
 
 interface ChecklistItem {
   id: string;
@@ -42,50 +46,114 @@ interface PriceVariation {
   active: boolean;
 }
 
-// Mock service data
-const mockService = {
-  id: '1',
-  code: 'SRV-ELEC-001',
-  name: 'Electrical Panel Upgrade',
-  category: 'Électricité',
-  subcategory: 'Tableau électrique',
-  description: 'Complete replacement of electrical panel to NFC 15-100 standards. Includes circuit breakers, differential protection, and labeling.',
-  longDescription: 'This service covers the full replacement of an outdated electrical panel with a modern, compliant unit meeting NFC 15-100 standards. The work includes:\n\n- Removal of old panel\n- Installation of new DRIVIA or equivalent panel\n- Installation of main circuit breaker\n- Installation of differential protection (30mA)\n- Circuit identification and labeling\n- Testing and certification\n- Customer walkthrough',
-  basePrice: 1250,
-  currency: 'EUR',
-  duration: '4-6 hours',
-  minDuration: 4,
-  maxDuration: 6,
-  status: 'active' as const,
-  requiredCertifications: ['CONSUEL', 'Qualifelec'],
-  requiredEquipment: ['Multimeter', 'Panel mounting kit', 'Cable crimping tools'],
-  createdAt: '2024-01-15',
-  updatedAt: '2025-01-11',
-  createdBy: 'Admin User',
-  usageCount: 156,
-  avgRating: 4.7,
-  completionRate: 94,
-};
+interface ServiceDetail {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  subcategory?: string;
+  description: string;
+  longDescription: string;
+  basePrice: number;
+  currency: string;
+  duration: string;
+  minDuration: number;
+  maxDuration: number;
+  status: 'active' | 'draft' | 'archived';
+  requiredCertifications: string[];
+  requiredEquipment: string[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  usageCount: number;
+  avgRating: number;
+  completionRate: number;
+}
 
-const mockChecklist: ChecklistItem[] = [
-  { id: '1', text: 'Vérifier la coupure générale', required: true, order: 1 },
-  { id: '2', text: 'Contrôler l\'état des conducteurs existants', required: true, order: 2 },
-  { id: '3', text: 'Installer le nouveau tableau', required: true, order: 3 },
-  { id: '4', text: 'Raccorder tous les circuits', required: true, order: 4 },
-  { id: '5', text: 'Installer les protections différentielles', required: true, order: 5 },
-  { id: '6', text: 'Tester chaque circuit individuellement', required: true, order: 6 },
-  { id: '7', text: 'Vérifier la continuité des terres', required: true, order: 7 },
-  { id: '8', text: 'Étiqueter tous les disjoncteurs', required: true, order: 8 },
-  { id: '9', text: 'Prendre photos avant/après', required: false, order: 9 },
-  { id: '10', text: 'Faire signer le PV de réception', required: true, order: 10 },
-];
+// Transform CatalogService to ServiceDetail format
+function transformToServiceDetail(service: CatalogService): ServiceDetail {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const serviceData = service as any;
+  
+  // Extract duration - estimatedDuration is in minutes
+  const durationMinutes = service.estimatedDuration || 120;
+  const minHours = Math.floor(durationMinutes / 60);
+  const maxHours = Math.ceil(durationMinutes * 1.5 / 60);
+  
+  // Map status
+  const statusMap: Record<string, 'active' | 'draft' | 'archived'> = {
+    'ACTIVE': 'active',
+    'CREATED': 'draft',
+    'DEPRECATED': 'archived',
+    'ARCHIVED': 'archived',
+  };
+  
+  // Extract scope as checklist items from scopeIncluded
+  const scopeIncluded = serviceData.scopeIncluded || [];
+  
+  return {
+    id: service.id,
+    code: service.externalCode || service.fsmCode || `SRV-${service.id.substring(0, 8)}`,
+    name: service.name,
+    category: service.category,
+    subcategory: service.subcategory,
+    description: service.description || '',
+    longDescription: scopeIncluded.length > 0 
+      ? `Service scope includes:\n\n${scopeIncluded.map((s: string) => `- ${s}`).join('\n')}`
+      : service.description || '',
+    basePrice: service.basePrice || 0,
+    currency: service.currency || 'EUR',
+    duration: `${minHours}-${maxHours} hours`,
+    minDuration: minHours,
+    maxDuration: maxHours,
+    status: statusMap[serviceData.status] || 'active',
+    requiredCertifications: serviceData.skillRequirements?.map((sr: any) => sr.specialty?.name || 'Unknown') || [],
+    requiredEquipment: serviceData.worksiteRequirements || [],
+    createdAt: service.createdAt,
+    updatedAt: service.updatedAt,
+    createdBy: serviceData.createdBy || 'System',
+    usageCount: serviceData._count?.serviceOrders || 0,
+    avgRating: 4.5, // Would need separate rating data
+    completionRate: 90, // Would need separate metrics
+  };
+}
 
-const mockPriceVariations: PriceVariation[] = [
-  { id: '1', name: 'Tableau < 6 modules', description: 'Petit tableau résidentiel', modifier: 'fixed', value: -200, active: true },
-  { id: '2', name: 'Tableau > 24 modules', description: 'Grand tableau avec nombreux circuits', modifier: 'fixed', value: 450, active: true },
-  { id: '3', name: 'Urgence (< 48h)', description: 'Intervention urgente', modifier: 'percentage', value: 25, active: true },
-  { id: '4', name: 'Week-end', description: 'Intervention samedi ou dimanche', modifier: 'percentage', value: 50, active: false },
-];
+// Transform scope to checklist items
+function transformToChecklist(service: CatalogService): ChecklistItem[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const serviceData = service as any;
+  const scopeIncluded = serviceData.scopeIncluded || [];
+  
+  return scopeIncluded.map((item: string, index: number) => ({
+    id: String(index + 1),
+    text: item,
+    required: true,
+    order: index + 1,
+  }));
+}
+
+// Transform pricing data to variations
+function transformToPriceVariations(service: CatalogService): PriceVariation[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const serviceData = service as any;
+  const pricing = serviceData.pricing || [];
+  
+  if (pricing.length === 0) {
+    // Return default variations if no pricing data
+    return [
+      { id: '1', name: 'Standard Rate', description: 'Base service rate', modifier: 'fixed', value: 0, active: true },
+    ];
+  }
+  
+  return pricing.map((p: any, index: number) => ({
+    id: p.id || String(index + 1),
+    name: p.postalCode?.city?.name || 'Regional Rate',
+    description: p.postalCode?.code ? `Postal code: ${p.postalCode.code}` : 'Base rate',
+    modifier: p.rateType === 'HOURLY' ? 'percentage' as const : 'fixed' as const,
+    value: Number(p.baseRate) || 0,
+    active: true,
+  }));
+}
 
 function getStatusColor(status: string): string {
   switch (status) {
@@ -134,8 +202,25 @@ export default function CatalogServiceDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['basic', 'requirements']));
 
-  // Use id to fetch service in real app
-  const service = { ...mockService, id: id || mockService.id };
+  // Fetch service from API
+  const { data: catalogData, isLoading, isError, error } = useQuery({
+    queryKey: ['catalog-service', id],
+    queryFn: () => catalogService.getById(id!),
+    enabled: !!id,
+  });
+
+  // Transform to UI format
+  const service = useMemo(() => 
+    catalogData ? transformToServiceDetail(catalogData) : null
+  , [catalogData]);
+  
+  const checklist = useMemo(() => 
+    catalogData ? transformToChecklist(catalogData) : []
+  , [catalogData]);
+  
+  const priceVariations = useMemo(() => 
+    catalogData ? transformToPriceVariations(catalogData) : []
+  , [catalogData]);
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
@@ -168,6 +253,40 @@ export default function CatalogServiceDetailPage() {
     { id: 'pricing' as const, label: 'Tarification', icon: Euro },
     { id: 'stats' as const, label: 'Statistiques', icon: BarChart3 },
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <span className="ml-3 text-gray-600">Loading service details...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError || !service) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => navigate('/catalog/services')}
+          className="p-2 hover:bg-gray-100 rounded-lg inline-flex items-center gap-2"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          Back to Services
+        </button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+          <div>
+            <p className="font-medium text-red-800">Failed to load service</p>
+            <p className="text-sm text-red-600">
+              {error instanceof Error ? error.message : 'Service not found'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -478,7 +597,7 @@ export default function CatalogServiceDetailPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Checklist d&apos;intervention</h3>
-              <p className="text-sm text-gray-500">{mockChecklist.length} éléments • {mockChecklist.filter(i => i.required).length} obligatoires</p>
+              <p className="text-sm text-gray-500">{checklist.length} éléments • {checklist.filter(i => i.required).length} obligatoires</p>
             </div>
             {isEditing && (
               <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
@@ -489,7 +608,7 @@ export default function CatalogServiceDetailPage() {
           </div>
 
           <div className="space-y-2">
-            {mockChecklist.map((item) => (
+            {checklist.map((item) => (
               <div
                 key={item.id}
                 className={clsx(
@@ -589,7 +708,7 @@ export default function CatalogServiceDetailPage() {
             </div>
 
             <div className="space-y-4">
-              {mockPriceVariations.map((variation) => (
+              {priceVariations.map((variation) => (
                 <div
                   key={variation.id}
                   className={clsx(

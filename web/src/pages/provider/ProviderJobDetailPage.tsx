@@ -7,12 +7,15 @@
 
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { 
   ArrowLeft, MapPin, User, Phone, Mail, MessageSquare, 
   FileText, Camera, CheckCircle, AlertCircle, Send, Calendar,
-  Navigation, DollarSign, Wrench, ClipboardList
+  Navigation, DollarSign, Wrench, ClipboardList, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import { serviceOrderService } from '@/services/service-order-service';
+import { ServiceOrder } from '@/types';
 
 interface TimelineEvent {
   id: string;
@@ -55,50 +58,118 @@ interface JobDetail {
   timeline: TimelineEvent[];
 }
 
-// Mock job data
-const mockJob: JobDetail = {
-  id: '1',
-  reference: 'JOB-2025-001234',
-  title: 'Installation électrique complète',
-  description: 'Installation du tableau électrique, câblage et mise en place des prises dans un appartement de 80m²',
-  status: 'in_progress',
-  priority: 'high',
-  scheduledDate: '2025-11-27',
-  scheduledTime: '09:00',
-  estimatedDuration: '4 hours',
-  customer: {
-    name: 'Jean Dupont',
-    phone: '+33 6 12 34 56 78',
-    email: 'jean.dupont@email.fr',
-    address: '15 Rue de la Paix, 75015 Paris',
-    coordinates: { lat: 48.8566, lng: 2.3522 },
-  },
-  service: {
-    name: 'Installation électrique',
-    category: 'Électricité',
-    description: 'Installation complète du système électrique',
-  },
-  pricing: {
-    estimated: 450,
-    parts: 180,
-    labor: 270,
-    total: 450,
-  },
-  notes: [
-    'Client demande une installation aux normes NF C 15-100',
-    'Accès par code: 4521B',
-    'Prévoir protection sols (parquet neuf)',
-  ],
-  timeline: [
-    { id: '1', type: 'status', title: 'Job Created', timestamp: '2025-11-25 10:00', user: 'System' },
-    { id: '2', type: 'status', title: 'Assigned to Provider', timestamp: '2025-11-25 10:15', user: 'Marie (Operator)' },
-    { id: '3', type: 'message', title: 'Customer Message', description: 'Merci de confirmer l\'heure d\'arrivée', timestamp: '2025-11-26 09:00', user: 'Jean Dupont' },
-    { id: '4', type: 'status', title: 'Job Accepted', timestamp: '2025-11-26 09:30', user: 'Provider' },
-    { id: '5', type: 'status', title: 'Work Started', timestamp: '2025-11-27 09:15', user: 'Provider' },
-    { id: '6', type: 'photo', title: 'Site Photo Added', description: 'Photo du tableau électrique existant', timestamp: '2025-11-27 09:20', user: 'Provider' },
-    { id: '7', type: 'note', title: 'Technical Note', description: 'Tableau existant vétuste, remplacement complet nécessaire', timestamp: '2025-11-27 09:45', user: 'Provider' },
-  ],
-};
+// Transform ServiceOrder to JobDetail format
+function transformToJobDetail(order: ServiceOrder): JobDetail {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderWithRelations = order as any;
+  
+  // Extract customer info
+  const customerInfo = order.customerInfo || {};
+  const customerAddress = order.serviceAddress 
+    ? `${order.serviceAddress.street}, ${order.serviceAddress.postalCode} ${order.serviceAddress.city}`
+    : order.customerAddress || 'No address';
+  
+  // Map status
+  const statusMap: Record<string, JobDetail['status']> = {
+    'CREATED': 'pending',
+    'SCHEDULED': 'pending',
+    'ASSIGNED': 'pending',
+    'ACCEPTED': 'accepted',
+    'IN_PROGRESS': 'in_progress',
+    'COMPLETED': 'completed',
+    'VALIDATED': 'completed',
+    'CLOSED': 'completed',
+    'CANCELLED': 'cancelled',
+  };
+  
+  // Map priority
+  const priorityMap: Record<string, JobDetail['priority']> = {
+    'P1': 'urgent',
+    'P2': 'medium',
+  };
+  
+  // Extract scheduled date and time
+  const scheduledDate = order.scheduledDate 
+    ? new Date(order.scheduledDate).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0];
+  const scheduledTime = order.scheduledDate 
+    ? new Date(order.scheduledDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : '09:00';
+  
+  // Format duration
+  const durationMinutes = order.estimatedDuration || 120;
+  const durationHours = Math.floor(durationMinutes / 60);
+  const durationMins = durationMinutes % 60;
+  const estimatedDuration = durationMins > 0 
+    ? `${durationHours}h ${durationMins}min`
+    : `${durationHours} hours`;
+  
+  // Extract service info
+  const serviceName = orderWithRelations.service?.name || String(order.serviceType).replace(/_/g, ' ');
+  const serviceCategory = orderWithRelations.service?.serviceCategory || 'Service';
+  
+  // Build timeline from order history if available
+  const timeline: TimelineEvent[] = [
+    { 
+      id: '1', 
+      type: 'status', 
+      title: 'Order Created', 
+      timestamp: order.createdAt,
+      user: 'System' 
+    },
+  ];
+  
+  if (order.updatedAt !== order.createdAt) {
+    timeline.push({
+      id: '2',
+      type: 'status',
+      title: `Status: ${order.status}`,
+      timestamp: order.updatedAt,
+      user: 'System',
+    });
+  }
+  
+  // Extract notes from salesmanNotes if available
+  const notes: string[] = [];
+  if (order.salesmanNotes) {
+    notes.push(order.salesmanNotes);
+  }
+  
+  return {
+    id: order.id,
+    reference: order.externalId || order.salesOrderNumber || `SO-${order.id.substring(0, 8)}`,
+    title: serviceName,
+    description: orderWithRelations.service?.description || `${serviceName} service`,
+    status: statusMap[order.status] || 'pending',
+    priority: priorityMap[order.priority || 'P2'] || 'medium',
+    scheduledDate,
+    scheduledTime,
+    estimatedDuration,
+    customer: {
+      name: customerInfo.name || order.customerName || 'Unknown Customer',
+      phone: customerInfo.phone || order.customerPhone || '',
+      email: customerInfo.email || order.customerEmail || '',
+      address: customerAddress,
+      coordinates: {
+        lat: order.serviceAddress?.lat || 48.8566,
+        lng: order.serviceAddress?.lng || 2.3522,
+      },
+    },
+    service: {
+      name: serviceName,
+      category: serviceCategory,
+      description: orderWithRelations.service?.description || '',
+    },
+    pricing: {
+      estimated: Number(order.totalAmountCustomer) || 0,
+      parts: 0, // Could be calculated from line items
+      labor: Number(order.totalAmountProvider) || 0,
+      total: Number(order.totalAmountCustomer) || 0,
+    },
+    notes,
+    timeline,
+  };
+}
 
 const getStatusColor = (status: JobDetail['status']): string => {
   switch (status) {
@@ -137,9 +208,15 @@ export default function ProviderJobDetailPage() {
   const [newMessage, setNewMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'timeline' | 'documents'>('details');
 
-  // In real app, fetch job by id from API
-  // For now, using mock data. The job id would be: id
-  const job = { ...mockJob, id: id ?? mockJob.id };
+  // Fetch service order from API
+  const { data: serviceOrder, isLoading, isError, error } = useQuery({
+    queryKey: ['service-order', id],
+    queryFn: () => serviceOrderService.getById(id!),
+    enabled: !!id,
+  });
+
+  // Transform to JobDetail format
+  const job = serviceOrder ? transformToJobDetail(serviceOrder) : null;
 
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
@@ -151,6 +228,40 @@ export default function ProviderJobDetailPage() {
     // Update status logic here
     console.log('Updating status to:', newStatus);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <span className="ml-3 text-gray-600">Loading job details...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError || !job) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-lg inline-flex items-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back
+        </button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+          <div>
+            <p className="font-medium text-red-800">Failed to load job details</p>
+            <p className="text-sm text-red-600">
+              {error instanceof Error ? error.message : 'Job not found or access denied'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

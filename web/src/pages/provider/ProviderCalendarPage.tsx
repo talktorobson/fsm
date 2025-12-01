@@ -5,9 +5,13 @@
  * Allows providers to manage their schedule and block time off.
  */
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Clock, Filter, Download } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Plus, Clock, Filter, Download, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
+import { useAuth } from '@/contexts/AuthContext';
+import { calendarService } from '@/services/calendar-service';
+import { ServiceOrder } from '@/types';
 
 interface ScheduledJob {
   id: string;
@@ -21,21 +25,54 @@ interface ScheduledJob {
   amount: number;
 }
 
-// Mock data for demonstration
-const mockJobs: Record<string, ScheduledJob[]> = {
-  '2025-11-27': [
-    { id: '1', title: 'Installation électrique', customer: 'Jean Dupont', address: '15 Rue de la Paix, Paris 15e', time: '09:00', duration: '4h', status: 'in_progress', team: 'Équipe A', amount: 450 },
-    { id: '2', title: 'Dépannage urgent', customer: 'Marie Martin', address: '8 Avenue des Champs, Paris 8e', time: '14:00', duration: '2h', status: 'scheduled', team: 'Équipe B', amount: 150 },
-    { id: '3', title: 'Diagnostic', customer: 'Paul Durand', address: '22 Rue Victor Hugo, Paris 16e', time: '16:30', duration: '1h', status: 'scheduled', amount: 80 },
-  ],
-  '2025-11-28': [
-    { id: '4', title: 'Mise aux normes', customer: 'Sophie Petit', address: '5 Rue du Commerce, Paris 15e', time: '08:30', duration: '6h', status: 'scheduled', team: 'Équipe A', amount: 890 },
-    { id: '5', title: 'Installation prise triphasée', customer: 'Luc Moreau', address: '10 Rue de Rivoli, Paris 1er', time: '15:00', duration: '2h', status: 'scheduled', amount: 280 },
-  ],
-  '2025-11-29': [
-    { id: '6', title: 'Réparation interrupteur', customer: 'Emma Dubois', address: '18 Avenue Mozart, Paris 16e', time: '11:00', duration: '1h', status: 'scheduled', amount: 95 },
-  ],
-};
+// Transform ServiceOrder to ScheduledJob format for calendar display
+function transformToScheduledJob(order: ServiceOrder): ScheduledJob {
+  // Extract customer name from customerInfo or customerName
+  const customerName = order.customerInfo?.name || order.customerName || 'Unknown Customer';
+  
+  // Extract address from serviceAddress or customerAddress
+  const address = order.serviceAddress 
+    ? `${order.serviceAddress.street}, ${order.serviceAddress.city}`
+    : order.customerAddress || 'No address';
+  
+  // Extract time from scheduledDate
+  const scheduledTime = order.scheduledDate 
+    ? new Date(order.scheduledDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : '09:00';
+  
+  // Format duration
+  const durationHours = order.estimatedDuration 
+    ? `${Math.round(order.estimatedDuration / 60)}h`
+    : '2h';
+  
+  // Map status to calendar job status
+  let status: 'scheduled' | 'in_progress' | 'completed' = 'scheduled';
+  if (order.status === 'IN_PROGRESS') {
+    status = 'in_progress';
+  } else if (order.status === 'COMPLETED' || order.status === 'VALIDATED' || order.status === 'CLOSED') {
+    status = 'completed';
+  }
+  
+  // Extract service name from embedded data or serviceType - API may include related data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderWithRelations = order as any;
+  const title = orderWithRelations.service?.name || String(order.serviceType).replace(/_/g, ' ');
+  
+  // Extract work team name if available from API response
+  const teamName = orderWithRelations.assignedWorkTeam?.name;
+  
+  return {
+    id: order.id,
+    title,
+    customer: customerName,
+    address,
+    time: scheduledTime,
+    duration: durationHours,
+    status,
+    team: teamName,
+    amount: order.totalAmountProvider || order.totalAmountCustomer || 0,
+  };
+}
 
 // Helper functions extracted to avoid deep nesting
 const getJobStatusClass = (status: ScheduledJob['status']): string => {
@@ -55,6 +92,7 @@ const getTeamStatus = (index: number): string => {
 };
 
 export default function ProviderCalendarPage() {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'week' | 'day'>('week');
 
@@ -81,8 +119,42 @@ export default function ProviderCalendarPage() {
     return date.toISOString().split('T')[0];
   };
 
+  // Calculate date range for API query
+  const startDate = formatDateKey(weekDates[0]);
+  const endDate = formatDateKey(weekDates[6]);
+
+  // Fetch scheduled orders from API
+  const { data: scheduledOrders = [], isLoading, isError } = useQuery({
+    queryKey: ['scheduled-orders', user?.providerId, startDate, endDate],
+    queryFn: () => calendarService.getScheduledOrders({
+      startDate,
+      endDate,
+      providerId: user?.providerId || undefined,
+      countryCode: user?.countryCode,
+    }),
+    enabled: !!user,
+    staleTime: 30000, // 30 seconds
+  });
+
+  // Transform and group jobs by date
+  const jobsByDate = useMemo(() => {
+    const grouped: Record<string, ScheduledJob[]> = {};
+    
+    for (const order of scheduledOrders) {
+      if (!order.scheduledDate) continue;
+      
+      const dateKey = order.scheduledDate.split('T')[0];
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(transformToScheduledJob(order));
+    }
+    
+    return grouped;
+  }, [scheduledOrders]);
+
   const getJobsForDate = (date: Date) => {
-    return mockJobs[formatDateKey(date)] || [];
+    return jobsByDate[formatDateKey(date)] || [];
   };
 
   const navigateWeek = (direction: number) => {
@@ -98,6 +170,29 @@ export default function ProviderCalendarPage() {
   const totalWeekJobs = weekDates.reduce((sum, date) => {
     return sum + getJobsForDate(date).length;
   }, 0);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+        <span className="ml-3 text-gray-600">Loading calendar...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+        <AlertCircle className="h-5 w-5 text-red-500" />
+        <div>
+          <p className="font-medium text-red-800">Failed to load calendar</p>
+          <p className="text-sm text-red-600">Please try refreshing the page</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

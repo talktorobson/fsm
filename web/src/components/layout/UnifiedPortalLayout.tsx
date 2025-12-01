@@ -199,19 +199,30 @@ export default function UnifiedPortalLayout() {
   const { user, logout } = useAuth();
   const { messages, isLoading, isOpen, sendMessage, toggleChat, closeChat } = useAIChat();
   
-  // Track expanded portals
-  const [expandedPortals, setExpandedPortals] = useState<string[]>(['operator']);
+  // Get which portal is currently active based on URL path
+  const getActivePortal = (): string => {
+    const path = location.pathname;
+    // Match portal based on URL prefix (e.g., /psm/dashboard -> psm)
+    if (path.startsWith('/psm/')) return 'psm';
+    if (path.startsWith('/seller/')) return 'seller';
+    if (path.startsWith('/admin/')) return 'admin';
+    if (path.startsWith('/provider/')) return 'provider';
+    if (path.startsWith('/catalog/')) return 'catalog';
+    if (path.startsWith('/customer/')) return 'customer';
+    if (path.startsWith('/operator/')) return 'operator';
+    return 'operator';
+  };
+
+  const activePortal = getActivePortal();
+  
+  // Track expanded portals - auto-expand the active one
+  const [expandedPortals, setExpandedPortals] = useState<string[]>([activePortal]);
 
   // Auto-expand portal based on current route
   useEffect(() => {
-    const currentPath = location.pathname;
-    for (const portal of portals) {
-      if (portal.items.some(item => currentPath.startsWith(item.href.split('/').slice(0, 2).join('/')))) {
-        if (!expandedPortals.includes(portal.id)) {
-          setExpandedPortals(prev => [...prev, portal.id]);
-        }
-        break;
-      }
+    const currentPortal = getActivePortal();
+    if (!expandedPortals.includes(currentPortal)) {
+      setExpandedPortals(prev => [...prev, currentPortal]);
     }
   }, [location.pathname]);
 
@@ -246,16 +257,6 @@ export default function UnifiedPortalLayout() {
     return location.pathname === href || location.pathname.startsWith(href + '/');
   };
 
-  // Get which portal is currently active
-  const getActivePortal = () => {
-    for (const portal of portals) {
-      if (portal.items.some(item => isItemActive(item.href))) {
-        return portal.id;
-      }
-    }
-    return 'operator';
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -271,7 +272,7 @@ export default function UnifiedPortalLayout() {
           {portals.filter(canAccessPortal).map((portal) => {
             const Icon = portal.icon;
             const isExpanded = expandedPortals.includes(portal.id);
-            const isActive = getActivePortal() === portal.id;
+            const isActive = activePortal === portal.id;
             
             return (
               <div key={portal.id} className="mb-2">

@@ -98,15 +98,23 @@ export default function CalendarPage() {
   const events: Event[] = useMemo(() => {
     if (!scheduledOrders) return [];
 
-    return scheduledOrders.map((order) => ({
-      id: order.id,
-      title: `${order.externalId} - ${order.serviceType}`,
-      start: new Date(order.scheduledDate!),
-      end: new Date(
-        new Date(order.scheduledDate!).getTime() + (order.estimatedDuration || 2) * 60 * 60 * 1000
-      ),
-      resource: order,
-    }));
+    return scheduledOrders.map((order) => {
+      // Get customer name from various possible sources
+      const customerName = 
+        order.customerInfo?.name || 
+        order.customerName || 
+        'Unknown Customer';
+      
+      return {
+        id: order.id,
+        title: `${customerName} - ${order.serviceType}`,
+        start: new Date(order.scheduledDate!),
+        end: new Date(
+          new Date(order.scheduledDate!).getTime() + (order.estimatedDuration || 2) * 60 * 60 * 1000
+        ),
+        resource: order,
+      };
+    });
   }, [scheduledOrders]);
 
   // Event style getter

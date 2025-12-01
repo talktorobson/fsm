@@ -4,42 +4,21 @@
  */
 
 import { useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle,
   AlertCircle,
-  Camera,
   FileText,
   Star,
   PenTool,
   XCircle,
   ThumbsUp,
   ThumbsDown,
+  Loader2,
 } from 'lucide-react';
 import clsx from 'clsx';
-
-const mockWCFData = {
-  serviceOrder: {
-    id: 'SO-2024-001',
-    service: 'Installation électrique complète',
-    completedAt: '2025-11-28 14:30',
-    technician: 'Marc Lefebvre',
-  },
-  workItems: [
-    { id: '1', description: 'Installation du tableau électrique', status: 'completed' as const },
-    { id: '2', description: 'Câblage des prises de courant (x12)', status: 'completed' as const },
-    { id: '3', description: 'Installation des interrupteurs (x8)', status: 'completed' as const },
-    { id: '4', description: 'Mise à la terre', status: 'completed' as const },
-    { id: '5', description: 'Test de conformité NFC 15-100', status: 'completed' as const },
-  ],
-  photos: [
-    { id: '1', url: '/api/placeholder/400/300', caption: 'Tableau avant', type: 'before' as const },
-    { id: '2', url: '/api/placeholder/400/300', caption: 'Tableau après', type: 'after' as const },
-    { id: '3', url: '/api/placeholder/400/300', caption: 'Prises installées', type: 'after' as const },
-  ],
-  totalAmount: 450,
-  materialsCost: 180,
-  laborCost: 270,
-};
+import { useCustomerPortalContext } from '@/hooks/useCustomerAccess';
+import { customerPortalService } from '@/services/customer-portal-service';
 
 function SignaturePad({ onSign, signature }: { onSign: (data: string) => void; signature: string | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -134,23 +113,55 @@ function SignaturePad({ onSign, signature }: { onSign: (data: string) => void; s
 }
 
 export default function CustomerWCFPage() {
+  const { accessToken, serviceOrder } = useCustomerPortalContext();
   const [signature, setSignature] = useState<string | null>(null);
   const [rating, setRating] = useState<number>(0);
   const [feedback, setFeedback] = useState('');
   const [workItemApprovals, setWorkItemApprovals] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  
-  const data = mockWCFData;
 
-  const allItemsApproved = data.workItems.every(item => workItemApprovals[item.id] === true);
+  // Fetch WCF data from API
+  const { data: wcfData, isLoading, error } = useQuery({
+    queryKey: ['customer-wcf', accessToken],
+    queryFn: () => customerPortalService.getWCFData(accessToken),
+    enabled: !!accessToken,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading work completion form...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !wcfData) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Work Completion Form</h2>
+          <p className="text-gray-600">
+            The work completion form is not yet available. It will be created after the service is completed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const checklistItems = wcfData.checklistItems || [];
+  const allItemsApproved = checklistItems.length === 0 || checklistItems.every(item => workItemApprovals[item.id] === true);
   const canSubmit = signature && rating > 0 && allItemsApproved;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     
     setIsSubmitting(true);
-    // Simulate API call
+    // TODO: Call API to submit WCF signature
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSubmitted(true);
     setIsSubmitting(false);
@@ -195,121 +206,93 @@ export default function CustomerWCFPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Work Completion Form</h1>
-            <p className="text-sm text-gray-500">Order #{data.serviceOrder.id} • {data.serviceOrder.service}</p>
+            <p className="text-sm text-gray-500">
+              Order #{serviceOrder.orderNumber || serviceOrder.id.substring(0, 8)} • {wcfData.serviceOrder.serviceName}
+            </p>
           </div>
         </div>
-        <div className="mt-4 p-3 bg-blue-50 rounded-xl">
-          <p className="text-sm text-blue-700">
-            <strong>Completed by:</strong> {data.serviceOrder.technician} on {data.serviceOrder.completedAt}
-          </p>
-        </div>
-      </div>
-
-      {/* Work Items */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Work Performed</h2>
-        <p className="text-sm text-gray-500 mb-4">Please confirm each item was completed to your satisfaction</p>
-        
-        <div className="space-y-3">
-          {data.workItems.map(item => (
-            <div 
-              key={item.id}
-              className={clsx(
-                'flex items-center justify-between p-4 rounded-xl border-2 transition-colors',
-                workItemApprovals[item.id] === true 
-                  ? 'border-green-200 bg-green-50' 
-                  : workItemApprovals[item.id] === false
-                  ? 'border-red-200 bg-red-50'
-                  : 'border-gray-200 bg-gray-50'
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <CheckCircle className={clsx(
-                  'w-5 h-5',
-                  item.status === 'completed' ? 'text-green-600' : 'text-gray-400'
-                )} />
-                <span className="text-gray-700">{item.description}</span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setWorkItemApprovals(prev => ({ ...prev, [item.id]: true }))}
-                  className={clsx(
-                    'p-2 rounded-lg transition-colors',
-                    workItemApprovals[item.id] === true
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-600 hover:bg-green-100 hover:text-green-600'
-                  )}
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setWorkItemApprovals(prev => ({ ...prev, [item.id]: false }))}
-                  className={clsx(
-                    'p-2 rounded-lg transition-colors',
-                    workItemApprovals[item.id] === false
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600'
-                  )}
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {!allItemsApproved && Object.keys(workItemApprovals).length > 0 && (
-          <div className="mt-4 p-3 bg-orange-50 rounded-xl flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-orange-700">
-              Please approve all work items before signing. If there are issues, please contact us.
+        {wcfData.wcf && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-xl">
+            <p className="text-sm text-blue-700">
+              <strong>Status:</strong> {wcfData.wcf.status?.replace(/_/g, ' ')}
+              {wcfData.wcf.signedAt && ` • Signed on ${new Date(wcfData.wcf.signedAt).toLocaleDateString()}`}
             </p>
           </div>
         )}
       </div>
 
-      {/* Photos */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Work Photos</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {data.photos.map(photo => (
-            <div key={photo.id} className="relative group">
-              <div className="aspect-[4/3] bg-gray-200 rounded-xl overflow-hidden">
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <Camera className="w-8 h-8" />
+      {/* Work Items / Checklist */}
+      {checklistItems.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Work Performed</h2>
+          <p className="text-sm text-gray-500 mb-4">Please confirm each item was completed to your satisfaction</p>
+          
+          <div className="space-y-3">
+            {checklistItems.map(item => (
+              <div 
+                key={item.id}
+                className={clsx(
+                  'flex items-center justify-between p-4 rounded-xl border-2 transition-colors',
+                  workItemApprovals[item.id] === true 
+                    ? 'border-green-200 bg-green-50' 
+                    : workItemApprovals[item.id] === false
+                    ? 'border-red-200 bg-red-50'
+                    : 'border-gray-200 bg-gray-50'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle className={clsx(
+                    'w-5 h-5',
+                    workItemApprovals[item.id] === true ? 'text-green-600' : 'text-gray-400'
+                  )} />
+                  <span className="text-gray-700">{item.text}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setWorkItemApprovals(prev => ({ ...prev, [item.id]: true }))}
+                    className={clsx(
+                      'p-2 rounded-lg transition-colors',
+                      workItemApprovals[item.id] === true
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-green-100 hover:text-green-600'
+                    )}
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setWorkItemApprovals(prev => ({ ...prev, [item.id]: false }))}
+                    className={clsx(
+                      'p-2 rounded-lg transition-colors',
+                      workItemApprovals[item.id] === false
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600'
+                    )}
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="absolute bottom-2 left-2 right-2">
-                <span className={clsx(
-                  'text-xs font-medium px-2 py-1 rounded-full',
-                  photo.type === 'before' ? 'bg-gray-800 text-white' : 'bg-green-600 text-white'
-                )}>
-                  {photo.type === 'before' ? 'Before' : 'After'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
 
-      {/* Cost Summary */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Cost Summary</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between text-gray-600">
-            <span>Materials</span>
-            <span>€{data.materialsCost}</span>
-          </div>
-          <div className="flex justify-between text-gray-600">
-            <span>Labor</span>
-            <span>€{data.laborCost}</span>
-          </div>
-          <div className="border-t border-gray-200 pt-3 flex justify-between">
-            <span className="font-semibold text-gray-900">Total</span>
-            <span className="font-bold text-xl text-gray-900">€{data.totalAmount}</span>
-          </div>
+          {!allItemsApproved && Object.keys(workItemApprovals).length > 0 && (
+            <div className="mt-4 p-3 bg-orange-50 rounded-xl flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-orange-700">
+                Please approve all work items before signing. If there are issues, please contact us.
+              </p>
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* Work Description */}
+      {wcfData.wcf?.workDescription && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Work Description</h2>
+          <p className="text-gray-700 whitespace-pre-wrap">{wcfData.wcf.workDescription}</p>
+        </div>
+      )}
 
       {/* Rating */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
@@ -374,7 +357,9 @@ export default function CustomerWCFPage() {
 
       {!canSubmit && (
         <p className="text-center text-sm text-gray-500">
-          Please approve all work items, add a rating, and sign above to submit.
+          {checklistItems.length > 0 
+            ? 'Please approve all work items, add a rating, and sign above to submit.'
+            : 'Please add a rating and sign above to submit.'}
         </p>
       )}
     </div>

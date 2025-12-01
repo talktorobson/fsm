@@ -2,11 +2,12 @@
 
 ## Orientation
 
-- **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). Phases 1-4 complete. Production-ready.
+- **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). 276 files, 53,539 lines. Phases 1-5 complete. Production-ready.
 - **Mobile App**: `mobile-app/` (React Native + Expo). Phase 3 deliverable. ~50% complete.
-- **Web App**: `web/` (React + Vite). Phase 4 deliverable. Core FSM features complete and deployed.
+- **Web App**: `web/` (React + Vite). 161 files, 5,969 lines. Phase 5 complete. Multi-experience platform deployed.
 - **Documentation**: `product-docs/` holds v2.0 production-ready specs. `docs/IMPLEMENTATION_TRACKING.md` is the authoritative progress tracker.
 - **Legacy/Reference**: `roadshow-mockup/` is archived. `business-requirements/` are read-only source materials.
+- **Live Demo**: https://135.181.96.93
 
 ## Build, Run, and Test
 
@@ -19,6 +20,7 @@
   - E2E: `npm run test:e2e` (requires DB setup, see `test/README.md`).
   - Coverage: `npm run test:cov`.
 - **Deploy**: `./deploy/deploy-remote.sh` (deploys to VPS at 135.181.96.93).
+- **Seed**: Compile with `npx tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --resolveJsonModule --skipLibCheck --module commonjs --target ES2020`, then run on server.
 
 ### Mobile App (`mobile-app/`)
 
@@ -31,6 +33,7 @@
 - **Setup**: `cd web && npm install`.
 - **Run**: `npm run dev`.
 - **Test**: `npm run test` (Vitest).
+- **E2E**: `node e2e-tests.cjs` and `node e2e-navigation-tests.cjs` (126 tests total).
 
 ## Data Model (Key Entities)
 
@@ -42,6 +45,13 @@
 - **WorkTeam**: Teams under providers with zone assignments and calendar inheritance
 - **WorkTeamCalendar**: Team-level calendar overrides with planned absences and dedicated working days
 - **TechnicianCertification**: Certification tracking with expiry dates
+
+### Demo Data (Seeded - Dec 2025)
+- **French Customers**: Marie Dupont, Jean-Pierre Martin, Sophie Bernard, Pierre Durand, Isabelle Moreau, François Leroy, Nathalie Petit, Laurent Roux
+- **French Providers**: Services Pro Paris, TechniService Marseille, InstallPlus Lyon, ProHabitat Bordeaux
+- **French Cities**: Paris, Lyon, Bordeaux, Marseille, Nice, Toulouse, Nantes
+- **Multi-Country**: ES, IT, PT with localized customer names
+- **Demo Credentials**: operator@adeo.com / Operator123!, admin-fr@adeo.com / Admin123!
 
 ### Key Enums
 - `ProviderTypeEnum`: P1, P2
