@@ -368,6 +368,46 @@ class ProviderService {
   }
 
   // ============================================================================
+  // CERTIFICATION VERIFICATION (PSM)
+  // ============================================================================
+
+  /**
+   * Get all technician certifications for verification
+   */
+  async getCertifications(filters: {
+    status?: 'pending' | 'approved' | 'rejected' | 'expired';
+    providerId?: string;
+    page?: number;
+    limit?: number;
+  } = {}): Promise<PaginatedResponse<CertificationVerificationItem>> {
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
+    );
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<CertificationVerificationItem>>>('/providers/certifications', { params });
+    return response.data.data;
+  }
+
+  /**
+   * Verify (approve/reject) a certification
+   */
+  async verifyCertification(certificationId: string, action: 'approve' | 'reject', notes?: string): Promise<any> {
+    const response = await apiClient.patch<ApiResponse<any>>(`/providers/certifications/${certificationId}/verify`, { action, notes });
+    return response.data.data;
+  }
+
+  // ============================================================================
+  // COVERAGE ANALYSIS (PSM)
+  // ============================================================================
+
+  /**
+   * Get all intervention zones for coverage analysis
+   */
+  async getInterventionZonesForCoverage(): Promise<any[]> {
+    const response = await apiClient.get<ApiResponse<{ data: any[] }>>('/providers/intervention-zones/coverage');
+    return response.data.data.data;
+  }
+
+  // ============================================================================
   // SEARCH & ASSIGNMENT
   // ============================================================================
 
@@ -388,6 +428,40 @@ class ProviderService {
     });
     return response.data;
   }
+}
+
+// Type for certification verification item
+export interface CertificationVerificationItem {
+  id: string;
+  technicianId: string;
+  certificationType: string;
+  certificateName: string;
+  certificateNumber?: string;
+  issuingAuthority?: string;
+  issuedAt: string;
+  expiresAt?: string;
+  documentUrl?: string;
+  isVerified: boolean;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  providerName: string;
+  providerId: string;
+  technician: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    workTeam: {
+      id: string;
+      name: string;
+      provider: {
+        id: string;
+        name: string;
+      };
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const providerService = new ProviderService();

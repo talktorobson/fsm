@@ -1269,4 +1269,210 @@ export class ProvidersService {
     this.logger.log(`Work team ${workTeamId} removed from zone ${interventionZoneId} by ${currentUserId}`);
     return { message: 'Work team zone assignment successfully deleted' };
   }
+
+  // ============================================================================
+  // CERTIFICATION METHODS
+  // ============================================================================
+
+  /**
+   * Get all technician certifications with verification status
+   * For PSM verification workflow
+   */
+  async getAllCertifications(
+    filters: {
+      status?: 'pending' | 'approved' | 'rejected' | 'expired';
+      providerId?: string;
+      page?: number;
+      limit?: number;
+    },
+    currentUserCountry: string,
+    currentUserBU: string,
+  ) {
+    const { status, providerId, page = 1, limit = 20 } = filters;
+    const skip = (page - 1) * limit;
+    const now = new Date();
+
+    const where: any = {
+      technician: {
+        workTeam: {
+          countryCode: currentUserCountry,
+          businessUnit: currentUserBU,
+        },
+      },
+    };
+
+    if (providerId) {
+      where.technician = {
+        ...where.technician,
+        workTeam: {
+          ...where.technician.workTeam,
+          providerId,
+        },
+      };
+    }
+
+    // Apply status filter
+    if (status === 'pending') {
+      where.isVerified = false;
+      where.OR = [{ expiresAt: null }, { expiresAt: { gt: now } }];
+    } else if (status === 'approved') {
+      where.isVerified = true;
+      where.OR = [{ expiresAt: null }, { expiresAt: { gt: now } }];
+    } else if (status === 'rejected') {
+      // Rejected = verified as false with a verification attempt
+      where.isVerified = false;
+      where.verifiedAt = { not: null };
+    } else if (status === 'expired') {
+      where.expiresAt = { lt: now };
+    }
+
+    const [certifications, total] = await Promise.all([
+      this.prisma.technicianCertification.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          technician: {
+            include: {
+              workTeam: {
+                include: {
+                  provider: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ isVerified: 'asc' }, { expiresAt: 'asc' }, { createdAt: 'desc' }],
+      }),
+      this.prisma.technicianCertification.count({ where }),
+    ]);
+
+    // Transform to include computed status
+    const transformedCertifications = certifications.map((cert) => {
+      let computedStatus: 'pending' | 'approved' | 'rejected' | 'expired' = 'pending';
+
+      if (cert.expiresAt && cert.expiresAt < now) {
+        computedStatus = 'expired';
+      } else if (cert.isVerified) {
+        computedStatus = 'approved';
+      } else if (cert.verifiedAt) {
+        computedStatus = 'rejected';
+      }
+
+      return {
+        ...cert,
+        status: computedStatus,
+        providerName: cert.technician.workTeam.provider.name,
+        providerId: cert.technician.workTeam.provider.id,
+      };
+    });
+
+    return {
+      data: transformedCertifications,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Update certification verification status
+   */
+  async verifyCertification(
+    certificationId: string,
+    action: 'approve' | 'reject',
+    currentUserId: string,
+    currentUserCountry: string,
+    notes?: string,
+  ) {
+    const certification = await this.prisma.technicianCertification.findFirst({
+      where: {
+        id: certificationId,
+        technician: {
+          workTeam: {
+            countryCode: currentUserCountry,
+          },
+        },
+      },
+    });
+
+    if (!certification) {
+      throw new NotFoundException('Certification not found');
+    }
+
+    const updated = await this.prisma.technicianCertification.update({
+      where: { id: certificationId },
+      data: {
+        isVerified: action === 'approve',
+        verifiedAt: new Date(),
+        verifiedBy: currentUserId,
+      },
+      include: {
+        technician: {
+          include: {
+            workTeam: {
+              include: {
+                provider: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    this.logger.log(`Certification ${certificationId} ${action}d by ${currentUserId}`);
+    return updated;
+  }
+
+  /**
+   * Get all intervention zones aggregated for coverage analysis
+   * For PSM coverage management
+   */
+  async getInterventionZonesForCoverage(currentUserCountry: string, currentUserBU: string) {
+    const zones = await this.prisma.interventionZone.findMany({
+      where: {
+        provider: {
+          countryCode: currentUserCountry,
+          businessUnit: currentUserBU,
+          status: { not: 'INACTIVE' },
+        },
+      },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+        workTeamZoneAssignments: {
+          include: {
+            workTeam: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                serviceTypes: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return { data: zones };
+  }
 }

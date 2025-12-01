@@ -426,4 +426,60 @@ export class ProvidersController {
   ) {
     return this.providersService.removeWorkTeamFromZone(workTeamId, interventionZoneId, user.userId, user.countryCode);
   }
+
+  // ============================================================================
+  // CERTIFICATION ENDPOINTS (PSM Verification)
+  // ============================================================================
+
+  @Get('certifications')
+  @ApiOperation({ summary: 'Get all technician certifications for verification (PSM)' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'List of certifications with verification status' })
+  async getAllCertifications(
+    @Query('status') status?: 'pending' | 'approved' | 'rejected' | 'expired',
+    @Query('providerId') providerId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: CurrentUserPayload,
+  ) {
+    return this.providersService.getAllCertifications(
+      {
+        status,
+        providerId,
+        page: page ? Number.parseInt(page, 10) : undefined,
+        limit: limit ? Number.parseInt(limit, 10) : undefined,
+      },
+      user?.countryCode || '',
+      user?.businessUnit || '',
+    );
+  }
+
+  @Patch('certifications/:certificationId/verify')
+  @Roles('ADMIN', 'PROVIDER_MANAGER', 'PSM')
+  @ApiOperation({ summary: 'Verify (approve/reject) a certification' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Certification verified' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Certification not found' })
+  async verifyCertification(
+    @Param('certificationId') certificationId: string,
+    @Body() body: { action: 'approve' | 'reject'; notes?: string },
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.providersService.verifyCertification(
+      certificationId,
+      body.action,
+      user.userId,
+      user.countryCode,
+      body.notes,
+    );
+  }
+
+  // ============================================================================
+  // COVERAGE ENDPOINTS (PSM Coverage Analysis)
+  // ============================================================================
+
+  @Get('intervention-zones/coverage')
+  @ApiOperation({ summary: 'Get all intervention zones for coverage analysis (PSM)' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'All intervention zones with provider data' })
+  async getInterventionZonesForCoverage(@CurrentUser() user: CurrentUserPayload) {
+    return this.providersService.getInterventionZonesForCoverage(user.countryCode, user.businessUnit);
+  }
 }
