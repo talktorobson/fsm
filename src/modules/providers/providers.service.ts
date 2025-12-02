@@ -15,6 +15,11 @@ import {
   BulkUpsertServicePriorityDto,
 } from './dto';
 
+/**
+ * Service for managing providers, work teams, and technicians.
+ *
+ * Handles logic for CRUD operations, schedule management, and coverage zones.
+ */
 @Injectable()
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
@@ -25,6 +30,14 @@ export class ProvidersService {
   // PROVIDER CRUD
   // ============================================================================
 
+  /**
+   * Creates a new provider.
+   *
+   * @param dto - The provider creation data.
+   * @param currentUserId - The ID of the user creating the provider.
+   * @returns {Promise<ProviderResponseDto>} The created provider.
+   * @throws {ConflictException} If a provider with the same external ID exists.
+   */
   async createProvider(dto: CreateProviderDto, currentUserId: string) {
     // Check for duplicate external ID
     if (dto.externalId) {
@@ -98,6 +111,14 @@ export class ProvidersService {
     return provider;
   }
 
+  /**
+   * Retrieves all providers with pagination and filters.
+   *
+   * @param query - The query parameters.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns A paginated list of providers.
+   */
   async findAllProviders(query: QueryProvidersDto, currentUserCountry: string, currentUserBU: string) {
     const { page = 1, limit = 20, search, countryCode, businessUnit, status } = query;
     const skip = (page - 1) * limit;
@@ -171,6 +192,15 @@ export class ProvidersService {
     };
   }
 
+  /**
+   * Retrieves a provider by ID.
+   *
+   * @param id - The provider ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<ProviderResponseDto>} The provider details.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async findOneProvider(id: string, currentUserCountry: string, currentUserBU: string) {
     const provider = await this.prisma.provider.findFirst({
       where: {
@@ -233,6 +263,17 @@ export class ProvidersService {
     return provider;
   }
 
+  /**
+   * Updates a provider.
+   *
+   * @param id - The provider ID.
+   * @param dto - The update data.
+   * @param currentUserId - The ID of the user performing the update.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<ProviderResponseDto>} The updated provider.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async updateProvider(
     id: string,
     dto: UpdateProviderDto,
@@ -307,6 +348,17 @@ export class ProvidersService {
     return provider;
   }
 
+  /**
+   * Deletes a provider.
+   *
+   * @param id - The provider ID.
+   * @param currentUserId - The ID of the user deleting the provider.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {NotFoundException} If the provider is not found.
+   * @throws {ForbiddenException} If the provider has associated work teams.
+   */
   async removeProvider(id: string, currentUserId: string, currentUserCountry: string, currentUserBU: string) {
     const existing = await this.prisma.provider.findFirst({
       where: {
@@ -340,6 +392,17 @@ export class ProvidersService {
   // WORK TEAM CRUD
   // ============================================================================
 
+  /**
+   * Creates a work team.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The work team creation data.
+   * @param currentUserId - The ID of the user creating the work team.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<WorkTeamResponseDto>} The created work team.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async createWorkTeam(
     providerId: string,
     dto: CreateWorkTeamDto,
@@ -392,6 +455,15 @@ export class ProvidersService {
     return workTeam;
   }
 
+  /**
+   * Retrieves all work teams for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<WorkTeamResponseDto[]>} A list of work teams.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async findAllWorkTeams(providerId: string, currentUserCountry: string, currentUserBU: string) {
     // Verify provider exists and belongs to current tenant
     const provider = await this.prisma.provider.findFirst({
@@ -431,6 +503,14 @@ export class ProvidersService {
     return workTeams;
   }
 
+  /**
+   * Retrieves a work team by ID.
+   *
+   * @param workTeamId - The work team ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<WorkTeamResponseDto>} The work team details.
+   * @throws {NotFoundException} If the work team is not found.
+   */
   async findOneWorkTeam(workTeamId: string, currentUserCountry: string) {
     const workTeam = await this.prisma.workTeam.findFirst({
       where: {
@@ -481,6 +561,16 @@ export class ProvidersService {
     return workTeam;
   }
 
+  /**
+   * Updates a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param dto - The update data.
+   * @param currentUserId - The ID of the user updating the work team.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<WorkTeamResponseDto>} The updated work team.
+   * @throws {NotFoundException} If the work team is not found.
+   */
   async updateWorkTeam(
     workTeamId: string,
     dto: UpdateWorkTeamDto,
@@ -533,6 +623,16 @@ export class ProvidersService {
     return workTeam;
   }
 
+  /**
+   * Deletes a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param currentUserId - The ID of the user deleting the work team.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {NotFoundException} If the work team is not found.
+   * @throws {ForbiddenException} If the work team has associated technicians.
+   */
   async removeWorkTeam(workTeamId: string, currentUserId: string, currentUserCountry: string) {
     const existing = await this.prisma.workTeam.findFirst({
       where: {
@@ -565,6 +665,16 @@ export class ProvidersService {
   // TECHNICIAN CRUD
   // ============================================================================
 
+  /**
+   * Creates a technician.
+   *
+   * @param workTeamId - The work team ID.
+   * @param dto - The technician creation data.
+   * @param currentUserId - The ID of the user creating the technician.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<TechnicianResponseDto>} The created technician.
+   * @throws {NotFoundException} If the work team is not found.
+   */
   async createTechnician(
     workTeamId: string,
     dto: CreateTechnicianDto,
@@ -604,6 +714,14 @@ export class ProvidersService {
     return technician;
   }
 
+  /**
+   * Retrieves all technicians for a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<TechnicianResponseDto[]>} A list of technicians.
+   * @throws {NotFoundException} If the work team is not found.
+   */
   async findAllTechnicians(workTeamId: string, currentUserCountry: string) {
     // Verify work team exists and belongs to current tenant
     const workTeam = await this.prisma.workTeam.findFirst({
@@ -629,6 +747,14 @@ export class ProvidersService {
     return technicians;
   }
 
+  /**
+   * Retrieves a technician by ID.
+   *
+   * @param technicianId - The technician ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<TechnicianResponseDto>} The technician details.
+   * @throws {NotFoundException} If the technician is not found.
+   */
   async findOneTechnician(technicianId: string, currentUserCountry: string) {
     const technician = await this.prisma.technician.findFirst({
       where: {
@@ -653,6 +779,16 @@ export class ProvidersService {
     return technician;
   }
 
+  /**
+   * Updates a technician.
+   *
+   * @param technicianId - The technician ID.
+   * @param dto - The update data.
+   * @param currentUserId - The ID of the user updating the technician.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<TechnicianResponseDto>} The updated technician.
+   * @throws {NotFoundException} If the technician is not found.
+   */
   async updateTechnician(
     technicianId: string,
     dto: UpdateTechnicianDto,
@@ -693,6 +829,15 @@ export class ProvidersService {
     return technician;
   }
 
+  /**
+   * Deletes a technician.
+   *
+   * @param technicianId - The technician ID.
+   * @param currentUserId - The ID of the user deleting the technician.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {NotFoundException} If the technician is not found.
+   */
   async removeTechnician(technicianId: string, currentUserId: string, currentUserCountry: string) {
     const existing = await this.prisma.technician.findFirst({
       where: {
@@ -719,6 +864,15 @@ export class ProvidersService {
   // PROVIDER WORKING SCHEDULE CRUD
   // ============================================================================
 
+  /**
+   * Retrieves the working schedule of a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<ProviderWorkingScheduleResponseDto>} The working schedule.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async getProviderWorkingSchedule(providerId: string, currentUserCountry: string, currentUserBU: string) {
     const provider = await this.prisma.provider.findFirst({
       where: {
@@ -742,6 +896,17 @@ export class ProvidersService {
     return provider.workingSchedule;
   }
 
+  /**
+   * Creates or updates a provider's working schedule.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The schedule data.
+   * @param currentUserId - The ID of the user creating/updating the schedule.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<ProviderWorkingScheduleResponseDto>} The updated schedule.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async upsertProviderWorkingSchedule(
     providerId: string,
     dto: CreateProviderWorkingScheduleDto,
@@ -821,6 +986,15 @@ export class ProvidersService {
   // INTERVENTION ZONE CRUD
   // ============================================================================
 
+  /**
+   * Retrieves all intervention zones for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<InterventionZoneResponseDto[]>} A list of intervention zones.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async getProviderInterventionZones(providerId: string, currentUserCountry: string, currentUserBU: string) {
     const provider = await this.prisma.provider.findFirst({
       where: {
@@ -852,6 +1026,17 @@ export class ProvidersService {
     });
   }
 
+  /**
+   * Creates an intervention zone.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The intervention zone data.
+   * @param currentUserId - The ID of the user creating the zone.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<InterventionZoneResponseDto>} The created intervention zone.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async createInterventionZone(
     providerId: string,
     dto: CreateInterventionZoneDto,
@@ -898,6 +1083,17 @@ export class ProvidersService {
     return zone;
   }
 
+  /**
+   * Updates an intervention zone.
+   *
+   * @param zoneId - The intervention zone ID.
+   * @param dto - The update data.
+   * @param currentUserId - The ID of the user updating the zone.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<InterventionZoneResponseDto>} The updated intervention zone.
+   * @throws {NotFoundException} If the intervention zone is not found.
+   */
   async updateInterventionZone(
     zoneId: string,
     dto: UpdateInterventionZoneDto,
@@ -946,6 +1142,16 @@ export class ProvidersService {
     return updated;
   }
 
+  /**
+   * Deletes an intervention zone.
+   *
+   * @param zoneId - The intervention zone ID.
+   * @param currentUserId - The ID of the user deleting the zone.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {NotFoundException} If the intervention zone is not found.
+   */
   async deleteInterventionZone(zoneId: string, currentUserId: string, currentUserCountry: string, currentUserBU: string) {
     const zone = await this.prisma.interventionZone.findFirst({
       where: {
@@ -983,6 +1189,15 @@ export class ProvidersService {
   // SERVICE PRIORITY CONFIG CRUD
   // ============================================================================
 
+  /**
+   * Retrieves service priority configurations for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<ServicePriorityConfigResponseDto[]>} A list of service priority configs.
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async getProviderServicePriorities(providerId: string, currentUserCountry: string, currentUserBU: string) {
     const provider = await this.prisma.provider.findFirst({
       where: {
@@ -1012,6 +1227,17 @@ export class ProvidersService {
     });
   }
 
+  /**
+   * Creates or updates a service priority configuration.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The configuration data.
+   * @param currentUserId - The ID of the user upserting the config.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<ServicePriorityConfigResponseDto>} The updated configuration.
+   * @throws {NotFoundException} If the provider or specialty is not found.
+   */
   async upsertServicePriorityConfig(
     providerId: string,
     dto: CreateServicePriorityConfigDto,
@@ -1080,6 +1306,17 @@ export class ProvidersService {
     return config;
   }
 
+  /**
+   * Bulk updates service priority configurations.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The bulk configuration data.
+   * @param currentUserId - The ID of the user upserting the configs.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<void>}
+   * @throws {NotFoundException} If the provider is not found.
+   */
   async bulkUpsertServicePriorityConfig(
     providerId: string,
     dto: BulkUpsertServicePriorityDto,
@@ -1143,6 +1380,17 @@ export class ProvidersService {
     return results;
   }
 
+  /**
+   * Deletes a service priority configuration.
+   *
+   * @param providerId - The provider ID.
+   * @param specialtyId - The specialty ID.
+   * @param currentUserId - The ID of the user deleting the config.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {NotFoundException} If the config is not found.
+   */
   async deleteServicePriorityConfig(
     providerId: string,
     specialtyId: string,
@@ -1182,6 +1430,17 @@ export class ProvidersService {
   // WORK TEAM ZONE ASSIGNMENT CRUD
   // ============================================================================
 
+  /**
+   * Assigns a work team to an intervention zone.
+   *
+   * @param workTeamId - The work team ID.
+   * @param interventionZoneId - The intervention zone ID.
+   * @param overrides - Optional overrides for limits and priority.
+   * @param currentUserId - The ID of the user performing the assignment.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<WorkTeamZoneAssignmentResponseDto>} The created assignment.
+   * @throws {NotFoundException} If the work team or zone is not found.
+   */
   async assignWorkTeamToZone(
     workTeamId: string,
     interventionZoneId: string,
@@ -1237,6 +1496,16 @@ export class ProvidersService {
     return assignment;
   }
 
+  /**
+   * Removes a work team from an intervention zone.
+   *
+   * @param workTeamId - The work team ID.
+   * @param interventionZoneId - The intervention zone ID.
+   * @param currentUserId - The ID of the user performing the removal.
+   * @param currentUserCountry - The country code of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {NotFoundException} If the assignment is not found.
+   */
   async removeWorkTeamFromZone(
     workTeamId: string,
     interventionZoneId: string,

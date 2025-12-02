@@ -210,7 +210,9 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   // ============================================================================
 
   /**
-   * Parse Kafka brokers from environment variable
+   * Parse Kafka brokers from environment variable.
+   *
+   * @returns An array of broker addresses.
    */
   private parseBrokers(): string[] {
     const brokers = process.env.KAFKA_BROKERS || 'localhost:9092';
@@ -218,7 +220,9 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Parse SASL configuration for authentication
+   * Parse SASL configuration for authentication.
+   *
+   * @returns SASL configuration object or undefined if not configured.
    */
   private parseSaslConfig(): any {
     const mechanism = process.env.KAFKA_SASL_MECHANISM;
@@ -245,7 +249,10 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Serialize headers to Buffer format required by KafkaJS
+   * Serialize headers to Buffer format required by KafkaJS.
+   *
+   * @param headers - Key-value pair of headers.
+   * @returns Headers with values converted to Buffers, or undefined.
    */
   private serializeHeaders(
     headers?: Record<string, string>,
@@ -262,7 +269,10 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Get topic name from domain
+   * Get topic name from domain.
+   *
+   * @param domain - The domain of the event (e.g., 'projects', 'assignments').
+   * @returns The corresponding Kafka topic name.
    */
   private getTopicName(domain: string): string {
     // Map domain to topic name based on naming convention
@@ -278,21 +288,27 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Generate unique event ID
+   * Generate unique event ID.
+   *
+   * @returns A unique string ID for the event.
    */
   private generateEventId(): string {
     return `evt_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
   }
 
   /**
-   * Get producer connection status
+   * Get producer connection status.
+   *
+   * @returns True if connected, false otherwise.
    */
   isProducerConnected(): boolean {
     return this.isConnected;
   }
 
   /**
-   * Get producer status (for health checks)
+   * Get producer status (for health checks).
+   *
+   * @returns An object containing connection status and broker list.
    */
   getStatus(): { connected: boolean; brokers: string[] } {
     return {

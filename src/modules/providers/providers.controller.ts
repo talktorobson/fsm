@@ -33,6 +33,11 @@ import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '@/common/decorators/current-user.decorator';
 
+/**
+ * Controller for managing providers, work teams, technicians, and related configurations.
+ *
+ * Handles CRUD operations for providers hierarchy and their operational settings.
+ */
 @ApiTags('providers')
 @Controller('providers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,6 +49,13 @@ export class ProvidersController {
   // PROVIDER ENDPOINTS
   // ============================================================================
 
+  /**
+   * Creates a new provider.
+   *
+   * @param dto - The provider creation data.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<ProviderResponseDto>} The created provider.
+   */
   @Post()
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Create a new provider (Admin only)' })
@@ -53,6 +65,13 @@ export class ProvidersController {
     return this.providersService.createProvider(dto, user.userId);
   }
 
+  /**
+   * Retrieves all providers with pagination and filtering.
+   *
+   * @param query - Query parameters for filtering and pagination.
+   * @param user - The current authenticated user.
+   * @returns A paginated list of providers.
+   */
   @Get()
   @ApiOperation({ summary: 'Get all providers with pagination and filters' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of providers' })
@@ -60,6 +79,13 @@ export class ProvidersController {
     return this.providersService.findAllProviders(query, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Retrieves a specific provider by ID.
+   *
+   * @param id - The provider ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<ProviderResponseDto>} The provider details.
+   */
   @Get(':id')
   @ApiOperation({ summary: 'Get provider by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Provider details' })
@@ -68,6 +94,14 @@ export class ProvidersController {
     return this.providersService.findOneProvider(id, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Updates an existing provider.
+   *
+   * @param id - The provider ID.
+   * @param dto - The update data.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<ProviderResponseDto>} The updated provider.
+   */
   @Put(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Update provider (Admin only)' })
@@ -81,6 +115,14 @@ export class ProvidersController {
     return this.providersService.updateProvider(id, dto, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Partially updates an existing provider.
+   *
+   * @param id - The provider ID.
+   * @param dto - The update data.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<ProviderResponseDto>} The updated provider.
+   */
   @Patch(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Partially update provider (Admin only)' })
@@ -94,6 +136,13 @@ export class ProvidersController {
     return this.providersService.updateProvider(id, dto, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Deletes a provider.
+   *
+   * @param id - The provider ID.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<void>}
+   */
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -109,6 +158,14 @@ export class ProvidersController {
   // WORK TEAM ENDPOINTS
   // ============================================================================
 
+  /**
+   * Creates a work team for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The work team creation data.
+   * @param user - The current authenticated user (ADMIN or PROVIDER_MANAGER).
+   * @returns {Promise<WorkTeamResponseDto>} The created work team.
+   */
   @Post(':providerId/work-teams')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Create work team for provider' })
@@ -122,6 +179,13 @@ export class ProvidersController {
     return this.providersService.createWorkTeam(providerId, dto, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Retrieves all work teams for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<WorkTeamResponseDto[]>} A list of work teams.
+   */
   @Get(':providerId/work-teams')
   @ApiOperation({ summary: 'Get all work teams for provider' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of work teams' })
@@ -130,6 +194,13 @@ export class ProvidersController {
     return this.providersService.findAllWorkTeams(providerId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Retrieves a specific work team by ID.
+   *
+   * @param workTeamId - The work team ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<WorkTeamResponseDto>} The work team details.
+   */
   @Get('work-teams/:workTeamId')
   @ApiOperation({ summary: 'Get work team by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Work team details' })
@@ -138,6 +209,14 @@ export class ProvidersController {
     return this.providersService.findOneWorkTeam(workTeamId, user.countryCode);
   }
 
+  /**
+   * Updates a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param dto - The update data.
+   * @param user - The current authenticated user (ADMIN or PROVIDER_MANAGER).
+   * @returns {Promise<WorkTeamResponseDto>} The updated work team.
+   */
   @Put('work-teams/:workTeamId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Update work team' })
@@ -151,6 +230,13 @@ export class ProvidersController {
     return this.providersService.updateWorkTeam(workTeamId, dto, user.userId, user.countryCode);
   }
 
+  /**
+   * Deletes a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param user - The current authenticated user (ADMIN or PROVIDER_MANAGER).
+   * @returns {Promise<void>}
+   */
   @Delete('work-teams/:workTeamId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -166,6 +252,14 @@ export class ProvidersController {
   // TECHNICIAN ENDPOINTS
   // ============================================================================
 
+  /**
+   * Creates a technician for a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param dto - The technician creation data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<TechnicianResponseDto>} The created technician.
+   */
   @Post('work-teams/:workTeamId/technicians')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Create technician for work team' })
@@ -179,6 +273,13 @@ export class ProvidersController {
     return this.providersService.createTechnician(workTeamId, dto, user.userId, user.countryCode);
   }
 
+  /**
+   * Retrieves all technicians for a work team.
+   *
+   * @param workTeamId - The work team ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<TechnicianResponseDto[]>} A list of technicians.
+   */
   @Get('work-teams/:workTeamId/technicians')
   @ApiOperation({ summary: 'Get all technicians for work team' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of technicians' })
@@ -187,6 +288,13 @@ export class ProvidersController {
     return this.providersService.findAllTechnicians(workTeamId, user.countryCode);
   }
 
+  /**
+   * Retrieves a specific technician by ID.
+   *
+   * @param technicianId - The technician ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<TechnicianResponseDto>} The technician details.
+   */
   @Get('technicians/:technicianId')
   @ApiOperation({ summary: 'Get technician by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Technician details' })
@@ -195,6 +303,14 @@ export class ProvidersController {
     return this.providersService.findOneTechnician(technicianId, user.countryCode);
   }
 
+  /**
+   * Updates a technician.
+   *
+   * @param technicianId - The technician ID.
+   * @param dto - The update data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<TechnicianResponseDto>} The updated technician.
+   */
   @Put('technicians/:technicianId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Update technician' })
@@ -208,6 +324,13 @@ export class ProvidersController {
     return this.providersService.updateTechnician(technicianId, dto, user.userId, user.countryCode);
   }
 
+  /**
+   * Deletes a technician.
+   *
+   * @param technicianId - The technician ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<void>}
+   */
   @Delete('technicians/:technicianId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -222,6 +345,13 @@ export class ProvidersController {
   // PROVIDER WORKING SCHEDULE ENDPOINTS
   // ============================================================================
 
+  /**
+   * Retrieves the working schedule of a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<ProviderWorkingScheduleResponseDto>} The working schedule.
+   */
   @Get(':providerId/working-schedule')
   @ApiOperation({ summary: 'Get provider working schedule (shifts and working days)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Provider working schedule' })
@@ -234,6 +364,14 @@ export class ProvidersController {
     return this.providersService.getProviderWorkingSchedule(providerId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Creates or updates a provider's working schedule.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The schedule data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<ProviderWorkingScheduleResponseDto>} The updated schedule.
+   */
   @Put(':providerId/working-schedule')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Create or update provider working schedule' })
@@ -257,6 +395,13 @@ export class ProvidersController {
   // INTERVENTION ZONE ENDPOINTS
   // ============================================================================
 
+  /**
+   * Retrieves all intervention zones for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<InterventionZoneResponseDto[]>} A list of intervention zones.
+   */
   @Get(':providerId/intervention-zones')
   @ApiOperation({ summary: 'Get provider intervention zones' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of intervention zones' })
@@ -268,6 +413,14 @@ export class ProvidersController {
     return this.providersService.getProviderInterventionZones(providerId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Creates a new intervention zone for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The intervention zone data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<InterventionZoneResponseDto>} The created intervention zone.
+   */
   @Post(':providerId/intervention-zones')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Create intervention zone for provider' })
@@ -287,6 +440,14 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * Updates an intervention zone.
+   *
+   * @param zoneId - The intervention zone ID.
+   * @param dto - The update data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<InterventionZoneResponseDto>} The updated intervention zone.
+   */
   @Put('intervention-zones/:zoneId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Update intervention zone' })
@@ -306,6 +467,13 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * Deletes an intervention zone.
+   *
+   * @param zoneId - The intervention zone ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<void>}
+   */
   @Delete('intervention-zones/:zoneId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -320,6 +488,13 @@ export class ProvidersController {
   // SERVICE PRIORITY CONFIG ENDPOINTS
   // ============================================================================
 
+  /**
+   * Retrieves service priority configurations for a provider.
+   *
+   * @param providerId - The provider ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<ServicePriorityConfigResponseDto[]>} A list of service priority configs.
+   */
   @Get(':providerId/service-priorities')
   @ApiOperation({ summary: 'Get provider service priority configurations (P1/P2/Opt-out)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of service priority configs' })
@@ -331,6 +506,14 @@ export class ProvidersController {
     return this.providersService.getProviderServicePriorities(providerId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Creates or updates a service priority configuration.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The configuration data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<ServicePriorityConfigResponseDto>} The updated configuration.
+   */
   @Post(':providerId/service-priorities')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Create or update service priority config' })
@@ -350,6 +533,14 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * Bulk updates service priority configurations.
+   *
+   * @param providerId - The provider ID.
+   * @param dto - The bulk configuration data.
+   * @param user - The current authenticated user.
+   * @returns {Promise<void>}
+   */
   @Put(':providerId/service-priorities/bulk')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Bulk update service priority configurations' })
@@ -369,6 +560,14 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * Deletes a service priority configuration.
+   *
+   * @param providerId - The provider ID.
+   * @param specialtyId - The specialty ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<void>}
+   */
   @Delete(':providerId/service-priorities/:specialtyId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -393,6 +592,15 @@ export class ProvidersController {
   // WORK TEAM ZONE ASSIGNMENT ENDPOINTS
   // ============================================================================
 
+  /**
+   * Assigns a work team to an intervention zone.
+   *
+   * @param workTeamId - The work team ID.
+   * @param interventionZoneId - The intervention zone ID.
+   * @param overrides - Optional overrides for max daily jobs and priority.
+   * @param user - The current authenticated user.
+   * @returns {Promise<void>}
+   */
   @Post('work-teams/:workTeamId/zones/:interventionZoneId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Assign work team to intervention zone' })
@@ -413,6 +621,14 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * Removes a work team from an intervention zone.
+   *
+   * @param workTeamId - The work team ID.
+   * @param interventionZoneId - The intervention zone ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<void>}
+   */
   @Delete('work-teams/:workTeamId/zones/:interventionZoneId')
   @Roles('ADMIN', 'PROVIDER_MANAGER')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -431,6 +647,16 @@ export class ProvidersController {
   // CERTIFICATION ENDPOINTS (PSM Verification)
   // ============================================================================
 
+  /**
+   * Retrieves all certifications based on filters.
+   *
+   * @param status - Filter by certification status.
+   * @param providerId - Filter by provider ID.
+   * @param page - Page number.
+   * @param limit - Items per page.
+   * @param user - The current authenticated user.
+   * @returns A paginated list of certifications.
+   */
   @Get('certifications')
   @ApiOperation({ summary: 'Get all technician certifications for verification (PSM)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of certifications with verification status' })
@@ -453,6 +679,14 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * Verifies (approves or rejects) a certification.
+   *
+   * @param certificationId - The certification ID.
+   * @param body - The verification action and optional notes.
+   * @param user - The current authenticated user.
+   * @returns {Promise<CertificationResponseDto>} The verified certification.
+   */
   @Patch('certifications/:certificationId/verify')
   @Roles('ADMIN', 'PROVIDER_MANAGER', 'PSM')
   @ApiOperation({ summary: 'Verify (approve/reject) a certification' })
@@ -476,6 +710,12 @@ export class ProvidersController {
   // COVERAGE ENDPOINTS (PSM Coverage Analysis)
   // ============================================================================
 
+  /**
+   * Retrieves all intervention zones for coverage analysis.
+   *
+   * @param user - The current authenticated user.
+   * @returns A list of intervention zones with provider data.
+   */
   @Get('intervention-zones/coverage')
   @ApiOperation({ summary: 'Get all intervention zones for coverage analysis (PSM)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'All intervention zones with provider data' })

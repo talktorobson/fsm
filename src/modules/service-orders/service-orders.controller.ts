@@ -30,6 +30,11 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ServiceOrderState } from '@prisma/client';
 
+/**
+ * Controller for managing service orders.
+ *
+ * Handles creation, retrieval, updates, scheduling, assignment, cancellation, and deletion of service orders.
+ */
 @ApiTags('Service Orders')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,6 +42,13 @@ import { ServiceOrderState } from '@prisma/client';
 export class ServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
+  /**
+   * Creates a new service order.
+   *
+   * @param createDto - The service order creation data.
+   * @param req - The HTTP request containing user info.
+   * @returns {Promise<ServiceOrderResponseDto>} The created service order.
+   */
   @Post()
   @Roles('ADMIN', 'OPERATOR')
   @ApiOperation({ summary: 'Create a new service order' })
@@ -52,6 +64,19 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.create(createDto, req.user?.email);
   }
 
+  /**
+   * Lists all service orders with optional filtering.
+   *
+   * @param skip - Number of records to skip.
+   * @param take - Number of records to take.
+   * @param countryCode - Filter by country code.
+   * @param businessUnit - Filter by business unit.
+   * @param state - Filter by service order state.
+   * @param priority - Filter by priority.
+   * @param assignedProviderId - Filter by assigned provider.
+   * @param projectId - Filter by project ID.
+   * @returns A list of service orders.
+   */
   @Get()
   @Roles('ADMIN', 'OPERATOR', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'List all service orders with filters' })
@@ -90,6 +115,12 @@ export class ServiceOrdersController {
     });
   }
 
+  /**
+   * Retrieves a service order by ID.
+   *
+   * @param id - The service order ID.
+   * @returns {Promise<ServiceOrderResponseDto>} The service order details.
+   */
   @Get(':id')
   @Roles('ADMIN', 'OPERATOR', 'PROVIDER_MANAGER')
   @ApiOperation({ summary: 'Get a service order by ID' })
@@ -103,6 +134,14 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.findOne(id);
   }
 
+  /**
+   * Updates a service order.
+   *
+   * @param id - The service order ID.
+   * @param updateDto - The update data.
+   * @param req - The HTTP request containing user info.
+   * @returns {Promise<ServiceOrderResponseDto>} The updated service order.
+   */
   @Patch(':id')
   @Roles('ADMIN', 'OPERATOR')
   @ApiOperation({ summary: 'Update a service order' })
@@ -121,6 +160,14 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.update(id, updateDto, req.user?.email);
   }
 
+  /**
+   * Schedules a service order.
+   *
+   * @param id - The service order ID.
+   * @param scheduleDto - The scheduling data.
+   * @param req - The HTTP request containing user info.
+   * @returns {Promise<ServiceOrderResponseDto>} The scheduled service order.
+   */
   @Post(':id/schedule')
   @Roles('ADMIN', 'OPERATOR')
   @ApiOperation({ summary: 'Schedule a service order (assign time slot)' })
@@ -139,6 +186,14 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.schedule(id, scheduleDto, req.user?.email);
   }
 
+  /**
+   * Assigns a provider to a service order.
+   *
+   * @param id - The service order ID.
+   * @param assignDto - The assignment data.
+   * @param req - The HTTP request containing user info.
+   * @returns {Promise<ServiceOrderResponseDto>} The assigned service order.
+   */
   @Post(':id/assign')
   @Roles('ADMIN', 'OPERATOR')
   @ApiOperation({ summary: 'Assign a provider to a service order' })
@@ -157,6 +212,14 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.assign(id, assignDto, req.user?.email);
   }
 
+  /**
+   * Cancels a service order.
+   *
+   * @param id - The service order ID.
+   * @param reason - The reason for cancellation.
+   * @param req - The HTTP request containing user info.
+   * @returns {Promise<ServiceOrderResponseDto>} The cancelled service order.
+   */
   @Post(':id/cancel')
   @Roles('ADMIN', 'OPERATOR')
   @HttpCode(HttpStatus.OK)
@@ -176,6 +239,12 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.cancel(id, reason, req.user?.email);
   }
 
+  /**
+   * Retrieves unsatisfied dependencies for a service order.
+   *
+   * @param id - The service order ID.
+   * @returns A list of unsatisfied dependencies.
+   */
   @Get(':id/dependencies')
   @Roles('ADMIN', 'OPERATOR')
   @ApiOperation({ summary: 'Get unsatisfied dependencies for a service order' })
@@ -187,6 +256,13 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.getUnsatisfiedDependencies(id);
   }
 
+  /**
+   * Deletes a service order.
+   *
+   * @param id - The service order ID.
+   * @param req - The HTTP request containing user info.
+   * @returns {Promise<void>}
+   */
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)

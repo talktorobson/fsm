@@ -14,12 +14,25 @@ export interface CreateAssignmentInput {
   providerScores?: Record<string, { score: number; scoreBreakdown: any }>;
 }
 
+/**
+ * Service for managing assignments of service orders to providers.
+ *
+ * Handles creation, acceptance, decline, and retrieval of assignments.
+ */
 @Injectable()
 export class AssignmentsService {
   private readonly logger = new Logger(AssignmentsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Creates assignments for a service order.
+   *
+   * @param input - The assignment creation data.
+   * @returns {Promise<Assignment[]>} The created assignments.
+   * @throws {BadRequestException} If providerIds are missing.
+   * @throws {NotFoundException} If the service order is not found.
+   */
   async createAssignments(input: CreateAssignmentInput) {
     const {
       serviceOrderId,
@@ -97,6 +110,13 @@ export class AssignmentsService {
     return assignments;
   }
 
+  /**
+   * Accepts an assignment.
+   *
+   * @param assignmentId - The assignment ID.
+   * @returns {Promise<Assignment>} The updated assignment.
+   * @throws {NotFoundException} If the assignment is not found.
+   */
   async acceptAssignment(assignmentId: string) {
     const assignment = await this.prisma.assignment.findUnique({ where: { id: assignmentId } });
     if (!assignment) {
@@ -125,6 +145,14 @@ export class AssignmentsService {
     return updated;
   }
 
+  /**
+   * Declines an assignment.
+   *
+   * @param assignmentId - The assignment ID.
+   * @param reason - The reason for declining.
+   * @returns {Promise<Assignment>} The updated assignment.
+   * @throws {NotFoundException} If the assignment is not found.
+   */
   async declineAssignment(assignmentId: string, reason?: string) {
     const assignment = await this.prisma.assignment.findUnique({ where: { id: assignmentId } });
     if (!assignment) {
@@ -144,6 +172,13 @@ export class AssignmentsService {
     return updated;
   }
 
+  /**
+   * Retrieves the funnel execution details for an assignment.
+   *
+   * @param assignmentId - The assignment ID.
+   * @returns {Promise<AssignmentFunnelExecution>} The funnel execution data.
+   * @throws {NotFoundException} If the assignment or funnel data is not found.
+   */
   async getAssignmentFunnel(assignmentId: string) {
     const assignment = await this.prisma.assignment.findUnique({
       where: { id: assignmentId },
@@ -169,6 +204,12 @@ export class AssignmentsService {
     return funnelExecution;
   }
 
+  /**
+   * Bulk creates assignments for multiple service orders.
+   *
+   * @param input - The bulk assignment input.
+   * @returns {Promise<{serviceOrderId: string, success: boolean, assignments?: any[], error?: string}[]>} The results of the bulk operation.
+   */
   async bulkCreateAssignments(input: {
     serviceOrderIds: string[];
     providerId: string;
@@ -196,6 +237,12 @@ export class AssignmentsService {
     return results;
   }
 
+  /**
+   * Retrieves assignments with pagination and filtering.
+   *
+   * @param params - The filtering and pagination parameters.
+   * @returns {Promise<{data: Assignment[], pagination: any}>} A paginated list of assignments.
+   */
   async findAll(params: {
     page?: number;
     limit?: number;

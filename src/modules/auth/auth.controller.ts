@@ -6,11 +6,22 @@ import { Public } from './decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '@/common/decorators/current-user.decorator';
 
+/**
+ * Controller for handling authentication-related requests.
+ *
+ * Provides endpoints for user registration, login, token refreshing, logout, and retrieving current user details.
+ */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * Registers a new user.
+   *
+   * @param dto - The registration data containing user details.
+   * @returns {Promise<AuthResponseDto>} The authentication response containing tokens and user info.
+   */
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -31,6 +42,12 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  /**
+   * Authenticates a user with email and password.
+   *
+   * @param dto - The login credentials.
+   * @returns {Promise<AuthResponseDto>} The authentication response containing tokens and user info.
+   */
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -48,6 +65,12 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  /**
+   * Refreshes the access token using a valid refresh token.
+   *
+   * @param dto - The refresh token data.
+   * @returns {Promise<AuthResponseDto>} The new authentication response containing fresh tokens.
+   */
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -65,6 +88,13 @@ export class AuthController {
     return this.authService.refreshToken(dto.refreshToken);
   }
 
+  /**
+   * Logs out the user and revokes the refresh token.
+   *
+   * @param user - The current authenticated user payload.
+   * @param dto - The refresh token to be revoked.
+   * @returns {Promise<void>}
+   */
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
@@ -85,6 +115,12 @@ export class AuthController {
     await this.authService.logout(user.userId, dto.refreshToken);
   }
 
+  /**
+   * Retrieves the currently authenticated user's information.
+   *
+   * @param user - The current authenticated user payload.
+   * @returns The user details.
+   */
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)

@@ -9,6 +9,15 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
+/**
+ * Bootstrap the NestJS application.
+ *
+ * This function initializes the application, sets up global middleware (CORS, Helmet, Compression),
+ * configures versioning, validation pipes, global filters, and interceptors.
+ * It also sets up Swagger documentation and starts the server on the configured port.
+ *
+ * @returns {Promise<void>} Resolves when the application is successfully started.
+ */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],

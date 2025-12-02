@@ -3,6 +3,11 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, QueryUsersDto, AssignRoleDto } from './dto';
 
+/**
+ * Service for managing users in the system.
+ *
+ * Handles creation, retrieval, updates, deletion (soft delete), and role management for users.
+ */
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -10,6 +15,14 @@ export class UsersService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Creates a new user.
+   *
+   * @param dto - The user creation data.
+   * @param currentUserId - The ID of the user creating the account (optional).
+   * @returns {Promise<UserResponseDto>} The created user.
+   * @throws {ConflictException} If the email already exists.
+   */
   async create(dto: CreateUserDto, currentUserId?: string) {
     // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
@@ -61,6 +74,14 @@ export class UsersService {
     return this.mapToResponse(user);
   }
 
+  /**
+   * Retrieves all users with pagination and filtering.
+   *
+   * @param query - Query parameters for filtering and pagination.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns A paginated list of users.
+   */
   async findAll(query: QueryUsersDto, currentUserCountry: string, currentUserBU: string) {
     const { page = 1, limit = 20, search, countryCode, businessUnit, role, isActive } = query;
     const skip = (page - 1) * limit;
@@ -125,6 +146,15 @@ export class UsersService {
     };
   }
 
+  /**
+   * Retrieves a user by ID.
+   *
+   * @param id - The user ID.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<UserResponseDto>} The user details.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async findOne(id: string, currentUserCountry: string, currentUserBU: string) {
     const user = await this.prisma.user.findFirst({
       where: {
@@ -149,6 +179,17 @@ export class UsersService {
     return this.mapToResponse(user);
   }
 
+  /**
+   * Updates a user.
+   *
+   * @param id - The user ID.
+   * @param dto - The update data.
+   * @param currentUserId - The ID of the user performing the update.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<UserResponseDto>} The updated user.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async update(id: string, dto: UpdateUserDto, currentUserId: string, currentUserCountry: string, currentUserBU: string) {
     // Check if user exists in current tenant
     const existingUser = await this.prisma.user.findFirst({
@@ -193,6 +234,17 @@ export class UsersService {
     return this.mapToResponse(user);
   }
 
+  /**
+   * Deactivates (soft deletes) a user.
+   *
+   * @param id - The user ID.
+   * @param currentUserId - The ID of the user performing the deletion.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<{ message: string }>} A confirmation message.
+   * @throws {ForbiddenException} If attempting to delete own account.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async remove(id: string, currentUserId: string, currentUserCountry: string, currentUserBU: string) {
     // Prevent self-deletion
     if (id === currentUserId) {
@@ -223,6 +275,18 @@ export class UsersService {
     return { message: 'User successfully deleted' };
   }
 
+  /**
+   * Assigns a role to a user.
+   *
+   * @param userId - The user ID.
+   * @param dto - The role assignment data.
+   * @param currentUserId - The ID of the user performing the assignment.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<UserResponseDto>} The updated user.
+   * @throws {ConflictException} If the user already has the role.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async assignRole(userId: string, dto: AssignRoleDto, currentUserId: string, currentUserCountry: string, currentUserBU: string) {
     // Check if user exists in current tenant
     const user = await this.prisma.user.findFirst({
@@ -273,6 +337,18 @@ export class UsersService {
     return this.findOne(userId, currentUserCountry, currentUserBU);
   }
 
+  /**
+   * Revokes a role from a user.
+   *
+   * @param userId - The user ID.
+   * @param roleName - The name of the role to revoke.
+   * @param currentUserId - The ID of the user performing the revocation.
+   * @param currentUserCountry - The country code of the current user.
+   * @param currentUserBU - The business unit of the current user.
+   * @returns {Promise<UserResponseDto>} The updated user.
+   * @throws {NotFoundException} If the user or role is not found.
+   * @throws {ForbiddenException} If attempting to remove the last role.
+   */
   async revokeRole(userId: string, roleName: string, currentUserId: string, currentUserCountry: string, currentUserBU: string) {
     // Check if user exists in current tenant
     const user = await this.prisma.user.findFirst({
@@ -320,6 +396,12 @@ export class UsersService {
     return this.findOne(userId, currentUserCountry, currentUserBU);
   }
 
+  /**
+   * Maps a user entity to a response DTO.
+   *
+   * @param user - The user entity.
+   * @returns {UserResponseDto} The user response DTO (excluding password).
+   */
   private mapToResponse(user: any) {
     const { password, ...userWithoutPassword } = user;
 

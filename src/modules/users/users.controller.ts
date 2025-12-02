@@ -21,6 +21,12 @@ import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '@/common/decorators/current-user.decorator';
 
+/**
+ * Controller for managing users.
+ *
+ * Provides endpoints for creating, retrieving, updating, and deleting users,
+ * as well as managing user roles.
+ */
 @ApiTags('users')
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,6 +34,13 @@ import { CurrentUser, CurrentUserPayload } from '@/common/decorators/current-use
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  /**
+   * Creates a new user.
+   *
+   * @param dto - The user creation data.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<UserResponseDto>} The created user.
+   */
   @Post()
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Create a new user (Admin only)' })
@@ -48,6 +61,13 @@ export class UsersController {
     return this.usersService.create(dto, user.userId);
   }
 
+  /**
+   * Retrieves all users with pagination and filtering.
+   *
+   * @param query - The query parameters for filtering and pagination.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns A paginated list of users.
+   */
   @Get()
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Get all users with pagination and filters (Admin only)' })
@@ -70,6 +90,13 @@ export class UsersController {
     return this.usersService.findAll(query, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Retrieves a specific user by ID.
+   *
+   * @param id - The user ID.
+   * @param user - The current authenticated user.
+   * @returns {Promise<UserResponseDto>} The user details.
+   */
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({
@@ -85,6 +112,15 @@ export class UsersController {
     return this.usersService.findOne(id, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Updates an existing user.
+   *
+   * @param id - The user ID to update.
+   * @param dto - The update data.
+   * @param user - The current authenticated user (must be ADMIN or the user themselves).
+   * @returns {Promise<UserResponseDto>} The updated user.
+   * @throws {ForbiddenException} If attempting to update another user without admin rights.
+   */
   @Put(':id')
   @ApiOperation({ summary: 'Update user (Admin or self)' })
   @ApiResponse({
@@ -121,6 +157,14 @@ export class UsersController {
     return this.usersService.update(id, dto, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Partially updates an existing user.
+   *
+   * @param id - The user ID to update.
+   * @param dto - The update data.
+   * @param user - The current authenticated user (must be ADMIN or the user themselves).
+   * @returns {Promise<UserResponseDto>} The updated user.
+   */
   @Patch(':id')
   @ApiOperation({ summary: 'Partially update user (Admin or self)' })
   @ApiResponse({
@@ -157,6 +201,14 @@ export class UsersController {
     return this.usersService.update(id, dto, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Deletes a user (soft delete).
+   *
+   * @param id - The user ID to delete.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<void>}
+   * @throws {ForbiddenException} If attempting to delete own account.
+   */
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -177,6 +229,14 @@ export class UsersController {
     return this.usersService.remove(id, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Assigns a role to a user.
+   *
+   * @param id - The user ID.
+   * @param dto - The role assignment data.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<UserResponseDto>} The updated user.
+   */
   @Post(':id/roles')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Assign role to user (Admin only)' })
@@ -201,6 +261,14 @@ export class UsersController {
     return this.usersService.assignRole(id, dto, user.userId, user.countryCode, user.businessUnit);
   }
 
+  /**
+   * Revokes a role from a user.
+   *
+   * @param id - The user ID.
+   * @param roleName - The name of the role to revoke.
+   * @param user - The current authenticated user (must be ADMIN).
+   * @returns {Promise<UserResponseDto>} The updated user.
+   */
   @Delete(':id/roles/:roleName')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
