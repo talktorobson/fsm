@@ -13,6 +13,11 @@ import { ScheduleServiceOrderDto } from './dto/schedule-service-order.dto';
 import { AssignServiceOrderDto } from './dto/assign-service-order.dto';
 import { ServiceOrder, ServiceOrderState, Prisma } from '@prisma/client';
 
+/**
+ * Service for managing service orders.
+ *
+ * Handles core business logic for service order lifecycle management.
+ */
 @Injectable()
 export class ServiceOrdersService {
   private readonly logger = new Logger(ServiceOrdersService.name);
@@ -90,7 +95,10 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Find all service orders with optional filters
+   * Retrieves all service orders with pagination and filtering.
+   *
+   * @param params - Query parameters for filtering and pagination.
+   * @returns A paginated list of service orders.
    */
   async findAll(params: {
     skip?: number;
@@ -194,7 +202,11 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Find a single service order by ID
+   * Retrieves a service order by ID.
+   *
+   * @param id - The service order ID.
+   * @returns {Promise<ServiceOrder>} The service order details.
+   * @throws {NotFoundException} If the service order is not found.
    */
   async findOne(id: string): Promise<ServiceOrder> {
     const serviceOrder = await this.prisma.serviceOrder.findUnique({
@@ -321,7 +333,13 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Update a service order
+   * Updates a service order.
+   *
+   * @param id - The service order ID.
+   * @param updateDto - The update data.
+   * @param userId - The ID of the user performing the update.
+   * @returns {Promise<ServiceOrder>} The updated service order.
+   * @throws {BadRequestException} If trying to update a service order in a terminal state.
    */
   async update(
     id: string,
@@ -356,7 +374,13 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Schedule a service order (transition to SCHEDULED state)
+   * Schedules a service order.
+   *
+   * @param id - The service order ID.
+   * @param scheduleDto - The scheduling data.
+   * @param userId - The ID of the user performing the scheduling.
+   * @returns {Promise<ServiceOrder>} The scheduled service order.
+   * @throws {BadRequestException} If scheduling validation fails.
    */
   async schedule(
     id: string,
@@ -431,7 +455,14 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Assign a provider to a service order (transition to ASSIGNED state)
+   * Assigns a provider to a service order.
+   *
+   * @param id - The service order ID.
+   * @param assignDto - The assignment data.
+   * @param userId - The ID of the user performing the assignment.
+   * @returns {Promise<ServiceOrder>} The assigned service order.
+   * @throws {BadRequestException} If assignment validation fails.
+   * @throws {NotFoundException} If the provider or work team is not found.
    */
   async assign(
     id: string,
@@ -495,7 +526,12 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Cancel a service order
+   * Cancels a service order.
+   *
+   * @param id - The service order ID.
+   * @param reason - The reason for cancellation.
+   * @param userId - The ID of the user performing the cancellation.
+   * @returns {Promise<ServiceOrder>} The cancelled service order.
    */
   async cancel(id: string, reason: string, userId?: string): Promise<ServiceOrder> {
     const serviceOrder = await this.findOne(id);
@@ -523,7 +559,10 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Get unsatisfied dependencies for a service order
+   * Retrieves unsatisfied dependencies for a service order.
+   *
+   * @param id - The service order ID.
+   * @returns A list of unsatisfied dependencies.
    */
   async getUnsatisfiedDependencies(id: string) {
     const dependencies = await this.prisma.serviceOrderDependency.findMany({
@@ -548,7 +587,12 @@ export class ServiceOrdersService {
   }
 
   /**
-   * Soft delete (archive) a service order
+   * Deletes a service order.
+   *
+   * @param id - The service order ID.
+   * @param userId - The ID of the user performing the deletion.
+   * @returns {Promise<void>}
+   * @throws {BadRequestException} If the service order is not in a deletable state.
    */
   async remove(id: string, userId?: string): Promise<void> {
     const serviceOrder = await this.findOne(id);

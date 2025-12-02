@@ -18,9 +18,18 @@ interface LoginResponse {
   refreshToken: string;
 }
 
+/**
+ * Authentication Service.
+ *
+ * Handles login, SSO, token management, and retrieval of user information.
+ */
 class AuthService {
   /**
-   * Login with email and password (fallback for development)
+   * Logs in with email and password (fallback for development).
+   *
+   * @param email - User's email.
+   * @param password - User's password.
+   * @returns {Promise<LoginResponse>} The login response containing tokens and user data.
    */
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await apiClient.post<ApiResponse<LoginResponse>>('/auth/login', {
@@ -31,8 +40,10 @@ class AuthService {
   }
 
   /**
-   * Login with SSO (PingID)
-   * Redirects to SSO provider
+   * Initiates login with SSO (PingID).
+   * Redirects the user to the SSO provider.
+   *
+   * @returns {Promise<void>}
    */
   async loginWithSSO(): Promise<void> {
     // Build authorization URL
@@ -54,8 +65,13 @@ class AuthService {
   }
 
   /**
-   * Handle SSO callback
-   * Exchange authorization code for tokens
+   * Handles the SSO callback.
+   * Exchanges the authorization code for tokens.
+   *
+   * @param code - The authorization code from the SSO provider.
+   * @param state - The state parameter for CSRF protection.
+   * @returns {Promise<LoginResponse>} The login response containing tokens and user data.
+   * @throws {Error} If the state parameter is invalid.
    */
   async handleSSOCallback(code: string, state: string): Promise<LoginResponse> {
     // Validate state
@@ -75,7 +91,9 @@ class AuthService {
   }
 
   /**
-   * Get current user info
+   * Retrieves current user information.
+   *
+   * @returns {Promise<User>} The current user details.
    */
   async getCurrentUser(): Promise<User> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,7 +118,10 @@ class AuthService {
   }
 
   /**
-   * Refresh access token
+   * Refreshes the access token using the stored refresh token.
+   *
+   * @returns {Promise<{ accessToken: string }>} The new access token.
+   * @throws {Error} If no refresh token is available.
    */
   async refreshToken(): Promise<{ accessToken: string }> {
     const refreshToken = localStorage.getItem('refresh_token');
@@ -116,7 +137,10 @@ class AuthService {
   }
 
   /**
-   * Logout
+   * Logs out the user.
+   * Calls the logout API and cleans up local storage.
+   *
+   * @returns {Promise<void>}
    */
   async logout(): Promise<void> {
     try {

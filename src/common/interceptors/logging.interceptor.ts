@@ -3,10 +3,23 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { nanoid } from 'nanoid';
 
+/**
+ * Interceptor for logging HTTP requests and responses.
+ *
+ * Generates a correlation ID for each request, logs the method, URL, status code, and duration.
+ * Logs errors if the request fails.
+ */
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
 
+  /**
+   * Intercepts the request/response cycle to log details.
+   *
+   * @param context - The execution context.
+   * @param next - The call handler.
+   * @returns An observable that handles the request processing.
+   */
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
     const { method, url, body } = request;

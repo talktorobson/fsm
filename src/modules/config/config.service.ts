@@ -2,6 +2,11 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { UpdateSystemConfigDto, UpdateCountryConfigDto, UpdateBusinessUnitConfigDto } from './dto';
 
+/**
+ * Service to manage system-wide, country-specific, and business-unit-specific configurations.
+ *
+ * Persists configuration in the database and provides default values when necessary.
+ */
 @Injectable()
 export class ConfigService {
   private readonly logger = new Logger(ConfigService.name);
@@ -12,6 +17,11 @@ export class ConfigService {
   // SYSTEM CONFIG (Key-Value Store)
   // ============================================================================
 
+  /**
+   * Retrieves all system configuration entries.
+   *
+   * @returns {Promise<Record<string, any>>} A key-value map of system configurations.
+   */
   async getSystemConfig() {
     // Get all system config entries
     const configs = await this.prisma.systemConfig.findMany({});
@@ -30,6 +40,13 @@ export class ConfigService {
     return result;
   }
 
+  /**
+   * Updates system configuration entries.
+   *
+   * @param dto - The new configuration values.
+   * @param currentUserId - The ID of the user performing the update.
+   * @returns {Promise<Record<string, any>>} The updated system configuration.
+   */
   async updateSystemConfig(dto: UpdateSystemConfigDto, currentUserId: string) {
     // Update or create each config key
     const updates: Promise<any>[] = [];
@@ -104,6 +121,11 @@ export class ConfigService {
     return this.getSystemConfig();
   }
 
+  /**
+   * Retrieves the default system configuration.
+   *
+   * @returns The default configuration object.
+   */
   private getDefaultSystemConfig() {
     return {
       featureFlags: {
@@ -123,6 +145,12 @@ export class ConfigService {
   // COUNTRY CONFIG
   // ============================================================================
 
+  /**
+   * Retrieves configuration for a specific country.
+   *
+   * @param countryCode - The ISO country code.
+   * @returns {Promise<CountryConfig>} The country configuration.
+   */
   async getCountryConfig(countryCode: string) {
     // Validate country code
     this.validateCountryCode(countryCode);
@@ -139,6 +167,14 @@ export class ConfigService {
     return config;
   }
 
+  /**
+   * Updates configuration for a specific country.
+   *
+   * @param countryCode - The ISO country code.
+   * @param dto - The new configuration values.
+   * @param currentUserId - The ID of the user performing the update.
+   * @returns {Promise<CountryConfig>} The updated country configuration.
+   */
   async updateCountryConfig(countryCode: string, dto: UpdateCountryConfigDto, currentUserId: string) {
     // Validate country code
     this.validateCountryCode(countryCode);
@@ -189,6 +225,12 @@ export class ConfigService {
     return config;
   }
 
+  /**
+   * Creates a default configuration for a country.
+   *
+   * @param countryCode - The ISO country code.
+   * @returns {Promise<CountryConfig>} The newly created configuration.
+   */
   private async createDefaultCountryConfig(countryCode: string) {
     const defaults = this.getCountryDefaults(countryCode);
 
@@ -211,6 +253,12 @@ export class ConfigService {
 
   private readonly VALID_COUNTRIES = ['FR', 'ES', 'IT', 'PL', 'RO', 'PT'];
 
+  /**
+   * Validates if a country code is supported.
+   *
+   * @param countryCode - The ISO country code to check.
+   * @throws {NotFoundException} If the country code is not supported.
+   */
   private validateCountryCode(countryCode: string) {
     if (!this.VALID_COUNTRIES.includes(countryCode)) {
       throw new NotFoundException(
@@ -219,6 +267,12 @@ export class ConfigService {
     }
   }
 
+  /**
+   * Gets default settings for a specific country.
+   *
+   * @param countryCode - The ISO country code.
+   * @returns The default settings object.
+   */
   private getCountryDefaults(countryCode: string) {
     const defaults: Record<string, any> = {
       FR: {
@@ -284,6 +338,13 @@ export class ConfigService {
   // BUSINESS UNIT CONFIG
   // ============================================================================
 
+  /**
+   * Retrieves configuration for a business unit within a country.
+   *
+   * @param countryCode - The ISO country code.
+   * @param businessUnit - The business unit identifier.
+   * @returns {Promise<BusinessUnitConfig>} The business unit configuration.
+   */
   async getBusinessUnitConfig(countryCode: string, businessUnit: string) {
     const buKey = `${businessUnit}_${countryCode}`;
     const config = await this.prisma.businessUnitConfig.findUnique({
@@ -298,6 +359,15 @@ export class ConfigService {
     return config;
   }
 
+  /**
+   * Updates configuration for a business unit within a country.
+   *
+   * @param countryCode - The ISO country code.
+   * @param businessUnit - The business unit identifier.
+   * @param dto - The new configuration values.
+   * @param currentUserId - The ID of the user performing the update.
+   * @returns {Promise<BusinessUnitConfig>} The updated business unit configuration.
+   */
   async updateBusinessUnitConfig(
     countryCode: string,
     businessUnit: string,
@@ -341,6 +411,13 @@ export class ConfigService {
     return config;
   }
 
+  /**
+   * Creates a default configuration for a business unit.
+   *
+   * @param countryCode - The ISO country code.
+   * @param businessUnit - The business unit identifier.
+   * @returns {Promise<BusinessUnitConfig>} The newly created configuration.
+   */
   private async createDefaultBusinessUnitConfig(countryCode: string, businessUnit: string) {
     const defaults = this.getBusinessUnitDefaults(businessUnit);
     const buKey = `${businessUnit}_${countryCode}`;
@@ -360,6 +437,12 @@ export class ConfigService {
     return config;
   }
 
+  /**
+   * Gets default settings for a specific business unit.
+   *
+   * @param businessUnit - The business unit identifier.
+   * @returns The default settings object.
+   */
   private getBusinessUnitDefaults(businessUnit: string) {
     const defaults: Record<string, any> = {
       LEROY_MERLIN: {

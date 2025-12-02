@@ -2,6 +2,12 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
+/**
+ * Service for interacting with Redis.
+ *
+ * Provides methods for standard Redis operations like set, get, del, etc.
+ * Handles Redis connection and error logging.
+ */
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
@@ -9,6 +15,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private configService: ConfigService) {}
 
+  /**
+   * Initializes the Redis connection.
+   */
   async onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL', 'redis://localhost:6379');
 
@@ -29,20 +38,30 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /**
+   * Closes the Redis connection.
+   */
   async onModuleDestroy() {
     await this.client.quit();
     this.logger.log('🔌 Redis disconnected');
   }
 
   /**
-   * Get client for direct access
+   * Returns the underlying Redis client instance.
+   *
+   * @returns {Redis} The ioredis client instance.
    */
   getClient(): Redis {
     return this.client;
   }
 
   /**
-   * Set key-value with optional TTL (seconds)
+   * Sets a key-value pair in Redis with an optional expiration time.
+   *
+   * @param key - The key to set.
+   * @param value - The value to store (string or Buffer).
+   * @param ttl - Optional Time-To-Live in seconds.
+   * @returns {Promise<void>}
    */
   async set(key: string, value: string | Buffer, ttl?: number): Promise<void> {
     if (ttl) {
@@ -53,56 +72,83 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Get value by key
+   * Gets a value by key.
+   *
+   * @param key - The key to retrieve.
+   * @returns {Promise<string | null>} The value, or null if not found.
    */
   async get(key: string): Promise<string | null> {
     return this.client.get(key);
   }
 
   /**
-   * Get buffer value (for bitmaps)
+   * Gets a value as a buffer (useful for bitmaps or binary data).
+   *
+   * @param key - The key to retrieve.
+   * @returns {Promise<Buffer | null>} The value as a Buffer, or null if not found.
    */
   async getBuffer(key: string): Promise<Buffer | null> {
     return this.client.getBuffer(key);
   }
 
   /**
-   * Delete key
+   * Deletes a key.
+   *
+   * @param key - The key to delete.
+   * @returns {Promise<number>} The number of keys deleted.
    */
   async del(key: string): Promise<number> {
     return this.client.del(key);
   }
 
   /**
-   * Set expiration (seconds)
+   * Sets an expiration on a key.
+   *
+   * @param key - The key to expire.
+   * @param seconds - The time in seconds until expiration.
+   * @returns {Promise<number>} 1 if the timeout was set, 0 if the key does not exist.
    */
   async expire(key: string, seconds: number): Promise<number> {
     return this.client.expire(key, seconds);
   }
 
   /**
-   * Check if key exists
+   * Checks if a key exists.
+   *
+   * @param key - The key to check.
+   * @returns {Promise<number>} 1 if the key exists, 0 otherwise.
    */
   async exists(key: string): Promise<number> {
     return this.client.exists(key);
   }
 
   /**
-   * Increment counter
+   * Increments the number stored at key by one.
+   *
+   * @param key - The key to increment.
+   * @returns {Promise<number>} The value of the key after the increment.
    */
   async incr(key: string): Promise<number> {
     return this.client.incr(key);
   }
 
   /**
-   * Decrement counter
+   * Decrements the number stored at key by one.
+   *
+   * @param key - The key to decrement.
+   * @returns {Promise<number>} The value of the key after the decrement.
    */
   async decr(key: string): Promise<number> {
     return this.client.decr(key);
   }
 
   /**
-   * Execute Lua script
+   * Executes a Lua script.
+   *
+   * @param script - The Lua script source.
+   * @param numKeys - The number of arguments that represent keys.
+   * @param args - The arguments for the script.
+   * @returns {Promise<unknown>} The result of the script execution.
    */
   async eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown> {
     return this.client.eval(script, numKeys, ...args);

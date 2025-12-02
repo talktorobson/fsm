@@ -8,10 +8,22 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+/**
+ * Global exception filter for handling HTTP and other exceptions.
+ *
+ * Catches exceptions thrown during request processing and formats the response
+ * into a standard error structure. Logs the error details.
+ */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
+  /**
+   * Catches exceptions and sends a formatted HTTP response.
+   *
+   * @param exception - The exception object caught.
+   * @param host - The arguments host providing access to the context.
+   */
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();

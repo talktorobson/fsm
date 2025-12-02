@@ -36,7 +36,12 @@ export class AuthService {
   }
 
   /**
-   * Login with email and password
+   * Login with email and password.
+   *
+   * @param email - The user's email.
+   * @param password - The user's password.
+   * @returns {Promise<User>} The authenticated user object.
+   * @throws {Error} If login fails.
    */
   async login(email: string, password: string): Promise<User> {
     try {
@@ -66,7 +71,9 @@ export class AuthService {
   }
 
   /**
-   * Logout and clear stored credentials
+   * Logout and clear stored credentials.
+   *
+   * @returns {Promise<void>}
    */
   async logout(): Promise<void> {
     try {
@@ -93,7 +100,10 @@ export class AuthService {
   }
 
   /**
-   * Refresh access token using refresh token
+   * Refresh access token using refresh token.
+   *
+   * @returns {Promise<string>} The new access token.
+   * @throws {Error} If refresh fails or no refresh token is available.
    */
   async refreshToken(): Promise<string> {
     try {
@@ -132,7 +142,9 @@ export class AuthService {
   }
 
   /**
-   * Get current authentication token
+   * Get current authentication token.
+   *
+   * @returns {Promise<string | null>} The access token or null if not found.
    */
   async getToken(): Promise<string | null> {
     try {
@@ -144,7 +156,9 @@ export class AuthService {
   }
 
   /**
-   * Get refresh token
+   * Get refresh token.
+   *
+   * @returns {Promise<string | null>} The refresh token or null if not found.
    */
   private async getRefreshToken(): Promise<string | null> {
     try {
@@ -156,7 +170,9 @@ export class AuthService {
   }
 
   /**
-   * Get current authenticated user
+   * Get current authenticated user.
+   *
+   * @returns {Promise<User | null>} The user object or null if not authenticated.
    */
   async getCurrentUser(): Promise<User | null> {
     if (this.currentUser) {
@@ -177,7 +193,9 @@ export class AuthService {
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated.
+   *
+   * @returns {Promise<boolean>} True if authenticated and token is valid, false otherwise.
    */
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
@@ -210,7 +228,9 @@ export class AuthService {
   }
 
   /**
-   * Initialize authentication (restore session)
+   * Initialize authentication (restore session).
+   *
+   * @returns {Promise<User | null>} The user object if session restored, null otherwise.
    */
   async initialize(): Promise<User | null> {
     try {

@@ -388,3 +388,25 @@ UNLICENSED - Proprietary platform
 ---
 
 **Yellow Grid** - Transforming Field Service Management 🌟
+
+## 📝 Documentation Standards
+
+This repository follows strict documentation standards to ensure maintainability and clarity.
+
+- **Backend**: All public classes, methods, and functions in `src/` must have JSDoc comments explaining their purpose, parameters, and return values.
+- **Frontend**: Components and services in `web/src/` and `mobile-app/src/` must be documented with JSDoc.
+- **Tools**: We use TSDoc standard for TypeScript documentation.
+
+Example:
+```typescript
+/**
+ * Calculates the total price including tax.
+ *
+ * @param price - The base price.
+ * @param taxRate - The tax rate (0-1).
+ * @returns The total price.
+ */
+function calculateTotal(price: number, taxRate: number): number {
+  return price * (1 + taxRate);
+}
+```

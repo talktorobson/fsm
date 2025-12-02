@@ -6,6 +6,11 @@ import { nanoid } from 'nanoid';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto';
 
+/**
+ * Service handling authentication logic.
+ *
+ * Manages user registration, login, token generation, refreshing, and revocation.
+ */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -17,6 +22,13 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * Registers a new user and generates tokens.
+   *
+   * @param dto - The registration data.
+   * @returns {Promise<AuthResponseDto>} The authentication response with tokens.
+   * @throws {ConflictException} If a user with the same email already exists.
+   */
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     // Check if user already exists
     const existingUser = await this.prisma.user.findUnique({
@@ -67,6 +79,13 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
+  /**
+   * Authenticates a user and generates tokens.
+   *
+   * @param dto - The login credentials.
+   * @returns {Promise<AuthResponseDto>} The authentication response with tokens.
+   * @throws {UnauthorizedException} If credentials are invalid or account is disabled.
+   */
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -102,6 +121,13 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
+  /**
+   * Refreshes access tokens using a refresh token.
+   *
+   * @param refreshToken - The refresh token string.
+   * @returns {Promise<AuthResponseDto>} The new authentication response.
+   * @throws {UnauthorizedException} If the refresh token is invalid, expired, or revoked.
+   */
   async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
     // Verify refresh token
     let payload: { userId: string; tokenId: string };
@@ -156,6 +182,13 @@ export class AuthService {
     return this.generateTokens(storedToken.user);
   }
 
+  /**
+   * Logs out a user by revoking the refresh token.
+   *
+   * @param userId - The ID of the user logging out.
+   * @param refreshToken - The refresh token to revoke.
+   * @returns {Promise<void>}
+   */
   async logout(userId: string, refreshToken: string): Promise<void> {
     // Verify and revoke refresh token
     try {
@@ -180,6 +213,13 @@ export class AuthService {
     }
   }
 
+  /**
+   * Validates user credentials.
+   *
+   * @param email - The user's email.
+   * @param password - The user's password.
+   * @returns The user object if valid, otherwise null.
+   */
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -209,6 +249,12 @@ export class AuthService {
     return result;
   }
 
+  /**
+   * Generates access and refresh tokens for a user.
+   *
+   * @param user - The user object.
+   * @returns {Promise<AuthResponseDto>} The authentication response containing tokens and user data.
+   */
   private async generateTokens(user: any): Promise<AuthResponseDto> {
     const roles = user.roles.map((ur: any) => ur.role.name);
     this.logger.log(`Generating token for user ${user.email} with roles: ${roles.join(', ')}`);

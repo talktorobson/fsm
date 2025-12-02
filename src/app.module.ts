@@ -29,6 +29,13 @@ import { CustomerPortalModule } from './modules/customer-portal/customer-portal.
 // Controllers
 import { AppController } from './app.controller';
 
+/**
+ * The root module of the application.
+ *
+ * This module imports all necessary common and feature modules,
+ * configures the global application state (configuration, rate limiting, scheduling),
+ * and defines the main application controller.
+ */
 @Module({
   imports: [
     // Configuration
