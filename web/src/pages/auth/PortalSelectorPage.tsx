@@ -106,8 +106,7 @@ export default function PortalSelectorPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <img src="/assets/logo.png" alt="Yellow Grid" className="h-8 w-auto" />
-              <span className="font-bold text-xl tracking-tight text-white">Yellow<span className="text-[#FFD700]">Grid</span></span>
+              <img src="/assets/logo.png" alt="Yellow Grid" className="h-12 w-auto" />
             </div>
             <div className="flex items-center gap-4">
               <a href="#" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Documentation</a>
