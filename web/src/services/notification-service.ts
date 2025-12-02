@@ -26,6 +26,9 @@ export interface Notification {
   id: UUID;
   type: NotificationType;
   priority: NotificationPriority;
+  // Backend uses subject/body, but we map to title/message for UI
+  subject?: string;
+  body?: string;
   title: string;
   message: string;
   link?: string;

@@ -7,9 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, CheckCheck, X, AlertCircle, Info, CheckCircle, XCircle } from 'lucide-react';
 import { notificationService, Notification as ApiNotification } from '@/services/notification-service';
-
-// Temporary user ID until auth context is fully implemented
-const CURRENT_USER_ID = 'test-user-id';
+import { useAuth } from '@/contexts/AuthContext';
 
 type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -33,8 +31,9 @@ const mapNotificationType = (type: string): NotificationType => {
 const mapApiNotification = (n: ApiNotification): Notification => ({
   id: n.id,
   type: mapNotificationType(n.type),
-  title: n.title,
-  message: n.message,
+  // Backend uses subject/body, frontend expects title/message
+  title: n.subject || n.title || 'Notification',
+  message: n.body || n.message || '',
   timestamp: new Date(n.createdAt),
   read: !!n.readAt, // API uses readAt date, UI uses boolean
   actionUrl: n.link,
@@ -44,19 +43,25 @@ export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  // Use actual user ID from auth context
+  const userId = user?.id || '';
 
-  // Fetch notifications
+  // Fetch notifications (only when user is authenticated)
   const { data: apiNotifications = [] } = useQuery({
-    queryKey: ['notifications', CURRENT_USER_ID],
-    queryFn: () => notificationService.getAll(CURRENT_USER_ID),
+    queryKey: ['notifications', userId],
+    queryFn: () => notificationService.getAll(userId),
     refetchInterval: 30000, // Poll every 30 seconds
+    enabled: !!userId,
   });
 
   // Fetch unread count
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['notifications', 'unread', CURRENT_USER_ID],
-    queryFn: () => notificationService.getUnreadCount(CURRENT_USER_ID),
+    queryKey: ['notifications', 'unread', userId],
+    queryFn: () => notificationService.getUnreadCount(userId),
     refetchInterval: 30000,
+    enabled: !!userId,
   });
 
   const notifications = apiNotifications.map(mapApiNotification);
@@ -70,7 +75,7 @@ export default function NotificationCenter() {
   });
 
   const markAllAsReadMutation = useMutation({
-    mutationFn: () => notificationService.markAllAsRead(CURRENT_USER_ID),
+    mutationFn: () => notificationService.markAllAsRead(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },

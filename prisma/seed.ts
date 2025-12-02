@@ -1,4 +1,4 @@
-import { PrismaClient, ServiceCategory, ContractProvider, RateType, ExperienceLevel, ServiceType, ServiceStatus, ProviderStatus, BookingType, AssignmentState, AssignmentMode, ServicePriority, ServiceOrderState, BookingStatus, SalesChannel, PaymentStatus, DeliveryStatus, LineItemType, LineExecutionStatus, ContactType, ContactMethod, ProviderTypeEnum, RiskLevel, ServicePriorityType, ZoneType, StoreAssignmentType, WorkTeamStatus, AbsenceType, AbsenceStatus, CertificationType, TaskType, TaskPriority, TaskStatus, SalesPotential } from '@prisma/client';
+import { PrismaClient, ServiceCategory, ContractProvider, RateType, ExperienceLevel, ServiceType, ServiceStatus, ProviderStatus, BookingType, AssignmentState, AssignmentMode, ServicePriority, ServiceOrderState, BookingStatus, SalesChannel, PaymentStatus, DeliveryStatus, LineItemType, LineExecutionStatus, ContactType, ContactMethod, ProviderTypeEnum, RiskLevel, ServicePriorityType, ZoneType, StoreAssignmentType, WorkTeamStatus, AbsenceType, AbsenceStatus, CertificationType, TaskType, TaskPriority, TaskStatus, SalesPotential, NotificationChannelType, NotificationStatusType, NotificationPriority } from '@prisma/client';
 // @ts-ignore
 import * as bcrypt from 'bcrypt';
 
@@ -2245,6 +2245,175 @@ async function main() {
     }
     
     console.log(`✅ Created ${taskCount} demo tasks (5 overdue, 5 assigned, 10 open)`);
+    
+    // ============================================================================
+    // SEED NOTIFICATIONS FOR DEMO - Notification Center
+    // ============================================================================
+    console.log('\n🔔 Seeding notifications for demo...');
+    
+    // Delete existing notifications
+    await prisma.notification.deleteMany({});
+    
+    // Get demo users to assign notifications
+    const demoUsers = await prisma.user.findMany({
+      where: {
+        email: {
+          in: [
+            'operator.fr@adeo.com', 'operator.es@adeo.com',
+            'admin-fr@adeo.com', 'psm.fr@adeo.com',
+            'provider.fr@adeo.com', 'technician.fr@adeo.com'
+          ]
+        }
+      }
+    });
+    
+    const notificationEvents = [
+      { event: 'ORDER_ASSIGNED', subject: 'Nouveau job assigné', body: 'Un nouveau job d\'installation a été assigné à votre équipe.', priority: NotificationPriority.HIGH },
+      { event: 'ORDER_COMPLETED', subject: 'Intervention terminée', body: 'L\'intervention chez M. Dupont a été terminée avec succès.', priority: NotificationPriority.NORMAL },
+      { event: 'ORDER_CANCELLED', subject: 'Commande annulée', body: 'La commande #ORD-FR-1234 a été annulée par le client.', priority: NotificationPriority.HIGH },
+      { event: 'SCHEDULE_REMINDER', subject: 'Rappel de RDV', body: 'Vous avez une intervention prévue demain à 09:00 - Installation TV chez Mme Bernard.', priority: NotificationPriority.NORMAL },
+      { event: 'DOCUMENT_REQUIRED', subject: 'Document requis', body: 'Le WCF pour la commande #ORD-FR-5678 n\'a pas été signé. Veuillez compléter.', priority: NotificationPriority.URGENT },
+      { event: 'PAYMENT_RECEIVED', subject: 'Paiement reçu', body: 'Le paiement de 450€ pour la commande #ORD-FR-9012 a été confirmé.', priority: NotificationPriority.LOW },
+      { event: 'TEAM_ABSENCE', subject: 'Absence déclarée', body: 'L\'équipe Paris-01 a déclaré une absence du 15 au 17 janvier.', priority: NotificationPriority.NORMAL },
+      { event: 'SLA_BREACH_WARNING', subject: '⚠️ Alerte SLA', body: 'La commande #ORD-FR-3456 approche de son SLA (2h restantes).', priority: NotificationPriority.URGENT },
+      { event: 'QUALITY_ALERT', subject: '⚠️ Alerte Qualité', body: 'Un client a signalé un problème suite à l\'intervention du 10/01.', priority: NotificationPriority.HIGH },
+      { event: 'NEW_MESSAGE', subject: 'Nouveau message', body: 'Vous avez reçu un message de TechniService Paris concernant l\'intervention #ORD-FR-7890.', priority: NotificationPriority.NORMAL },
+    ];
+    
+    let notificationCount = 0;
+    const now = new Date();
+    
+    for (const user of demoUsers) {
+      // Give each user 3-5 notifications
+      const numNotifs = Math.floor(Math.random() * 3) + 3;
+      
+      for (let i = 0; i < numNotifs; i++) {
+        const notifEvent = notificationEvents[Math.floor(Math.random() * notificationEvents.length)];
+        const createdAt = new Date(now);
+        createdAt.setHours(createdAt.getHours() - Math.floor(Math.random() * 72)); // Last 3 days
+        
+        // Some are read, some are not
+        const isRead = Math.random() > 0.6;
+        
+        await prisma.notification.create({
+          data: {
+            recipientId: user.id,
+            recipientEmail: user.email,
+            recipientName: `${user.firstName} ${user.lastName}`,
+            channel: NotificationChannelType.PUSH,
+            eventType: notifEvent.event,
+            priority: notifEvent.priority,
+            language: user.preferredLanguage || 'fr',
+            subject: notifEvent.subject,
+            body: notifEvent.body,
+            status: isRead ? NotificationStatusType.READ : NotificationStatusType.DELIVERED,
+            sentAt: createdAt,
+            deliveredAt: createdAt,
+            readAt: isRead ? new Date(createdAt.getTime() + 3600000) : null,
+            contextType: 'service_order',
+            contextId: allOrders[Math.floor(Math.random() * allOrders.length)]?.id,
+            countryCode: user.countryCode,
+            businessUnit: user.businessUnit,
+            createdAt: createdAt,
+          }
+        });
+        notificationCount++;
+      }
+    }
+    
+    console.log(`✅ Created ${notificationCount} demo notifications`);
+    
+    // ============================================================================
+    // SEED ADDITIONAL BOOKINGS FOR CALENDAR VIEW
+    // ============================================================================
+    console.log('\n📅 Seeding additional calendar bookings...');
+    
+    // Get existing bookings to count
+    const existingBookings = await prisma.booking.count();
+    
+    // Find scheduled orders without bookings and create bookings for them
+    const ordersNeedingBookings = await prisma.serviceOrder.findMany({
+      where: {
+        state: ServiceOrderState.SCHEDULED,
+        assignedProviderId: { not: null },
+      },
+      include: {
+        assignment: true,
+      },
+      take: 15,
+    });
+    
+    let additionalBookings = 0;
+    for (const order of ordersNeedingBookings) {
+      if (!order.assignment || !order.assignment.workTeamId) continue;
+      
+      // Check if booking already exists
+      const existingBooking = await prisma.booking.findFirst({
+        where: { serviceOrderId: order.id }
+      });
+      if (existingBooking) continue;
+      
+      const bookingDate = order.scheduledDate || new Date();
+      
+      // Create varied time slots for realistic calendar
+      const baseSlot = 32 + Math.floor(Math.random() * 32); // Between 08:00 and 16:00
+      
+      try {
+        await prisma.booking.create({
+          data: {
+            serviceOrderId: order.id,
+            providerId: order.assignedProviderId!,
+            workTeamId: order.assignment.workTeamId,
+            bookingDate: bookingDate,
+            startSlot: baseSlot,
+            endSlot: baseSlot + 8, // 2 hours
+            durationMinutes: 120,
+            bookingType: BookingType.SERVICE_ORDER,
+            status: BookingStatus.CONFIRMED,
+            confirmedAt: new Date(),
+          }
+        });
+        additionalBookings++;
+      } catch (e: any) {
+        if (e.code !== 'P2002') {
+          console.warn('Failed to create additional booking:', e.message);
+        }
+      }
+    }
+    
+    // Also add some external blocks (vacations, maintenance) for calendar variety
+    const allTeams = await prisma.workTeam.findMany({ take: 5 });
+    const blockTypes = ['Maintenance planifiée', 'Formation équipe', 'Réunion régionale'];
+    
+    for (let i = 0; i < 3; i++) {
+      const team = allTeams[i % allTeams.length];
+      if (!team) continue;
+      
+      const blockDate = new Date();
+      blockDate.setDate(blockDate.getDate() + i + 3); // 3-5 days from now
+      
+      try {
+        await prisma.booking.create({
+          data: {
+            serviceOrderId: ordersNeedingBookings[0]?.id || allOrders[0].id, // Reuse an order ID (hack for demo)
+            providerId: team.providerId,
+            workTeamId: team.id,
+            bookingDate: blockDate,
+            startSlot: 32 + i * 8, // Staggered times
+            endSlot: 40 + i * 8,
+            durationMinutes: 120,
+            bookingType: BookingType.EXTERNAL_BLOCK,
+            status: BookingStatus.CONFIRMED,
+            cancellationReason: blockTypes[i],
+          }
+        });
+        additionalBookings++;
+      } catch (e: any) {
+        // Ignore duplicates
+      }
+    }
+    
+    console.log(`✅ Created ${additionalBookings} additional calendar bookings (total: ${existingBookings + additionalBookings})`);
   }
 
   console.log(`✅ Created ${calendarConfigs.length} calendar configurations`);
