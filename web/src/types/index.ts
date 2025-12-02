@@ -200,11 +200,22 @@ export interface User {
 }
 
 export enum UserRole {
+  // System Administration
   SUPER_ADMIN = 'SUPER_ADMIN',
   COUNTRY_ADMIN = 'COUNTRY_ADMIN',
   BU_ADMIN = 'BU_ADMIN',
   STORE_ADMIN = 'STORE_ADMIN',
-  OPERATOR = 'OPERATOR',
+  
+  // Platform Roles (8 user experiences)
+  ADMIN = 'ADMIN',           // Platform administration
+  OPERATOR = 'OPERATOR',     // Control Tower / Service Operator
+  PSM = 'PSM',               // Provider Success Manager
+  SELLER = 'SELLER',         // Retail sales staff
+  OFFER_MANAGER = 'OFFER_MANAGER', // Service catalog management
+  PROVIDER = 'PROVIDER',     // Provider company manager
+  TECHNICIAN = 'TECHNICIAN', // Field technician (mobile)
+  
+  // Legacy
   READONLY_USER = 'READONLY_USER',
 }
 

@@ -54,44 +54,30 @@ async function main() {
 
   console.log(`✅ Created ${permissions.length} permissions`);
 
-  // Create roles
-  const adminRole = await prisma.role.upsert({
-    where: { name: 'ADMIN' },
-    update: {},
-    create: {
-      name: 'ADMIN',
-      description: 'System administrator with full access',
-    },
-  });
+  // Create roles - All 8 user experience roles
+  const roles: Record<string, any> = {};
 
-  const operatorRole = await prisma.role.upsert({
-    where: { name: 'OPERATOR' },
-    update: {},
-    create: {
-      name: 'OPERATOR',
-      description: 'Operations staff managing service orders',
-    },
-  });
+  const roleDefinitions = [
+    { name: 'ADMIN', description: 'Platform administrator with full system access' },
+    { name: 'OPERATOR', description: 'Control Tower operator managing service orders and assignments' },
+    { name: 'PSM', description: 'Provider Success Manager - recruits and onboards providers' },
+    { name: 'SELLER', description: 'Retail sales staff - checks availability and creates quotations' },
+    { name: 'OFFER_MANAGER', description: 'Catalog manager - defines services, pricing, and checklists' },
+    { name: 'PROVIDER', description: 'Provider company manager - manages jobs and teams' },
+    { name: 'TECHNICIAN', description: 'Field technician - executes service orders on-site' },
+    // Legacy roles for backward compatibility
+    { name: 'PROVIDER_MANAGER', description: 'Legacy: Provider company manager' },
+  ];
 
-  const providerManagerRole = await prisma.role.upsert({
-    where: { name: 'PROVIDER_MANAGER' },
-    update: {},
-    create: {
-      name: 'PROVIDER_MANAGER',
-      description: 'Provider company manager',
-    },
-  });
+  for (const roleDef of roleDefinitions) {
+    roles[roleDef.name] = await prisma.role.upsert({
+      where: { name: roleDef.name },
+      update: { description: roleDef.description },
+      create: roleDef,
+    });
+  }
 
-  const technicianRole = await prisma.role.upsert({
-    where: { name: 'TECHNICIAN' },
-    update: {},
-    create: {
-      name: 'TECHNICIAN',
-      description: 'Field technician',
-    },
-  });
-
-  console.log('✅ Created 4 roles');
+  console.log(`✅ Created ${roleDefinitions.length} roles`);
 
   // Assign all permissions to ADMIN role
   const allPermissions = await prisma.permission.findMany();
@@ -99,13 +85,13 @@ async function main() {
     await prisma.rolePermission.upsert({
       where: {
         roleId_permissionId: {
-          roleId: adminRole.id,
+          roleId: roles['ADMIN'].id,
           permissionId: permission.id,
         },
       },
       update: {},
       create: {
-        roleId: adminRole.id,
+        roleId: roles['ADMIN'].id,
         permissionId: permission.id,
       },
     });
@@ -121,13 +107,13 @@ async function main() {
     await prisma.rolePermission.upsert({
       where: {
         roleId_permissionId: {
-          roleId: operatorRole.id,
+          roleId: roles['OPERATOR'].id,
           permissionId: permission.id,
         },
       },
       update: {},
       create: {
-        roleId: operatorRole.id,
+        roleId: roles['OPERATOR'].id,
         permissionId: permission.id,
       },
     });
@@ -136,67 +122,90 @@ async function main() {
   console.log('✅ Assigned permissions to OPERATOR role');
 
   // ============================================================================
-  // 2. SEED ADMIN USER
+  // 2. SEED ALL ROLE-BASED USERS (One per role per country)
   // ============================================================================
-  console.log('\n👤 Seeding admin user...');
+  console.log('\n👥 Seeding role-based users for all countries...');
 
-  const adminPassword = await bcrypt.hash('Admin123!', 10);
+  const standardPassword = await bcrypt.hash('Admin123!', 10);
+  const countryCodes = ['FR', 'ES', 'IT', 'PT'];
+  
+  // Role to email prefix and first name mapping
+  const roleUserConfigs = [
+    { role: 'ADMIN', emailPrefix: 'admin', firstName: 'Admin', lastName: 'User' },
+    { role: 'OPERATOR', emailPrefix: 'operator', firstName: 'Control Tower', lastName: 'Operator' },
+    { role: 'PSM', emailPrefix: 'psm', firstName: 'Provider Success', lastName: 'Manager' },
+    { role: 'SELLER', emailPrefix: 'seller', firstName: 'Store', lastName: 'Seller' },
+    { role: 'OFFER_MANAGER', emailPrefix: 'catalog', firstName: 'Offer', lastName: 'Manager' },
+    { role: 'PROVIDER', emailPrefix: 'provider', firstName: 'Provider', lastName: 'Manager' },
+    { role: 'TECHNICIAN', emailPrefix: 'technician', firstName: 'Field', lastName: 'Technician' },
+  ];
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin-fr@adeo.com' },
-    update: {
-      password: adminPassword, // Update password to ensure it's correct
-      firstName: 'Admin',
-      lastName: 'User',
-    },
-    create: {
-      email: 'admin-fr@adeo.com',
-      password: adminPassword,
-      firstName: 'Admin',
-      lastName: 'User',
-      countryCode: 'FR',
-      businessUnit: 'LEROY_MERLIN',
-      isActive: true,
-      isVerified: true,
-    },
-  });
+  let userCount = 0;
+  
+  for (const country of countryCodes) {
+    for (const config of roleUserConfigs) {
+      const email = `${config.emailPrefix}.${country.toLowerCase()}@adeo.com`;
+      
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {
+          password: standardPassword,
+          firstName: config.firstName,
+          lastName: `${config.lastName} (${country})`,
+          countryCode: country,
+          isActive: true,
+          isVerified: true,
+        },
+        create: {
+          email,
+          password: standardPassword,
+          firstName: config.firstName,
+          lastName: `${config.lastName} (${country})`,
+          countryCode: country,
+          businessUnit: 'LEROY_MERLIN',
+          isActive: true,
+          isVerified: true,
+        },
+      });
 
-  // Assign ADMIN role to admin user
-  await prisma.userRole.upsert({
-    where: {
-      userId_roleId: {
-        userId: adminUser.id,
-        roleId: adminRole.id,
-      },
-    },
-    update: {},
-    create: {
-      userId: adminUser.id,
-      roleId: adminRole.id,
-    },
-  });
+      // Assign role
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId: {
+            userId: user.id,
+            roleId: roles[config.role].id,
+          },
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          roleId: roles[config.role].id,
+        },
+      });
+      
+      userCount++;
+    }
+  }
 
-  console.log('✅ Admin user created/updated with password: Admin123!');
+  console.log(`✅ Created ${userCount} role-based users (${roleUserConfigs.length} roles × ${countryCodes.length} countries)`);
+  console.log('   All users have password: Admin123!');
+  console.log('   Email format: {role}.{country}@adeo.com');
+  console.log('   Examples: operator.fr@adeo.com, seller.es@adeo.com, admin.it@adeo.com');
 
-  // ============================================================================
-  // 3. SEED TEST USERS
-  // ============================================================================
-  console.log('\n👥 Seeding test users...');
-
-  const operatorPassword = await bcrypt.hash('Operator123!', 10);
-  const operatorUser = await prisma.user.upsert({
+  // Keep legacy users for backward compatibility
+  const legacyOperatorUser = await prisma.user.upsert({
     where: { email: 'operator@adeo.com' },
     update: {
-      password: operatorPassword, // Always update password to ensure it's correct
-      firstName: 'Test',
+      password: standardPassword,
+      firstName: 'Legacy',
       lastName: 'Operator',
       isActive: true,
       isVerified: true,
     },
     create: {
       email: 'operator@adeo.com',
-      password: operatorPassword,
-      firstName: 'Test',
+      password: standardPassword,
+      firstName: 'Legacy',
       lastName: 'Operator',
       countryCode: 'FR',
       businessUnit: 'LEROY_MERLIN',
@@ -208,39 +217,37 @@ async function main() {
   await prisma.userRole.upsert({
     where: {
       userId_roleId: {
-        userId: operatorUser.id,
-        roleId: operatorRole.id,
+        userId: legacyOperatorUser.id,
+        roleId: roles['OPERATOR'].id,
       },
     },
     update: {},
     create: {
-      userId: operatorUser.id,
-      roleId: operatorRole.id,
+      userId: legacyOperatorUser.id,
+      roleId: roles['OPERATOR'].id,
     },
   });
 
-  console.log('✅ Test operator created');
-
-  // Create country-specific admins
-  const countryAdmins = [
-    { email: 'admin-es@adeo.com', country: 'ES', name: 'Admin Spain' },
-    { email: 'admin-it@adeo.com', country: 'IT', name: 'Admin Italy' },
-    { email: 'admin-pt@adeo.com', country: 'PT', name: 'Admin Portugal' },
+  // Legacy admin users for backward compatibility
+  const legacyAdmins = [
+    { email: 'admin-fr@adeo.com', country: 'FR' },
+    { email: 'admin-es@adeo.com', country: 'ES' },
+    { email: 'admin-it@adeo.com', country: 'IT' },
+    { email: 'admin-pt@adeo.com', country: 'PT' },
   ];
 
-  for (const admin of countryAdmins) {
+  for (const admin of legacyAdmins) {
     const user = await prisma.user.upsert({
       where: { email: admin.email },
       update: {
-        password: adminPassword,
-        firstName: admin.name,
+        password: standardPassword,
         countryCode: admin.country,
       },
       create: {
         email: admin.email,
-        password: adminPassword,
-        firstName: admin.name,
-        lastName: 'User',
+        password: standardPassword,
+        firstName: 'Admin',
+        lastName: `(${admin.country})`,
         countryCode: admin.country,
         businessUnit: 'LEROY_MERLIN',
         isActive: true,
@@ -252,17 +259,18 @@ async function main() {
       where: {
         userId_roleId: {
           userId: user.id,
-          roleId: adminRole.id,
+          roleId: roles['ADMIN'].id,
         },
       },
       update: {},
       create: {
         userId: user.id,
-        roleId: adminRole.id,
+        roleId: roles['ADMIN'].id,
       },
     });
   }
-  console.log(`✅ Created ${countryAdmins.length} country-specific admins`);
+
+  console.log('✅ Legacy users maintained for backward compatibility');
 
   // ============================================================================
   // 4. SEED GEOGRAPHIC MASTER DATA

@@ -1,6 +1,6 @@
 # Yellow Grid Platform - Complete Demo Guide
 
-**Version**: 3.0
+**Version**: 4.0
 **Last Updated**: 2025-12-02
 **Live Demo URL**: https://135.181.96.93
 **Status**: ✅ Production Ready
@@ -10,70 +10,130 @@
 ## Table of Contents
 
 1. [Quick Start](#1-quick-start)
-2. [User Credentials & Portal Links](#2-user-credentials--portal-links)
-3. [Complete Workflow Demonstrations](#3-complete-workflow-demonstrations)
-4. [High-Level Test Scenarios (HLTs)](#4-high-level-test-scenarios-hlts)
-5. [User Experience Walkthroughs](#5-user-experience-walkthroughs)
-6. [Data Overview](#6-data-overview)
-7. [Troubleshooting](#7-troubleshooting)
+2. [Portal Access & Login URLs](#2-portal-access--login-urls)
+3. [User Credentials Matrix](#3-user-credentials-matrix)
+4. [Complete Workflow Demonstrations](#4-complete-workflow-demonstrations)
+5. [High-Level Test Scenarios (HLTs)](#5-high-level-test-scenarios-hlts)
+6. [User Experience Walkthroughs](#6-user-experience-walkthroughs)
+7. [Data Overview](#7-data-overview)
+8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
 ## 1. Quick Start
 
-### Access the Platform
+### 🚀 Fastest Way to Demo
+
+1. Go to **https://135.181.96.93/login**
+2. Select your portal (Control Tower, Provider, Seller, etc.)
+3. Click a country flag for instant login
+4. Password for ALL users: **`Admin123!`**
+
+### Portal Selector
+
+The main login page shows all available portals with branded experiences:
 
 ```
-Demo URL: https://135.181.96.93
+https://135.181.96.93/login
 ```
-
-### Primary Demo User
-
-| Role | Email | Password |
-|------|-------|----------|
-| **Operator** | `operator@adeo.com` | `Operator123!` |
-
-> **Tip**: The Operator role has access to the full Control Tower and can navigate to all major features.
 
 ---
 
-## 2. User Credentials & Portal Links
+## 2. Portal Access & Login URLs
 
-### 2.1 All Available Users
+Each portal has its own **branded login page** with role-specific theming.
 
-| User Type | Email | Password | Portal URL |
-|-----------|-------|----------|------------|
-| **Operator (FR)** | `operator@adeo.com` | `Operator123!` | `/dashboard` |
-| **Admin (FR)** | `admin-fr@adeo.com` | `Admin123!` | `/admin/dashboard` |
-| **Admin (ES)** | `admin-es@adeo.com` | `Admin123!` | `/admin/dashboard` |
-| **Admin (IT)** | `admin-it@adeo.com` | `Admin123!` | `/admin/dashboard` |
-| **Admin (PT)** | `admin-pt@adeo.com` | `Admin123!` | `/admin/dashboard` |
+### Direct Portal Login URLs
 
-### 2.2 Portal Direct Links
+| Portal | Login URL | Description |
+|--------|-----------|-------------|
+| 🏠 **Control Tower** | `/login/operator` | Service operations hub |
+| 🏢 **Provider Portal** | `/login/provider` | Provider business management |
+| 👤 **PSM Portal** | `/login/psm` | Provider success management |
+| 🛒 **Seller Portal** | `/login/seller` | Retail sales enablement |
+| 📚 **Catalog Manager** | `/login/catalog` | Service catalog administration |
+| ⚙️ **Admin Portal** | `/login/admin` | Platform administration |
+| 🔧 **Technician Portal** | `/login/technician` | Field service execution |
 
-Once logged in, navigate to these portals:
+### Full URLs
 
-| Portal | Route | Purpose | Access Level |
-|--------|-------|---------|--------------|
-| **🏠 Operator Cockpit** | `/dashboard` | Control Tower - Main operations hub | Operator, Admin |
-| **📦 Service Orders** | `/service-orders` | All service orders management | Operator, Admin |
-| **👷 Providers** | `/providers` | Provider company management | Operator, Admin |
-| **📅 Calendar** | `/calendar` | Visual scheduling overview | Operator, Admin |
-| **✅ Assignments** | `/assignments` | Work assignment management | Operator, Admin |
-| **📋 Tasks** | `/tasks` | Task queue management | Operator, Admin |
-| **📊 Analytics** | `/analytics` | Performance dashboards | Operator, Admin |
-| **🏢 Provider Portal** | `/provider/dashboard` | Provider self-service | Provider role |
-| **👤 PSM Portal** | `/psm/dashboard` | Provider Success Manager | PSM role |
-| **🛒 Seller Portal** | `/seller/dashboard` | Store sales staff | Seller role |
-| **⚙️ Admin Portal** | `/admin/dashboard` | Platform administration | Admin only |
-| **📚 Catalog** | `/catalog/services` | Service catalog management | Offer Manager |
-| **👥 Customer Portal** | `/customer/:token` | Customer self-service | Token-based |
+| Portal | Full URL |
+|--------|----------|
+| Portal Selector | `https://135.181.96.93/login` |
+| Control Tower | `https://135.181.96.93/login/operator` |
+| Provider Portal | `https://135.181.96.93/login/provider` |
+| PSM Portal | `https://135.181.96.93/login/psm` |
+| Seller Portal | `https://135.181.96.93/login/seller` |
+| Catalog Manager | `https://135.181.96.93/login/catalog` |
+| Admin Portal | `https://135.181.96.93/login/admin` |
+| Technician Portal | `https://135.181.96.93/login/technician` |
 
 ---
 
-## 3. Complete Workflow Demonstrations
+## 4. User Credentials Matrix
 
-### 3.1 🔧 Technical Visit (TV) → Installation Flow
+### 🔑 Universal Password
+
+**ALL users share the same password:**
+
+```
+Admin123!
+```
+
+### Email Pattern
+
+```
+{role}.{country}@adeo.com
+```
+
+### Complete User Matrix
+
+| Role | France 🇫🇷 | Spain 🇪🇸 | Italy 🇮🇹 | Portugal 🇵🇹 |
+|------|------------|-----------|-----------|--------------|
+| **Admin** | admin.fr@adeo.com | admin.es@adeo.com | admin.it@adeo.com | admin.pt@adeo.com |
+| **Operator** | operator.fr@adeo.com | operator.es@adeo.com | operator.it@adeo.com | operator.pt@adeo.com |
+| **PSM** | psm.fr@adeo.com | psm.es@adeo.com | psm.it@adeo.com | psm.pt@adeo.com |
+| **Seller** | seller.fr@adeo.com | seller.es@adeo.com | seller.it@adeo.com | seller.pt@adeo.com |
+| **Catalog** | catalog.fr@adeo.com | catalog.es@adeo.com | catalog.it@adeo.com | catalog.pt@adeo.com |
+| **Provider** | provider.fr@adeo.com | provider.es@adeo.com | provider.it@adeo.com | provider.pt@adeo.com |
+| **Technician** | technician.fr@adeo.com | technician.es@adeo.com | technician.it@adeo.com | technician.pt@adeo.com |
+
+### Quick Reference Card
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    YELLOW GRID DEMO CREDENTIALS                     │
+├─────────────────────────────────────────────────────────────────────┤
+│  Password (all users): Admin123!                                    │
+│                                                                     │
+│  Email format: {role}.{country}@adeo.com                           │
+│                                                                     │
+│  Roles: admin, operator, psm, seller, catalog, provider, technician│
+│  Countries: fr, es, it, pt                                          │
+├─────────────────────────────────────────────────────────────────────┤
+│  Examples:                                                          │
+│    operator.fr@adeo.com  - French operator                         │
+│    seller.es@adeo.com    - Spanish seller                          │
+│    admin.it@adeo.com     - Italian admin                           │
+│    provider.pt@adeo.com  - Portuguese provider                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Legacy Users (Backward Compatibility)
+
+| Email | Password | Role |
+|-------|----------|------|
+| operator@adeo.com | Admin123! | OPERATOR |
+| admin-fr@adeo.com | Admin123! | ADMIN |
+| admin-es@adeo.com | Admin123! | ADMIN |
+| admin-it@adeo.com | Admin123! | ADMIN |
+| admin-pt@adeo.com | Admin123! | ADMIN |
+
+---
+
+## 4. Complete Workflow Demonstrations
+
+### 8.1 🔧 Technical Visit (TV) → Installation Flow
 
 This is the **core business workflow** demonstrating how a customer purchase leads to service delivery.
 
@@ -85,7 +145,7 @@ This is the **core business workflow** demonstrating how a customer purchase lea
 1. LOGIN
    → URL: https://135.181.96.93/login
    → Email: operator@adeo.com
-   → Password: Operator123!
+   → Password: Admin123!
 
 2. VIEW SERVICE ORDERS
    → Navigate to: /service-orders
@@ -148,7 +208,7 @@ This is the **core business workflow** demonstrating how a customer purchase lea
 
 ---
 
-### 3.2 📝 Quotation Workflow
+### 8.2 📝 Quotation Workflow
 
 Demonstrates the sales quotation process after a Technical Visit.
 
@@ -196,7 +256,7 @@ Demonstrates the sales quotation process after a Technical Visit.
 
 ---
 
-### 3.3 🔨 Installation Workflow
+### 8.3 🔨 Installation Workflow
 
 Complete installation service delivery.
 
@@ -232,7 +292,7 @@ Complete installation service delivery.
 
 ---
 
-### 3.4 🛠️ Maintenance/Rework Workflow
+### 8.4 🛠️ Maintenance/Rework Workflow
 
 Handle post-installation issues and maintenance requests.
 
@@ -264,7 +324,7 @@ Handle post-installation issues and maintenance requests.
 
 ---
 
-### 3.5 📄 Contract Lifecycle Workflow
+### 8.5 📄 Contract Lifecycle Workflow
 
 Demonstrates e-signature and contract management.
 
@@ -289,7 +349,7 @@ Demonstrates e-signature and contract management.
 
 ---
 
-## 4. High-Level Test Scenarios (HLTs)
+## 5. High-Level Test Scenarios (HLTs)
 
 ### HLT-001: Complete Service Order Lifecycle
 
@@ -305,7 +365,7 @@ Demonstrates e-signature and contract management.
 
 **Demo Steps**:
 ```
-1. https://135.181.96.93/login → operator@adeo.com / Operator123!
+1. https://135.181.96.93/login → operator@adeo.com / Admin123!
 2. Click "Service Orders" in sidebar
 3. Verify 60 orders displayed with customer names
 4. Click on order "ORD-FR-001" (or any)
@@ -435,9 +495,9 @@ Demonstrates e-signature and contract management.
 
 ---
 
-## 5. User Experience Walkthroughs
+## 6. User Experience Walkthroughs
 
-### 5.1 🏠 Operator Cockpit (Control Tower)
+### 8.1 🏠 Operator Cockpit (Control Tower)
 
 **Access**: Login as `operator@adeo.com`
 
@@ -472,7 +532,7 @@ Dashboard (/dashboard)
 
 ---
 
-### 5.2 🏢 Provider Portal
+### 8.2 🏢 Provider Portal
 
 **Access**: Navigate to `/provider/dashboard` (Provider role required)
 
@@ -507,7 +567,7 @@ Provider Dashboard (/provider/dashboard)
 
 ---
 
-### 5.3 👤 PSM Portal (Provider Success Manager)
+### 8.3 👤 PSM Portal (Provider Success Manager)
 
 **Access**: Navigate to `/psm/dashboard`
 
@@ -536,7 +596,7 @@ PSM Dashboard (/psm/dashboard)
 
 ---
 
-### 5.4 🛒 Seller Portal
+### 8.4 🛒 Seller Portal
 
 **Access**: Navigate to `/seller/dashboard`
 
@@ -565,7 +625,7 @@ Seller Dashboard (/seller/dashboard)
 
 ---
 
-### 5.5 ⚙️ Admin Portal
+### 8.5 ⚙️ Admin Portal
 
 **Access**: Login as `admin-fr@adeo.com`
 
@@ -594,7 +654,7 @@ Admin Dashboard (/admin/dashboard)
 
 ---
 
-### 5.6 📚 Catalog (Offer Manager)
+### 8.6 📚 Catalog (Offer Manager)
 
 **Access**: Navigate to `/catalog/services`
 
@@ -623,7 +683,7 @@ Service Catalog (/catalog/services)
 
 ---
 
-### 5.7 👥 Customer Portal
+### 8.7 👥 Customer Portal
 
 **Access**: Token-based (simulated via `/customer/:token`)
 
@@ -656,9 +716,9 @@ Customer Service View (/customer/:token)
 
 ---
 
-## 6. Data Overview
+## 7. Data Overview
 
-### 6.1 Demo Data Summary
+### 8.1 Demo Data Summary
 
 | Entity | Count | Notes |
 |--------|-------|-------|
@@ -669,7 +729,7 @@ Customer Service View (/customer/:token)
 | **Users** | 5 | Admin (4 countries) + Operator |
 | **Services** | 7+ | HVAC, Plumbing, Kitchen, etc. |
 
-### 6.2 Sample Customers (French Data)
+### 8.2 Sample Customers (French Data)
 
 | Customer | City | Sample Order |
 |----------|------|--------------|
@@ -682,7 +742,7 @@ Customer Service View (/customer/:token)
 | Nathalie Petit | Nantes | ORD-FR-007 |
 | Laurent Roux | Paris | ORD-FR-008 |
 
-### 6.3 Sample Providers (French Data)
+### 8.3 Sample Providers (French Data)
 
 | Provider | City | Specialties |
 |----------|------|-------------|
@@ -691,7 +751,7 @@ Customer Service View (/customer/:token)
 | InstallPlus Lyon | Lyon | Kitchen, Bathroom |
 | ProHabitat Bordeaux | Bordeaux | Full service |
 
-### 6.4 Service Types
+### 8.4 Service Types
 
 | Type | Code | Description |
 |------|------|-------------|
@@ -702,7 +762,7 @@ Customer Service View (/customer/:token)
 | Rework | `REWORK` | Correction of previous work |
 | Complex | `COMPLEX` | Multi-day complex installations |
 
-### 6.5 Service Order States
+### 8.5 Service Order States
 
 ```
 Created → Scheduled → Assigned → Dispatched → InProgress → Completed → Verified
@@ -728,13 +788,13 @@ Created → Scheduled → Assigned → Dispatched → InProgress → Completed �
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 ### Common Issues
 
 | Issue | Solution |
 |-------|----------|
-| Cannot login | Check credentials: operator@adeo.com / Operator123! |
+| Cannot login | Check credentials: operator@adeo.com / Admin123! |
 | Page not loading | Try hard refresh: Ctrl+F5 or Cmd+Shift+R |
 | No data displayed | Wait for data load, check network tab |
 | 404 errors | Ensure correct URL, check browser console |
@@ -813,7 +873,7 @@ For quick stakeholder demonstrations:
 ```
 MINUTE 1: Login & Dashboard
 - https://135.181.96.93
-- Login: operator@adeo.com / Operator123!
+- Login: operator@adeo.com / Admin123!
 - Show dashboard KPIs
 
 MINUTE 2: Service Orders

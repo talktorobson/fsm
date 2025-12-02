@@ -3,7 +3,8 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import { ExperienceProvider } from './providers/ExperienceProvider';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import LoginPage from './pages/auth/LoginPage';
+import PortalSelectorPage from './pages/auth/PortalSelectorPage';
+import PortalLoginPage from './pages/auth/PortalLoginPage';
 import CallbackPage from './pages/auth/CallbackPage';
 
 // Layouts
@@ -94,8 +95,20 @@ function App() {
       <ExperienceProvider>
         <Toaster position="top-right" richColors />
         <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
+          {/* ============================================================ */}
+          {/* PUBLIC ROUTES - Portal Selection & Login */}
+          {/* ============================================================ */}
+          
+          {/* Main portal selector */}
+          <Route path="/login" element={<PortalSelectorPage />} />
+          
+          {/* Individual portal logins */}
+          <Route path="/login/:portal" element={<PortalLoginPage />} />
+          
+          {/* Legacy login (redirects to selector) */}
+          <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+          
+          {/* SSO callback */}
           <Route path="/auth/callback" element={<CallbackPage />} />
 
           {/* ============================================================ */}
