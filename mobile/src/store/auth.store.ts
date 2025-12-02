@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { apiService } from '@services/api.service';
 import { STORAGE_KEYS } from '@config/api.config';
 import type {
@@ -41,9 +42,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const { user, tokens } = response;
 
       // Store tokens securely
-      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
-      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
-      await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      if (Platform.OS === 'web') {
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      } else {
+        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
+        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
+        await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      }
 
       set({
         user,
@@ -75,9 +82,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       console.error('Logout error:', error);
     } finally {
       // Clear local storage regardless of API call result
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      } else {
+        await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+        await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+        await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+      }
 
       set({
         user: null,
@@ -103,10 +116,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const [accessToken, userData] = await Promise.all([
-        SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
-        SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA),
-      ]);
+      let accessToken, userData;
+      if (Platform.OS === 'web') {
+        accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+        userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+      } else {
+        [accessToken, userData] = await Promise.all([
+          SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+          SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA),
+        ]);
+      }
 
       if (accessToken && userData) {
         const user: User = JSON.parse(userData);
@@ -140,7 +159,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (currentUser) {
       const updatedUser = { ...currentUser, ...userUpdate };
       set({ user: updatedUser });
-      SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(updatedUser));
+      if (Platform.OS === 'web') {
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(updatedUser));
+      } else {
+        SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(updatedUser));
+      }
     }
   },
 

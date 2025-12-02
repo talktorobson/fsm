@@ -45,7 +45,6 @@ rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
     --exclude '.git' \
     --exclude 'dist' \
     --exclude 'coverage' \
-    --exclude 'mobile' \
     --exclude 'mobile-app' \
     --exclude 'web-app' \
     --exclude 'roadshow-mockup' \

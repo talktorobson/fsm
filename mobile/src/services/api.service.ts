@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { API_CONFIG, STORAGE_KEYS } from '@config/api.config';
 
 class ApiService {
@@ -22,7 +23,12 @@ class ApiService {
     // Request interceptor - add auth token
     this.api.interceptors.request.use(
       async (config) => {
-        const token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+        let token;
+        if (Platform.OS === 'web') {
+          token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+        } else {
+          token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+        }
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -66,7 +72,12 @@ class ApiService {
 
     this.refreshTokenPromise = (async () => {
       try {
-        const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+        let refreshToken;
+        if (Platform.OS === 'web') {
+          refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+        } else {
+          refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+        }
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
@@ -77,9 +88,16 @@ class ApiService {
 
         const { accessToken, refreshToken: newRefreshToken } = response.data;
 
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        if (newRefreshToken) {
-          await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+        if (Platform.OS === 'web') {
+          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+          if (newRefreshToken) {
+            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+          }
+        } else {
+          await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+          if (newRefreshToken) {
+            await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+          }
         }
 
         return accessToken;
@@ -92,9 +110,15 @@ class ApiService {
   }
 
   private async clearTokens() {
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+    } else {
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+    }
   }
 
   // Generic HTTP methods

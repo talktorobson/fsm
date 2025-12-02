@@ -22,6 +22,24 @@
         reverse_proxy api:3000
     }
 
+    # Serve mobile app assets
+    handle /_expo/* {
+        root * /srv/mobile
+        file_server
+    }
+
+    handle /assets/* {
+        root * /srv/mobile
+        file_server
+    }
+
+    # Serve mobile app
+    handle_path /mobile/* {
+        root * /srv/mobile
+        try_files {path} /index.html
+        file_server
+    }
+
     # Serve static files from /srv
     handle {
         root * /srv

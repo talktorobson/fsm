@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // Base URL - should be replaced with actual backend URL
   BASE_URL: __DEV__
-    ? 'http://localhost:3000/api/v1'
+    ? 'https://135.181.96.93/api/v1'
     : 'https://api.yellow-grid.com/api/v1',
 
   // Timeout settings
