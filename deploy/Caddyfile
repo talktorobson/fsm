@@ -22,14 +22,10 @@
         reverse_proxy api:3000
     }
 
-    # Serve mobile app assets
+    # Serve mobile app assets (Expo bundles accessed from /mobile/index.html)
     handle /_expo/* {
         root * /srv/mobile
-        file_server
-    }
-
-    handle /assets/* {
-        root * /srv/mobile
+        try_files {path} =404
         file_server
     }
 
