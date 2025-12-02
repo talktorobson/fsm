@@ -86,7 +86,8 @@ class ApiService {
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        // Backend returns { data: { accessToken, refreshToken }, meta: {...} }
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
 
         if (Platform.OS === 'web') {
           localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
@@ -122,29 +123,30 @@ class ApiService {
   }
 
   // Generic HTTP methods
+  // Note: Backend returns { data: T, meta: {...} }, so we unwrap the 'data' property
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.get<T>(url, config);
-    return response.data;
+    const response = await this.api.get<{ data: T }>(url, config);
+    return response.data.data;
   }
 
   async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.post<T>(url, data, config);
-    return response.data;
+    const response = await this.api.post<{ data: T }>(url, data, config);
+    return response.data.data;
   }
 
   async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.put<T>(url, data, config);
-    return response.data;
+    const response = await this.api.put<{ data: T }>(url, data, config);
+    return response.data.data;
   }
 
   async patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.patch<T>(url, data, config);
-    return response.data;
+    const response = await this.api.patch<{ data: T }>(url, data, config);
+    return response.data.data;
   }
 
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.delete<T>(url, config);
-    return response.data;
+    const response = await this.api.delete<{ data: T }>(url, config);
+    return response.data.data;
   }
 
   // File upload

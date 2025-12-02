@@ -34,12 +34,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      // API returns { accessToken, refreshToken, tokenType, expiresIn, user }
       const response = await apiService.post<{
+        accessToken: string;
+        refreshToken: string;
+        tokenType: string;
+        expiresIn: number;
         user: User;
-        tokens: AuthTokens;
       }>('/auth/login', credentials);
 
-      const { user, tokens } = response;
+      const { accessToken, refreshToken, user } = response;
+      const tokens: AuthTokens = { accessToken, refreshToken };
 
       // Store tokens securely
       if (Platform.OS === 'web') {

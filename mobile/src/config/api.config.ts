@@ -1,9 +1,19 @@
 // API Configuration
-export const API_CONFIG = {
-  // Base URL - should be replaced with actual backend URL
-  BASE_URL: __DEV__
+// For web builds, use relative URL so it works on any host
+const getBaseUrl = () => {
+  if (globalThis.window?.location?.origin) {
+    // Web: use same origin
+    return `${globalThis.window.location.origin}/api/v1`;
+  }
+  // Native: use environment or fallback
+  return __DEV__
     ? 'https://135.181.96.93/api/v1'
-    : 'https://api.yellow-grid.com/api/v1',
+    : 'https://api.yellow-grid.com/api/v1';
+};
+
+export const API_CONFIG = {
+  // Base URL - dynamically determined based on platform
+  BASE_URL: getBaseUrl(),
 
   // Timeout settings
   TIMEOUT: 30000, // 30 seconds
