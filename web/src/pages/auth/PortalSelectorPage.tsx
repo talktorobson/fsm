@@ -106,7 +106,18 @@ export default function PortalSelectorPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <img src="/assets/logo.png" alt="Yellow Grid" className="h-12 w-auto" />
+              {/* Vector Logo Recreation */}
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-10 w-10">
+                <rect width="48" height="48" rx="12" fill="#FFD700" />
+                <path d="M12 24H36" stroke="#1F2937" strokeWidth="2" strokeLinecap="round" />
+                <path d="M24 12V36" stroke="#1F2937" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="24" cy="24" r="4" fill="white" stroke="#1F2937" strokeWidth="2" />
+                <circle cx="16" cy="16" r="2" fill="#1F2937" />
+                <circle cx="32" cy="16" r="2" fill="#1F2937" />
+                <circle cx="16" cy="32" r="2" fill="#1F2937" />
+                <circle cx="32" cy="32" r="2" fill="#1F2937" />
+              </svg>
+              <span className="font-bold text-2xl tracking-tight text-white">Yellow<span className="text-[#FFD700]">Grid</span></span>
             </div>
             <div className="flex items-center gap-4">
               <a href="#" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Documentation</a>
@@ -117,22 +128,15 @@ export default function PortalSelectorPage() {
       </nav>
 
       {/* Hero Section */}
-      <div className="relative pt-20 pb-16 sm:pt-24 sm:pb-20">
+      <div className="relative pt-12 pb-10 sm:pt-16 sm:pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[#FFD700] text-xs font-medium mb-6">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-            </span>
-            v2.0 Production Ready
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-4">
             Orchestrate Field Operations <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-yellow-200">
               With Precision
             </span>
           </h1>
-          <p className="max-w-2xl mx-auto text-lg text-gray-400 mb-10">
+          <p className="max-w-2xl mx-auto text-lg text-gray-400 mb-8">
             The enterprise-grade platform for managing complex service execution networks.
             Connect operators, providers, and technicians in a single unified ecosystem.
           </p>
@@ -140,13 +144,13 @@ export default function PortalSelectorPage() {
       </div>
 
       {/* Portal Grid */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {portals.map((portal) => (
             <Link
               key={portal.id}
               to={portal.url}
-              className={`group relative overflow-hidden rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-yellow-500/10
+              className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-yellow-500/10
                 ${portal.highlight
                   ? 'bg-white/10 border-yellow-500/50 ring-1 ring-yellow-500/20'
                   : 'bg-white/5 border-white/10 hover:border-yellow-500/30 hover:bg-white/10'
@@ -156,31 +160,31 @@ export default function PortalSelectorPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 via-yellow-500/0 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl ${portal.highlight ? 'bg-yellow-500 text-black' : 'bg-white/10 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black'} transition-colors duration-300`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2.5 rounded-xl ${portal.highlight ? 'bg-yellow-500 text-black' : 'bg-white/10 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black'} transition-colors duration-300`}>
                     {portal.icon}
                   </div>
                   {portal.badge && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium border border-blue-500/30">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-medium border border-blue-500/30">
                       <Smartphone className="w-3 h-3" />
                       {portal.badge}
                     </span>
                   )}
                   {portal.highlight && !portal.badge && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-xs font-medium border border-yellow-500/30">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 text-[10px] font-medium border border-yellow-500/30">
                       <CheckCircle2 className="w-3 h-3" />
                       Primary
                     </span>
                   )}
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-1 group-hover:text-[#FFD700] transition-colors">
+                <h3 className="text-lg font-bold text-white mb-0.5 group-hover:text-[#FFD700] transition-colors">
                   {portal.name}
                 </h3>
-                <p className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wider text-xs">
+                <p className="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
                   {portal.role}
                 </p>
-                <p className="text-gray-400 text-sm leading-relaxed mb-4 group-hover:text-gray-300 transition-colors">
+                <p className="text-gray-400 text-sm leading-relaxed mb-3 group-hover:text-gray-300 transition-colors line-clamp-2">
                   {portal.description}
                 </p>
 
@@ -193,34 +197,34 @@ export default function PortalSelectorPage() {
         </div>
 
         {/* Trust Indicators */}
-        <div className="mt-20 pt-10 border-t border-white/10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+        <div className="mt-12 pt-8 border-t border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div className="flex flex-col items-center">
-              <div className="p-3 rounded-full bg-white/5 mb-4 text-gray-400">
-                <Globe2 className="w-6 h-6" />
+              <div className="p-2 rounded-full bg-white/5 mb-3 text-gray-400">
+                <Globe2 className="w-5 h-5" />
               </div>
-              <h4 className="text-white font-semibold mb-1">Multi-Country Support</h4>
-              <p className="text-sm text-gray-500">Deployed across FR, ES, IT, PT</p>
+              <h4 className="text-white font-semibold mb-0.5 text-sm">Multi-Country Support</h4>
+              <p className="text-xs text-gray-500">Deployed across FR, ES, IT, PT</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="p-3 rounded-full bg-white/5 mb-4 text-gray-400">
-                <ShieldCheck className="w-6 h-6" />
+              <div className="p-2 rounded-full bg-white/5 mb-3 text-gray-400">
+                <ShieldCheck className="w-5 h-5" />
               </div>
-              <h4 className="text-white font-semibold mb-1">Enterprise Security</h4>
-              <p className="text-sm text-gray-500">Role-based access & data isolation</p>
+              <h4 className="text-white font-semibold mb-0.5 text-sm">Enterprise Security</h4>
+              <p className="text-xs text-gray-500">Role-based access & data isolation</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="p-3 rounded-full bg-white/5 mb-4 text-gray-400">
-                <CheckCircle2 className="w-6 h-6" />
+              <div className="p-2 rounded-full bg-white/5 mb-3 text-gray-400">
+                <CheckCircle2 className="w-5 h-5" />
               </div>
-              <h4 className="text-white font-semibold mb-1">99.9% Reliability</h4>
-              <p className="text-sm text-gray-500">High availability architecture</p>
+              <h4 className="text-white font-semibold mb-0.5 text-sm">99.9% Reliability</h4>
+              <p className="text-xs text-gray-500">High availability architecture</p>
             </div>
           </div>
         </div>
 
         {/* Demo Credentials Footer */}
-        <div className="mt-16 bg-white/5 backdrop-blur rounded-xl border border-white/10 p-6 max-w-3xl mx-auto">
+        <div className="mt-12 bg-white/5 backdrop-blur rounded-xl border border-white/10 p-5 max-w-3xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h4 className="text-white font-semibold mb-1 flex items-center gap-2">
