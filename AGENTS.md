@@ -2,12 +2,12 @@
 
 ## Orientation
 
-- **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). 276 files, 53,539 lines. Phases 1-5 complete. Production-ready.
-- **Mobile App**: `mobile-app/` (React Native + Expo). Phase 3 deliverable. ~50% complete.
+- **Backend**: `src/` (NestJS + Prisma + PostgreSQL + Redis). 280+ files, 55,000+ lines. Phases 1-5 complete. Production-ready.
+- **Mobile App**: `mobile/` (React Native + Expo). 6 screens + 4-party Chat. Deployed at `/mobile/`. Production-ready.
 - **Web App**: `web/` (React + Vite). 161 files, 5,969 lines. Phase 5 complete. Multi-experience platform deployed.
 - **Documentation**: `product-docs/` holds v2.0 production-ready specs. `docs/IMPLEMENTATION_TRACKING.md` is the authoritative progress tracker.
 - **Legacy/Reference**: `roadshow-mockup/` is archived. `business-requirements/` are read-only source materials.
-- **Live Demo**: https://135.181.96.93
+- **Live Demo**: https://135.181.96.93 (Web) | https://135.181.96.93/mobile/ (Mobile)
 
 ## Remote Server (VPS) - Quick Reference
 
@@ -133,6 +133,12 @@ EOSQL'
 ### Service Orders
 - **ServiceOrder**: Core entity with `urgency` field (URGENT, STANDARD, LOW) for response time requirements
 - **Note on P1/P2**: P1/P2 terminology ONLY applies to provider service preferences (ServicePriorityConfig), NOT to service order urgency. Service orders use explicit urgency levels.
+
+### Chat System (Dec 2025)
+- **ServiceOrderConversation**: One conversation per service order, 4-party communication
+- **ConversationParticipant**: CUSTOMER, OPERATOR, WORK_TEAM, PROVIDER_MANAGER, SYSTEM
+- **ServiceOrderMessage**: Messages with TEXT/IMAGE/FILE/SYSTEM types, status tracking (SENT/DELIVERED/READ)
+- **Chat API**: `/api/v1/chat/*` - 10 endpoints for conversations and messages
 
 ### Demo Data (Seeded - Dec 2025)
 - **French Customers**: Marie Dupont, Jean-Pierre Martin, Sophie Bernard, Pierre Durand, Isabelle Moreau, François Leroy, Nathalie Petit, Laurent Roux
