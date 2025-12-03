@@ -878,6 +878,255 @@ enum ConflictStatus {
 }
 ```
 
+### 6. Chat & Messaging
+
+The chat system enables real-time 4-party communication for service orders between Customer, Operator (Control Tower), Work Team (Technicians), and Provider Manager.
+
+#### ServiceOrderConversation Entity
+
+```typescript
+interface ServiceOrderConversation {
+  id: string;
+  serviceOrderId: string;
+  status: ConversationStatus;
+  participants: ConversationParticipant[];
+  messageCount: number;
+  unreadCounts: Record<string, number>; // participantId -> unread count
+  lastMessageAt?: DateTime;
+  lastMessagePreview?: string;
+  metadata: {
+    createdByParticipantType: ParticipantType;
+    urgencyLevel?: UrgencyLevel;
+    tags?: string[];
+  };
+  createdAt: DateTime;
+  updatedAt: DateTime;
+}
+
+enum ConversationStatus {
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  CLOSED = 'CLOSED'
+}
+
+enum UrgencyLevel {
+  LOW = 'LOW',
+  NORMAL = 'NORMAL',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT'
+}
+```
+
+#### ConversationParticipant Entity
+
+```typescript
+interface ConversationParticipant {
+  id: string;
+  conversationId: string;
+  participantType: ParticipantType;
+  userId?: string;           // For OPERATOR, PROVIDER_MANAGER
+  workTeamId?: string;       // For WORK_TEAM
+  customerId?: string;       // For CUSTOMER
+  displayName: string;
+  avatarUrl?: string;
+  role: ParticipantRole;
+  permissions: ParticipantPermissions;
+  lastSeenAt?: DateTime;
+  lastReadMessageId?: string;
+  notificationPreferences: NotificationPreferences;
+  status: ParticipantStatus;
+  joinedAt: DateTime;
+  leftAt?: DateTime;
+}
+
+enum ParticipantType {
+  CUSTOMER = 'CUSTOMER',
+  OPERATOR = 'OPERATOR',
+  WORK_TEAM = 'WORK_TEAM',
+  PROVIDER_MANAGER = 'PROVIDER_MANAGER',
+  SYSTEM = 'SYSTEM'
+}
+
+enum ParticipantRole {
+  OWNER = 'OWNER',
+  PARTICIPANT = 'PARTICIPANT',
+  OBSERVER = 'OBSERVER'
+}
+
+interface ParticipantPermissions {
+  canSendMessages: boolean;
+  canSendMedia: boolean;
+  canSendFiles: boolean;
+  canViewHistory: boolean;
+  canMuteConversation: boolean;
+}
+
+enum ParticipantStatus {
+  ACTIVE = 'ACTIVE',
+  MUTED = 'MUTED',
+  LEFT = 'LEFT',
+  REMOVED = 'REMOVED'
+}
+
+interface NotificationPreferences {
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  smsEnabled: boolean;
+  quietHoursStart?: string; // HH:MM format
+  quietHoursEnd?: string;
+}
+```
+
+#### ServiceOrderMessage Entity
+
+```typescript
+interface ServiceOrderMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderType: ParticipantType;
+  senderDisplayName: string;
+  content: MessageContent;
+  messageType: MessageType;
+  replyToMessageId?: string;
+  mentions: MessageMention[];
+  reactions: MessageReaction[];
+  status: MessageStatus;
+  statusHistory: MessageStatusEntry[];
+  deliveredTo: DeliveryReceipt[];
+  readBy: ReadReceipt[];
+  metadata: {
+    deviceId?: string;
+    platform?: 'WEB' | 'IOS' | 'ANDROID';
+    clientMessageId?: string;
+    offlineQueued?: boolean;
+  };
+  createdAt: DateTime;
+  updatedAt: DateTime;
+  deletedAt?: DateTime;
+}
+
+interface MessageContent {
+  text?: string;
+  mediaUrl?: string;
+  mediaType?: MediaType;
+  mediaThumbnailUrl?: string;
+  mediaSize?: number;
+  mediaDuration?: number; // for audio/video
+  fileName?: string;
+  fileSize?: number;
+  location?: GeoLocation;
+}
+
+enum MessageType {
+  TEXT = 'TEXT',
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  AUDIO = 'AUDIO',
+  FILE = 'FILE',
+  LOCATION = 'LOCATION',
+  SYSTEM = 'SYSTEM'
+}
+
+enum MediaType {
+  IMAGE_JPEG = 'IMAGE_JPEG',
+  IMAGE_PNG = 'IMAGE_PNG',
+  IMAGE_WEBP = 'IMAGE_WEBP',
+  VIDEO_MP4 = 'VIDEO_MP4',
+  VIDEO_MOV = 'VIDEO_MOV',
+  AUDIO_MP3 = 'AUDIO_MP3',
+  AUDIO_M4A = 'AUDIO_M4A',
+  PDF = 'PDF',
+  DOC = 'DOC',
+  DOCX = 'DOCX',
+  XLS = 'XLS',
+  XLSX = 'XLSX'
+}
+
+enum MessageStatus {
+  SENDING = 'SENDING',
+  SENT = 'SENT',
+  DELIVERED = 'DELIVERED',
+  READ = 'READ',
+  FAILED = 'FAILED',
+  DELETED = 'DELETED'
+}
+
+interface MessageStatusEntry {
+  status: MessageStatus;
+  timestamp: DateTime;
+  reason?: string;
+}
+
+interface MessageMention {
+  participantId: string;
+  participantType: ParticipantType;
+  displayName: string;
+  startIndex: number;
+  endIndex: number;
+}
+
+interface MessageReaction {
+  participantId: string;
+  emoji: string;
+  createdAt: DateTime;
+}
+
+interface DeliveryReceipt {
+  participantId: string;
+  deliveredAt: DateTime;
+}
+
+interface ReadReceipt {
+  participantId: string;
+  readAt: DateTime;
+}
+```
+
+#### SystemMessage Entity
+
+```typescript
+interface SystemMessage {
+  id: string;
+  conversationId: string;
+  eventType: SystemEventType;
+  eventData: Record<string, any>;
+  localizedContent: Record<string, string>; // locale -> translated text
+  triggerParticipantId?: string;
+  affectedParticipantIds?: string[];
+  createdAt: DateTime;
+}
+
+enum SystemEventType {
+  CONVERSATION_CREATED = 'CONVERSATION_CREATED',
+  PARTICIPANT_JOINED = 'PARTICIPANT_JOINED',
+  PARTICIPANT_LEFT = 'PARTICIPANT_LEFT',
+  PARTICIPANT_REMOVED = 'PARTICIPANT_REMOVED',
+  SERVICE_ORDER_STATUS_CHANGED = 'SERVICE_ORDER_STATUS_CHANGED',
+  APPOINTMENT_SCHEDULED = 'APPOINTMENT_SCHEDULED',
+  APPOINTMENT_RESCHEDULED = 'APPOINTMENT_RESCHEDULED',
+  TECHNICIAN_ASSIGNED = 'TECHNICIAN_ASSIGNED',
+  TECHNICIAN_EN_ROUTE = 'TECHNICIAN_EN_ROUTE',
+  TECHNICIAN_ARRIVED = 'TECHNICIAN_ARRIVED',
+  WORK_COMPLETED = 'WORK_COMPLETED',
+  CONVERSATION_CLOSED = 'CONVERSATION_CLOSED'
+}
+```
+
+#### TypingIndicator Entity (Real-time)
+
+```typescript
+interface TypingIndicator {
+  conversationId: string;
+  participantId: string;
+  participantType: ParticipantType;
+  displayName: string;
+  isTyping: boolean;
+  startedAt: DateTime;
+  expiresAt: DateTime; // Auto-clear after 10 seconds
+}
+```
+
 ## Business Rules & Constraints
 
 ### Check-In Rules
@@ -964,6 +1213,40 @@ enum ConflictStatus {
    - Checksums validated before and after sync
    - Dependencies synced in correct order
    - Failed items retry with exponential backoff
+
+### Chat & Messaging Rules
+
+1. **Conversation Management**
+   - One conversation per service order (auto-created on first message)
+   - Conversation remains active until service order is closed
+   - Archived conversations can be accessed for 90 days after closure
+   - System messages cannot be deleted or edited
+
+2. **Participant Rules**
+   - Customer automatically added when sending first message
+   - Operator added when control tower engages with order
+   - Work Team added when technician is assigned
+   - Provider Manager can join any conversation for their provider
+   - Only OWNER role can remove participants
+
+3. **Message Handling**
+   - Text messages limited to 4000 characters
+   - Media uploads limited to 25MB per file
+   - Maximum 10 files per message
+   - Messages can be deleted within 24 hours (soft delete)
+   - Edited messages show edit history
+
+4. **Delivery & Read Receipts**
+   - Delivery receipts sent immediately upon server receipt
+   - Read receipts triggered when message is viewed for 2+ seconds
+   - Unread counts updated in real-time
+   - Batch delivery receipts for offline sync
+
+5. **Notifications**
+   - Push notifications for new messages (unless muted)
+   - Quiet hours respected per participant preferences
+   - Urgent messages bypass quiet hours for operators
+   - SMS fallback after 5 minutes of unread urgent messages
 
 ## Workflows
 
@@ -1119,6 +1402,64 @@ stateDiagram-v2
     WaitDependency --> QueueProcessing: Dependency synced
     ManualReview --> [*]
     SyncComplete --> [*]
+```
+
+### Chat Message Workflow
+
+```mermaid
+stateDiagram-v2
+    [*] --> ComposeMessage: User opens chat
+    ComposeMessage --> ValidateContent: Send message
+    ValidateContent --> UploadMedia: Has attachments
+    ValidateContent --> CreateMessage: Text only
+
+    UploadMedia --> CreateMessage: Upload complete
+    UploadMedia --> UploadFailed: Upload error
+    UploadFailed --> RetryUpload: Retry
+    RetryUpload --> UploadMedia
+    UploadFailed --> [*]: Cancel
+
+    CreateMessage --> SendToServer: Online
+    CreateMessage --> QueueOffline: Offline
+
+    QueueOffline --> LocalStorage: Store locally
+    LocalStorage --> WaitNetwork: Monitor connectivity
+    WaitNetwork --> SendToServer: Network available
+
+    SendToServer --> DeliveryPending: Server received
+    DeliveryPending --> DeliverToParticipants: Process message
+    
+    DeliverToParticipants --> GenerateReceipts: Delivered
+    GenerateReceipts --> UpdateStatus: Receipts sent
+    
+    UpdateStatus --> NotifyParticipants: Push notifications
+    NotifyParticipants --> Delivered: All notified
+    
+    Delivered --> [*]
+```
+
+### Chat Participant Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> ConversationCreated: First message
+    ConversationCreated --> CustomerAdded: Customer sends message
+    ConversationCreated --> OperatorAdded: Operator initiates
+
+    CustomerAdded --> ActiveParticipant
+    OperatorAdded --> ActiveParticipant
+
+    ActiveParticipant --> WorkTeamJoins: Technician assigned
+    ActiveParticipant --> ProviderManagerJoins: Manager requested
+
+    WorkTeamJoins --> FullConversation: All parties
+    ProviderManagerJoins --> FullConversation
+
+    FullConversation --> MessageExchange: Active chat
+    MessageExchange --> ServiceCompleted: Order closed
+    
+    ServiceCompleted --> ConversationArchived: Archive after 24h
+    ConversationArchived --> [*]: Retained 90 days
 ```
 
 ## Validation & Error Handling

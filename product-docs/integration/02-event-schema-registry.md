@@ -37,6 +37,8 @@ interface SchemaVersion {
 ### 6. Communication Events
 ### 7. Master Data Events
 
+### 8. Chat Events
+
 ---
 
 ## Order Domain Events
@@ -1075,6 +1077,299 @@ interface SchemaVersion {
     {"name": "failureMessage", "type": "string"},
     {"name": "deliveryAttempts", "type": "int"},
     {"name": "willRetry", "type": "boolean"}
+  ]
+}
+```
+
+---
+
+## Chat Domain Events
+
+Chat events enable real-time messaging for 4-party service order conversations (Customer, Operator, Work Team, Provider Manager).
+
+### ConversationCreated
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "ConversationCreated",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "conversationId", "type": "string"},
+    {"name": "serviceOrderId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {
+      "name": "initiator",
+      "type": {
+        "type": "record",
+        "name": "ParticipantInfo",
+        "fields": [
+          {"name": "participantId", "type": "string"},
+          {"name": "participantType", "type": {"type": "enum", "name": "ParticipantType", "symbols": ["CUSTOMER", "OPERATOR", "WORK_TEAM", "PROVIDER_MANAGER", "SYSTEM"]}},
+          {"name": "displayName", "type": "string"},
+          {"name": "userId", "type": ["null", "string"], "default": null},
+          {"name": "workTeamId", "type": ["null", "string"], "default": null},
+          {"name": "customerId", "type": ["null", "string"], "default": null}
+        ]
+      }
+    },
+    {
+      "name": "initialParticipants",
+      "type": {
+        "type": "array",
+        "items": "ParticipantInfo"
+      }
+    },
+    {"name": "createdBy", "type": "string"}
+  ]
+}
+```
+
+### MessageSent
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "MessageSent",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "messageId", "type": "string"},
+    {"name": "conversationId", "type": "string"},
+    {"name": "serviceOrderId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {
+      "name": "sender",
+      "type": "ParticipantInfo"
+    },
+    {
+      "name": "messageType",
+      "type": {
+        "type": "enum",
+        "name": "MessageType",
+        "symbols": ["TEXT", "IMAGE", "VIDEO", "AUDIO", "FILE", "LOCATION", "SYSTEM"]
+      }
+    },
+    {
+      "name": "content",
+      "type": {
+        "type": "record",
+        "name": "MessageContent",
+        "fields": [
+          {"name": "text", "type": ["null", "string"], "default": null},
+          {"name": "mediaUrl", "type": ["null", "string"], "default": null},
+          {"name": "mediaType", "type": ["null", "string"], "default": null},
+          {"name": "mediaThumbnailUrl", "type": ["null", "string"], "default": null},
+          {"name": "mediaSize", "type": ["null", "long"], "default": null},
+          {"name": "fileName", "type": ["null", "string"], "default": null}
+        ]
+      }
+    },
+    {"name": "replyToMessageId", "type": ["null", "string"], "default": null},
+    {
+      "name": "mentions",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "Mention",
+          "fields": [
+            {"name": "participantId", "type": "string"},
+            {"name": "participantType", "type": "ParticipantType"},
+            {"name": "displayName", "type": "string"}
+          ]
+        }
+      },
+      "default": []
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "default": {}
+    }
+  ]
+}
+```
+
+### MessageDelivered
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "MessageDelivered",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "messageId", "type": "string"},
+    {"name": "conversationId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {
+      "name": "deliveredTo",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "DeliveryReceipt",
+          "fields": [
+            {"name": "participantId", "type": "string"},
+            {"name": "participantType", "type": "ParticipantType"},
+            {"name": "deliveredAt", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+### MessageRead
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "MessageRead",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "messageId", "type": "string"},
+    {"name": "conversationId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {
+      "name": "readBy",
+      "type": {
+        "type": "record",
+        "name": "ReadReceipt",
+        "fields": [
+          {"name": "participantId", "type": "string"},
+          {"name": "participantType", "type": "ParticipantType"},
+          {"name": "readAt", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+        ]
+      }
+    },
+    {"name": "unreadCountRemaining", "type": "int", "doc": "Remaining unread messages for this participant"}
+  ]
+}
+```
+
+### ParticipantJoined
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "ParticipantJoined",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "conversationId", "type": "string"},
+    {"name": "serviceOrderId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {
+      "name": "participant",
+      "type": "ParticipantInfo"
+    },
+    {"name": "addedBy", "type": ["null", "string"], "default": null, "doc": "User ID who added this participant, null if auto-joined"},
+    {
+      "name": "joinReason",
+      "type": {
+        "type": "enum",
+        "name": "JoinReason",
+        "symbols": ["INITIAL_CREATION", "TECHNICIAN_ASSIGNED", "MANAGER_REQUEST", "MANUAL_ADD", "ESCALATION"]
+      }
+    }
+  ]
+}
+```
+
+### ParticipantLeft
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "ParticipantLeft",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "conversationId", "type": "string"},
+    {"name": "serviceOrderId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {
+      "name": "participant",
+      "type": "ParticipantInfo"
+    },
+    {"name": "removedBy", "type": ["null", "string"], "default": null, "doc": "User ID who removed this participant, null if self-left"},
+    {
+      "name": "leaveReason",
+      "type": {
+        "type": "enum",
+        "name": "LeaveReason",
+        "symbols": ["SELF_LEFT", "REMOVED_BY_OWNER", "SERVICE_ORDER_CLOSED", "TECHNICIAN_UNASSIGNED", "ACCOUNT_DEACTIVATED"]
+      }
+    }
+  ]
+}
+```
+
+### ConversationClosed
+
+```json
+{
+  "namespace": "com.fsm.events.chat",
+  "type": "record",
+  "name": "ConversationClosed",
+  "version": 1,
+  "fields": [
+    {"name": "eventId", "type": "string"},
+    {"name": "correlationId", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "conversationId", "type": "string"},
+    {"name": "serviceOrderId", "type": "string"},
+    {"name": "tenantId", "type": "string"},
+    {"name": "closedBy", "type": "string"},
+    {
+      "name": "closeReason",
+      "type": {
+        "type": "enum",
+        "name": "CloseReason",
+        "symbols": ["SERVICE_ORDER_COMPLETED", "SERVICE_ORDER_CANCELLED", "MANUAL_CLOSE", "INACTIVITY_TIMEOUT"]
+      }
+    },
+    {
+      "name": "statistics",
+      "type": {
+        "type": "record",
+        "name": "ConversationStatistics",
+        "fields": [
+          {"name": "totalMessages", "type": "int"},
+          {"name": "totalParticipants", "type": "int"},
+          {"name": "durationMinutes", "type": "int"},
+          {"name": "firstMessageAt", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+          {"name": "lastMessageAt", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+        ]
+      }
+    },
+    {"name": "archiveRetentionDays", "type": "int", "default": 90}
   ]
 }
 ```

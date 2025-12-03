@@ -13,7 +13,8 @@ The Execution Mobile API provides endpoints for field service technicians to man
 3. [Media Upload](#media-upload)
 4. [Offline Sync](#offline-sync)
 5. [Real-Time Updates](#real-time-updates)
-6. [Rate Limiting](#rate-limiting)
+6. [Chat & Messaging](#chat--messaging)
+7. [Rate Limiting](#rate-limiting)
 
 ---
 
@@ -1181,6 +1182,529 @@ Send JWT token as query parameter or in first message after connection.
 **Recommended ping interval:** 30 seconds
 
 **Connection timeout:** 60 seconds without activity
+
+---
+
+## Chat & Messaging
+
+The Chat API enables 4-party real-time communication for service orders. All parties (Customer, Operator, Work Team, Provider Manager) share a single conversation per service order.
+
+### Get or Create Conversation
+
+```yaml
+POST /api/v1/chat/service-orders/{serviceOrderId}/conversation
+```
+
+Retrieves the existing conversation for a service order or creates a new one if none exists.
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| serviceOrderId | string | Yes | Unique service order identifier |
+
+**Response 200/201:**
+
+```json
+{
+  "data": {
+    "id": "conv_001",
+    "serviceOrderId": "so_789",
+    "status": "ACTIVE",
+    "participants": [
+      {
+        "id": "part_001",
+        "participantType": "CUSTOMER",
+        "displayName": "Marie Dupont",
+        "customerId": "cust_123",
+        "status": "ACTIVE",
+        "joinedAt": "2025-12-01T10:00:00Z"
+      },
+      {
+        "id": "part_002",
+        "participantType": "OPERATOR",
+        "displayName": "Jean-Pierre Martin",
+        "userId": "user_456",
+        "status": "ACTIVE",
+        "joinedAt": "2025-12-01T10:05:00Z"
+      },
+      {
+        "id": "part_003",
+        "participantType": "WORK_TEAM",
+        "displayName": "Services Pro Paris - Équipe 1",
+        "workTeamId": "wt_789",
+        "status": "ACTIVE",
+        "joinedAt": "2025-12-01T10:30:00Z"
+      }
+    ],
+    "messageCount": 12,
+    "lastMessageAt": "2025-12-01T14:30:00Z",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T14:30:00Z"
+  }
+}
+```
+
+---
+
+### Get Conversation Messages
+
+```yaml
+GET /api/v1/chat/conversations/{conversationId}/messages
+```
+
+Retrieve messages from a conversation with pagination.
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| conversationId | string | Yes | Unique conversation identifier |
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| take | integer | No | Number of messages to retrieve (default: 50, max: 100) |
+| cursor | string | No | Cursor for pagination (message ID) |
+| direction | string | No | `before` or `after` cursor (default: `before`) |
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "messages": [
+      {
+        "id": "msg_001",
+        "conversationId": "conv_001",
+        "senderId": "part_001",
+        "senderType": "CUSTOMER",
+        "senderDisplayName": "Marie Dupont",
+        "messageType": "TEXT",
+        "content": {
+          "text": "Bonjour, à quelle heure arrivez-vous ?"
+        },
+        "status": "READ",
+        "createdAt": "2025-12-01T10:15:00Z"
+      },
+      {
+        "id": "msg_002",
+        "conversationId": "conv_001",
+        "senderId": "part_002",
+        "senderType": "OPERATOR",
+        "senderDisplayName": "Jean-Pierre Martin",
+        "messageType": "TEXT",
+        "content": {
+          "text": "Bonjour Mme Dupont, le technicien est prévu entre 14h et 16h."
+        },
+        "status": "DELIVERED",
+        "createdAt": "2025-12-01T10:20:00Z"
+      },
+      {
+        "id": "msg_003",
+        "conversationId": "conv_001",
+        "senderId": "part_003",
+        "senderType": "WORK_TEAM",
+        "senderDisplayName": "Services Pro Paris - Équipe 1",
+        "messageType": "TEXT",
+        "content": {
+          "text": "Je suis en route, arrivée prévue dans 20 minutes."
+        },
+        "status": "SENT",
+        "createdAt": "2025-12-01T14:10:00Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": true,
+      "nextCursor": "msg_000",
+      "totalCount": 45
+    }
+  }
+}
+```
+
+---
+
+### Send Message
+
+```yaml
+POST /api/v1/chat/conversations/{conversationId}/messages
+```
+
+Send a new message to the conversation.
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| conversationId | string | Yes | Unique conversation identifier |
+
+**Request Body:**
+
+```json
+{
+  "messageType": "TEXT",
+  "content": {
+    "text": "Le travail est terminé. Voici les photos de l'installation."
+  },
+  "replyToMessageId": null,
+  "metadata": {
+    "clientMessageId": "client_msg_123",
+    "platform": "ANDROID"
+  }
+}
+```
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "id": "msg_004",
+    "conversationId": "conv_001",
+    "senderId": "part_003",
+    "senderType": "WORK_TEAM",
+    "senderDisplayName": "Services Pro Paris - Équipe 1",
+    "messageType": "TEXT",
+    "content": {
+      "text": "Le travail est terminé. Voici les photos de l'installation."
+    },
+    "status": "SENT",
+    "metadata": {
+      "clientMessageId": "client_msg_123",
+      "platform": "ANDROID"
+    },
+    "createdAt": "2025-12-01T16:00:00Z"
+  }
+}
+```
+
+---
+
+### Send Media Message
+
+```yaml
+POST /api/v1/chat/conversations/{conversationId}/messages
+```
+
+Send a message with media attachment.
+
+**Content-Type:** `multipart/form-data` or JSON with pre-uploaded media URL
+
+**Request Body (JSON):**
+
+```json
+{
+  "messageType": "IMAGE",
+  "content": {
+    "text": "Installation terminée - avant/après",
+    "mediaUrl": "/media/uploads/photo_123.jpg",
+    "mediaThumbnailUrl": "/media/uploads/photo_123_thumb.jpg",
+    "mediaType": "IMAGE_JPEG",
+    "mediaSize": 2457600
+  }
+}
+```
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "id": "msg_005",
+    "conversationId": "conv_001",
+    "senderId": "part_003",
+    "senderType": "WORK_TEAM",
+    "senderDisplayName": "Services Pro Paris - Équipe 1",
+    "messageType": "IMAGE",
+    "content": {
+      "text": "Installation terminée - avant/après",
+      "mediaUrl": "/media/uploads/photo_123.jpg",
+      "mediaThumbnailUrl": "/media/uploads/photo_123_thumb.jpg",
+      "mediaType": "IMAGE_JPEG",
+      "mediaSize": 2457600
+    },
+    "status": "SENT",
+    "createdAt": "2025-12-01T16:05:00Z"
+  }
+}
+```
+
+---
+
+### Mark Messages as Read
+
+```yaml
+POST /api/v1/chat/conversations/{conversationId}/read
+```
+
+Mark all messages up to and including a specific message as read.
+
+**Request Body:**
+
+```json
+{
+  "lastReadMessageId": "msg_005"
+}
+```
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "conversationId": "conv_001",
+    "participantId": "part_001",
+    "lastReadMessageId": "msg_005",
+    "unreadCount": 0,
+    "updatedAt": "2025-12-01T16:10:00Z"
+  }
+}
+```
+
+---
+
+### Get Unread Count
+
+```yaml
+GET /api/v1/chat/conversations/{conversationId}/unread
+```
+
+Get unread message count for the current participant.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "conversationId": "conv_001",
+    "unreadCount": 3,
+    "lastReadMessageId": "msg_002",
+    "oldestUnreadMessageId": "msg_003",
+    "newestUnreadMessageId": "msg_005"
+  }
+}
+```
+
+---
+
+### Get All Conversations Unread
+
+```yaml
+GET /api/v1/chat/unread
+```
+
+Get unread counts for all conversations the user participates in.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "totalUnread": 15,
+    "conversations": [
+      {
+        "conversationId": "conv_001",
+        "serviceOrderId": "so_789",
+        "unreadCount": 3,
+        "lastMessageAt": "2025-12-01T16:05:00Z",
+        "lastMessagePreview": "Installation terminée - avant/après"
+      },
+      {
+        "conversationId": "conv_002",
+        "serviceOrderId": "so_790",
+        "unreadCount": 12,
+        "lastMessageAt": "2025-12-01T15:30:00Z",
+        "lastMessagePreview": "À quelle heure pouvez-vous venir demain ?"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Add Participant
+
+```yaml
+POST /api/v1/chat/conversations/{conversationId}/participants
+```
+
+Add a new participant to the conversation. Requires OWNER role or system permissions.
+
+**Request Body:**
+
+```json
+{
+  "participantType": "PROVIDER_MANAGER",
+  "userId": "user_999",
+  "displayName": "Sophie Bernard - Responsable"
+}
+```
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "id": "part_004",
+    "conversationId": "conv_001",
+    "participantType": "PROVIDER_MANAGER",
+    "userId": "user_999",
+    "displayName": "Sophie Bernard - Responsable",
+    "status": "ACTIVE",
+    "joinedAt": "2025-12-01T16:15:00Z"
+  }
+}
+```
+
+---
+
+### Remove Participant
+
+```yaml
+DELETE /api/v1/chat/conversations/{conversationId}/participants/{participantId}
+```
+
+Remove a participant from the conversation. Creates a system message.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "id": "part_004",
+    "status": "LEFT",
+    "leftAt": "2025-12-01T17:00:00Z",
+    "systemMessage": {
+      "id": "msg_006",
+      "messageType": "SYSTEM",
+      "content": {
+        "text": "Sophie Bernard - Responsable a quitté la conversation"
+      },
+      "createdAt": "2025-12-01T17:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+### Typing Indicator (WebSocket)
+
+```yaml
+WS /api/v1/chat/ws
+```
+
+Send and receive typing indicators via WebSocket.
+
+**Send Typing Start:**
+
+```json
+{
+  "type": "typing.start",
+  "conversationId": "conv_001"
+}
+```
+
+**Receive Typing Indicator:**
+
+```json
+{
+  "type": "typing.update",
+  "data": {
+    "conversationId": "conv_001",
+    "participantId": "part_002",
+    "participantType": "OPERATOR",
+    "displayName": "Jean-Pierre Martin",
+    "isTyping": true,
+    "expiresAt": "2025-12-01T16:20:10Z"
+  }
+}
+```
+
+---
+
+### Chat WebSocket Events
+
+#### New Message Event
+
+```json
+{
+  "type": "chat.message.new",
+  "timestamp": "2025-12-01T16:20:00Z",
+  "data": {
+    "message": {
+      "id": "msg_007",
+      "conversationId": "conv_001",
+      "senderId": "part_002",
+      "senderType": "OPERATOR",
+      "senderDisplayName": "Jean-Pierre Martin",
+      "messageType": "TEXT",
+      "content": {
+        "text": "Merci pour le retour, je clôture le dossier."
+      },
+      "status": "SENT",
+      "createdAt": "2025-12-01T16:20:00Z"
+    }
+  }
+}
+```
+
+#### Message Status Update Event
+
+```json
+{
+  "type": "chat.message.status",
+  "timestamp": "2025-12-01T16:21:00Z",
+  "data": {
+    "messageId": "msg_007",
+    "conversationId": "conv_001",
+    "status": "DELIVERED",
+    "deliveredTo": [
+      {
+        "participantId": "part_001",
+        "deliveredAt": "2025-12-01T16:20:05Z"
+      },
+      {
+        "participantId": "part_003",
+        "deliveredAt": "2025-12-01T16:20:10Z"
+      }
+    ]
+  }
+}
+```
+
+#### Participant Joined Event
+
+```json
+{
+  "type": "chat.participant.joined",
+  "timestamp": "2025-12-01T16:15:00Z",
+  "data": {
+    "conversationId": "conv_001",
+    "participant": {
+      "id": "part_004",
+      "participantType": "PROVIDER_MANAGER",
+      "displayName": "Sophie Bernard - Responsable",
+      "joinedAt": "2025-12-01T16:15:00Z"
+    }
+  }
+}
+```
+
+---
+
+### Chat Rate Limits
+
+| Operation | Requests | Time Window | Burst |
+|-----------|----------|-------------|-------|
+| Send Message | 30 | 1 minute | 40 |
+| Get Messages | 60 | 1 minute | 80 |
+| WebSocket Messages | 60 | 1 minute | 100 |
+| Typing Indicators | 10 | 10 seconds | 15 |
+| Media Upload | 10 | 1 minute | 15 |
 
 ---
 
