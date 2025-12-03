@@ -15,7 +15,8 @@ import {
   Wrench,
   UserCheck,
   LayoutDashboard,
-  Globe
+  Globe,
+  ArrowLeft
 } from 'lucide-react';
 
 // Portal configuration type
@@ -114,7 +115,7 @@ const portalConfigs: Record<string, PortalConfig> = {
     icon: <Wrench className="w-12 h-12" />,
     gradient: 'from-amber-600 to-amber-800',
     accentColor: 'amber',
-    defaultRedirect: '/operator/dashboard', // Work team uses mobile app, but web fallback
+    defaultRedirect: '/mobile/', // Redirect to mobile app
     defaultEmail: 'workteam.fr@adeo.com',
     features: ['Daily Agenda', 'Job Execution', 'Photo Capture', 'WCF Submission'],
   },
@@ -256,6 +257,10 @@ export default function PortalLoginPage() {
 
           {/* Sign In Header */}
           <div className="text-center lg:text-left mb-8">
+            <a href="/login" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back to portals
+            </a>
             <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
             <p className="text-gray-600 mt-1">Access your {config.name.toLowerCase()}</p>
           </div>

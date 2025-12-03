@@ -38,7 +38,7 @@ function getBooleanEnvVar(key: string, defaultValue = false): boolean {
 
 export const env: EnvironmentConfig = {
   api: {
-    baseUrl: getEnvVar('VITE_API_BASE_URL', 'http://localhost:3001/api/v1'),
+    baseUrl: getEnvVar('VITE_API_BASE_URL', '/api/v1'),
     timeout: parseInt(getEnvVar('VITE_API_TIMEOUT', '30000'), 10),
   },
   auth: {

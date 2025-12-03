@@ -84,11 +84,11 @@ const portals: PortalCard[] = [
   {
     id: 'workteam',
     name: 'Work Team App',
-    role: 'Work Team Member',
-    description: 'Mobile-first experience for executing jobs and submitting reports.',
+    role: 'Field Execution',
+    description: 'Execute jobs, capture photos, and submit work completion forms on-site.',
     icon: <Wrench className="w-6 h-6" />,
-    url: '/login/workteam',
-    badge: 'Mobile App',
+    url: '/mobile/',
+    badge: 'Mobile',
   },
 ];
 
@@ -120,8 +120,8 @@ export default function PortalSelectorPage() {
               <span className="font-bold text-2xl tracking-tight text-white">Yellow<span className="text-[#FFD700]">Grid</span></span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Documentation</a>
-              <a href="#" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Support</a>
+              <a href="https://github.com/talktorobson/yellow-grid#readme" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Documentation</a>
+              <a href="mailto:support@adeo.com" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Support</a>
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function PortalSelectorPage() {
           </h1>
           <p className="max-w-2xl mx-auto text-lg text-gray-400 mb-8">
             The enterprise-grade platform for managing complex service execution networks.
-            Connect operators, providers, and technicians in a single unified ecosystem.
+            Connect operators, providers, and work teams in a single unified ecosystem.
           </p>
         </div>
       </div>
@@ -254,9 +254,9 @@ export default function PortalSelectorPage() {
               © 2025 Adeo Home Services. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <a href="#" className="text-gray-500 hover:text-white text-sm transition-colors">Privacy Policy</a>
-              <a href="#" className="text-gray-500 hover:text-white text-sm transition-colors">Terms of Service</a>
-              <a href="#" className="text-gray-500 hover:text-white text-sm transition-colors">Status</a>
+              <a href="/legal/privacy" className="text-gray-500 hover:text-white text-sm transition-colors">Privacy Policy</a>
+              <a href="/legal/terms" className="text-gray-500 hover:text-white text-sm transition-colors">Terms of Service</a>
+              <a href="/api/v1/health" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white text-sm transition-colors">Status</a>
             </div>
           </div>
         </div>
