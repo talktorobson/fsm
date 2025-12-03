@@ -1757,23 +1757,56 @@ async function main() {
   }
   console.log(`✅ Created/Verified ${workTeams.length} work teams with calendars and certifications`);
 
-  // Create Service Orders & Bookings for Heatmap/Calendar
-  // We'll create orders around the major cities - focusing on France for demo
+  // ============================================================================
+  // LINK WORK TEAM USERS TO THEIR RESPECTIVE WORK TEAMS
+  // ============================================================================
+  console.log('\n🔗 Linking workteam users to work teams...');
+  
+  const workTeamUserLinks: { country: string; email: string }[] = [
+    { country: 'FR', email: 'workteam.fr@adeo.com' },
+    { country: 'ES', email: 'workteam.es@adeo.com' },
+    { country: 'IT', email: 'workteam.it@adeo.com' },
+    { country: 'PT', email: 'workteam.pt@adeo.com' },
+  ];
+
+  for (const link of workTeamUserLinks) {
+    // Find the first work team for this country
+    const countryTeam = workTeams.find(t => {
+      const provider = allProvidersForTeams.find(p => p.id === t.providerId);
+      return provider?.countryCode === link.country;
+    });
+    
+    if (countryTeam) {
+      await prisma.user.updateMany({
+        where: { email: link.email },
+        data: { workTeamId: countryTeam.id },
+      });
+      console.log(`   ✅ Linked ${link.email} → Work Team ${countryTeam.name}`);
+    }
+  }
+
+  // Create Service Orders & Bookings for Work Teams Demo
+  // Rich data with ALL required fields for mobile app experience
   const locations = [
-    // France - primary focus
-    { city: 'Paris', lat: 48.8566, lon: 2.3522, country: 'FR', province: '75' },
-    { city: 'Lyon', lat: 45.7640, lon: 4.8357, country: 'FR', province: '69' },
-    { city: 'Marseille', lat: 43.2965, lon: 5.3698, country: 'FR', province: '13' },
-    { city: 'Bordeaux', lat: 44.8378, lon: -0.5792, country: 'FR', province: '33' },
-    { city: 'Toulouse', lat: 43.6047, lon: 1.4442, country: 'FR', province: '31' },
-    { city: 'Nice', lat: 43.7102, lon: 7.2620, country: 'FR', province: '06' },
-    { city: 'Nantes', lat: 47.2184, lon: -1.5536, country: 'FR', province: '44' },
-    // Other countries
-    { city: 'Madrid', lat: 40.4168, lon: -3.7038, country: 'ES', province: '28' },
-    { city: 'Barcelona', lat: 41.3851, lon: 2.1734, country: 'ES', province: '08' },
-    { city: 'Milan', lat: 45.4642, lon: 9.19, country: 'IT', province: 'MI' },
-    { city: 'Rome', lat: 41.9028, lon: 12.4964, country: 'IT', province: 'RM' },
-    { city: 'Lisbon', lat: 38.7223, lon: -9.1393, country: 'PT', province: '11' },
+    // France - primary focus (more locations for FR)
+    { city: 'Paris', lat: 48.8566, lon: 2.3522, country: 'FR', province: '75', street: 'Avenue des Champs-Élysées', postalCode: '75008' },
+    { city: 'Lyon', lat: 45.7640, lon: 4.8357, country: 'FR', province: '69', street: 'Rue de la République', postalCode: '69001' },
+    { city: 'Marseille', lat: 43.2965, lon: 5.3698, country: 'FR', province: '13', street: 'La Canebière', postalCode: '13001' },
+    { city: 'Bordeaux', lat: 44.8378, lon: -0.5792, country: 'FR', province: '33', street: 'Cours de l\'Intendance', postalCode: '33000' },
+    { city: 'Toulouse', lat: 43.6047, lon: 1.4442, country: 'FR', province: '31', street: 'Place du Capitole', postalCode: '31000' },
+    { city: 'Nice', lat: 43.7102, lon: 7.2620, country: 'FR', province: '06', street: 'Promenade des Anglais', postalCode: '06000' },
+    { city: 'Nantes', lat: 47.2184, lon: -1.5536, country: 'FR', province: '44', street: 'Rue Crébillon', postalCode: '44000' },
+    // Spain
+    { city: 'Madrid', lat: 40.4168, lon: -3.7038, country: 'ES', province: '28', street: 'Gran Vía', postalCode: '28013' },
+    { city: 'Barcelona', lat: 41.3851, lon: 2.1734, country: 'ES', province: '08', street: 'Passeig de Gràcia', postalCode: '08007' },
+    { city: 'Valencia', lat: 39.4699, lon: -0.3763, country: 'ES', province: '46', street: 'Calle Colón', postalCode: '46004' },
+    // Italy
+    { city: 'Milan', lat: 45.4642, lon: 9.19, country: 'IT', province: 'MI', street: 'Via Montenapoleone', postalCode: '20121' },
+    { city: 'Rome', lat: 41.9028, lon: 12.4964, country: 'IT', province: 'RM', street: 'Via del Corso', postalCode: '00186' },
+    { city: 'Florence', lat: 43.7696, lon: 11.2558, country: 'IT', province: 'FI', street: 'Via dei Calzaiuoli', postalCode: '50122' },
+    // Portugal
+    { city: 'Lisbon', lat: 38.7223, lon: -9.1393, country: 'PT', province: '11', street: 'Avenida da Liberdade', postalCode: '1250-096' },
+    { city: 'Porto', lat: 41.1579, lon: -8.6291, country: 'PT', province: '13', street: 'Rua de Santa Catarina', postalCode: '4000-450' },
   ];
 
   // Get a service to use
@@ -1794,21 +1827,77 @@ async function main() {
 
     const today = new Date();
     
-    // Sample products and services for line items
+    // =========================================================================
+    // RICH PRODUCT AND SERVICE CATALOG FOR DEMO
+    // =========================================================================
     const sampleProducts = [
-      { sku: 'PROD-AC-001', name: 'Split Air Conditioner 12000 BTU', unitPrice: 599.99, providerUnitCost: 480.00, taxRate: 21 },
-      { sku: 'PROD-AC-002', name: 'Window AC Unit 8000 BTU', unitPrice: 349.99, providerUnitCost: 280.00, taxRate: 21 },
-      { sku: 'PROD-HVAC-001', name: 'Heat Pump Inverter', unitPrice: 1299.99, providerUnitCost: 1040.00, taxRate: 21 },
-      { sku: 'PROD-TILE-001', name: 'Ceramic Floor Tiles (10 sqm)', unitPrice: 189.99, providerUnitCost: 150.00, taxRate: 21 },
-      { sku: 'PROD-PLUMB-001', name: 'Water Heater 50L', unitPrice: 449.99, providerUnitCost: 360.00, taxRate: 21 },
+      { sku: 'PROD-AC-001', name: 'Climatiseur Split Inverter 12000 BTU', brand: 'Daikin', model: 'FTXF35A', unitPrice: 899.99, providerUnitCost: 720.00, taxRate: 20 },
+      { sku: 'PROD-AC-002', name: 'Climatiseur Mural 9000 BTU', brand: 'Mitsubishi', model: 'MSZ-AP25', unitPrice: 649.99, providerUnitCost: 520.00, taxRate: 20 },
+      { sku: 'PROD-HVAC-001', name: 'Pompe à Chaleur Air/Eau', brand: 'Atlantic', model: 'Alfea Extensa', unitPrice: 4299.99, providerUnitCost: 3440.00, taxRate: 20 },
+      { sku: 'PROD-BOIL-001', name: 'Chauffe-eau Thermodynamique 270L', brand: 'Thermor', model: 'Aeromax 5', unitPrice: 1899.99, providerUnitCost: 1520.00, taxRate: 20 },
+      { sku: 'PROD-PLUMB-001', name: 'Chauffe-eau Électrique 200L', brand: 'Atlantic', model: 'Zeneo', unitPrice: 549.99, providerUnitCost: 440.00, taxRate: 20 },
+      { sku: 'PROD-KITCHEN-001', name: 'Plan de Travail Granit 3m', brand: 'Silestone', model: 'Eternal Noir', unitPrice: 1299.99, providerUnitCost: 1040.00, taxRate: 20 },
+      { sku: 'PROD-FLOOR-001', name: 'Parquet Chêne Massif 20m²', brand: 'Quick-Step', model: 'Palazzo', unitPrice: 1599.99, providerUnitCost: 1280.00, taxRate: 20 },
+      { sku: 'PROD-TV-001', name: 'Support TV Mural Articulé 55-85"', brand: 'Vogels', model: 'THIN 550', unitPrice: 349.99, providerUnitCost: 280.00, taxRate: 20 },
     ];
     
     const sampleServices = [
-      { sku: 'SVC-INSTALL-001', name: 'Standard Installation Service', unitPrice: 150.00, providerUnitCost: 90.00, taxRate: 21 },
-      { sku: 'SVC-INSTALL-002', name: 'Premium Installation Service', unitPrice: 250.00, providerUnitCost: 150.00, taxRate: 21 },
-      { sku: 'SVC-MAINT-001', name: 'Annual Maintenance Plan', unitPrice: 99.99, providerUnitCost: 60.00, taxRate: 21 },
-      { sku: 'SVC-REPAIR-001', name: 'Standard Repair Service', unitPrice: 120.00, providerUnitCost: 72.00, taxRate: 21 },
+      { sku: 'SVC-INSTALL-AC', name: 'Installation Climatisation Complète', unitPrice: 350.00, providerUnitCost: 210.00, taxRate: 20, durationMinutes: 180 },
+      { sku: 'SVC-INSTALL-HVAC', name: 'Installation Pompe à Chaleur', unitPrice: 890.00, providerUnitCost: 534.00, taxRate: 20, durationMinutes: 480 },
+      { sku: 'SVC-INSTALL-PLUMB', name: 'Installation Chauffe-eau', unitPrice: 250.00, providerUnitCost: 150.00, taxRate: 20, durationMinutes: 120 },
+      { sku: 'SVC-INSTALL-KITCHEN', name: 'Pose Plan de Travail', unitPrice: 450.00, providerUnitCost: 270.00, taxRate: 20, durationMinutes: 240 },
+      { sku: 'SVC-INSTALL-FLOOR', name: 'Pose Parquet (jour)', unitPrice: 380.00, providerUnitCost: 228.00, taxRate: 20, durationMinutes: 480 },
+      { sku: 'SVC-INSTALL-TV', name: 'Installation Support TV + Config', unitPrice: 150.00, providerUnitCost: 90.00, taxRate: 20, durationMinutes: 90 },
+      { sku: 'SVC-MAINT-AC', name: 'Maintenance Climatisation Annuelle', unitPrice: 129.00, providerUnitCost: 77.00, taxRate: 20, durationMinutes: 60 },
+      { sku: 'SVC-TV-CONFIRM', name: 'Visite Technique Préalable', unitPrice: 79.00, providerUnitCost: 47.00, taxRate: 20, durationMinutes: 45 },
     ];
+    
+    // =========================================================================
+    // RICH CUSTOMER DATA BY COUNTRY (with full address details)
+    // =========================================================================
+    const customerData: Record<string, Array<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      streetNumber: string;
+      apartment?: string;
+      floor?: string;
+      accessCode?: string;
+      parkingInfo?: string;
+    }>> = {
+      'FR': [
+        { firstName: 'Marie', lastName: 'Dupont', email: 'marie.dupont@gmail.com', phone: '+33 6 12 34 56 78', streetNumber: '15', apartment: 'Apt 4B', floor: '4ème étage', accessCode: 'A1234', parkingInfo: 'Parking souterrain disponible' },
+        { firstName: 'Jean-Pierre', lastName: 'Martin', email: 'jp.martin@orange.fr', phone: '+33 6 23 45 67 89', streetNumber: '28', floor: 'RDC', parkingInfo: 'Stationnement rue autorisé' },
+        { firstName: 'Sophie', lastName: 'Bernard', email: 'sophie.bernard@free.fr', phone: '+33 6 34 56 78 90', streetNumber: '42', apartment: 'Apt 12', floor: '3ème étage', accessCode: 'B5678' },
+        { firstName: 'Pierre', lastName: 'Durand', email: 'p.durand@wanadoo.fr', phone: '+33 6 45 67 89 01', streetNumber: '7', parkingInfo: 'Place de parking privée n°12' },
+        { firstName: 'Isabelle', lastName: 'Moreau', email: 'i.moreau@gmail.com', phone: '+33 6 56 78 90 12', streetNumber: '156', apartment: 'Apt 2A', floor: '2ème étage', accessCode: 'C9012' },
+        { firstName: 'François', lastName: 'Leroy', email: 'f.leroy@outlook.fr', phone: '+33 6 67 89 01 23', streetNumber: '83', floor: '1er étage', parkingInfo: 'Dépose minute devant l\'immeuble' },
+        { firstName: 'Nathalie', lastName: 'Petit', email: 'n.petit@gmail.com', phone: '+33 6 78 90 12 34', streetNumber: '211', apartment: 'Maison individuelle' },
+        { firstName: 'Laurent', lastName: 'Roux', email: 'l.roux@sfr.fr', phone: '+33 6 89 01 23 45', streetNumber: '5 bis', floor: '5ème étage avec ascenseur', accessCode: 'D3456' },
+      ],
+      'ES': [
+        { firstName: 'María', lastName: 'García López', email: 'maria.garcia@gmail.com', phone: '+34 612 345 678', streetNumber: '23', apartment: 'Piso 3A', floor: '3ª planta', accessCode: '1234', parkingInfo: 'Parking público cercano' },
+        { firstName: 'Juan', lastName: 'Martínez Ruiz', email: 'j.martinez@hotmail.es', phone: '+34 623 456 789', streetNumber: '45', floor: 'Bajo', parkingInfo: 'Zona azul' },
+        { firstName: 'Carmen', lastName: 'López Rodríguez', email: 'c.lopez@gmail.com', phone: '+34 634 567 890', streetNumber: '12', apartment: 'Ático', floor: '6ª planta', accessCode: '5678' },
+        { firstName: 'Carlos', lastName: 'Rodríguez Sánchez', email: 'c.rodriguez@yahoo.es', phone: '+34 645 678 901', streetNumber: '78', parkingInfo: 'Garaje privado' },
+        { firstName: 'Ana', lastName: 'Fernández García', email: 'ana.fernandez@gmail.com', phone: '+34 656 789 012', streetNumber: '34', apartment: 'Piso 2B', floor: '2ª planta', accessCode: '9012' },
+      ],
+      'IT': [
+        { firstName: 'Maria', lastName: 'Rossi', email: 'maria.rossi@gmail.com', phone: '+39 320 123 4567', streetNumber: '18', apartment: 'Int. 5', floor: '2° piano', accessCode: 'ABC123', parkingInfo: 'Parcheggio nel cortile' },
+        { firstName: 'Giuseppe', lastName: 'Russo', email: 'g.russo@libero.it', phone: '+39 330 234 5678', streetNumber: '56', floor: 'Piano terra', parkingInfo: 'Strisce blu' },
+        { firstName: 'Anna', lastName: 'Ferrari', email: 'anna.ferrari@gmail.com', phone: '+39 340 345 6789', streetNumber: '91', apartment: 'Int. 12', floor: '4° piano', accessCode: 'DEF456' },
+        { firstName: 'Marco', lastName: 'Esposito', email: 'm.esposito@virgilio.it', phone: '+39 350 456 7890', streetNumber: '33', parkingInfo: 'Box auto disponibile' },
+        { firstName: 'Francesca', lastName: 'Romano', email: 'f.romano@gmail.com', phone: '+39 360 567 8901', streetNumber: '7', apartment: 'Attico', floor: '5° piano', accessCode: 'GHI789' },
+      ],
+      'PT': [
+        { firstName: 'Maria', lastName: 'Silva', email: 'maria.silva@gmail.com', phone: '+351 912 345 678', streetNumber: '29', apartment: '3º Esq.', floor: '3º andar', accessCode: '1234', parkingInfo: 'Parque subterrâneo' },
+        { firstName: 'João', lastName: 'Santos', email: 'j.santos@sapo.pt', phone: '+351 923 456 789', streetNumber: '67', floor: 'R/C', parkingInfo: 'Estacionamento na rua' },
+        { firstName: 'Ana', lastName: 'Oliveira', email: 'ana.oliveira@gmail.com', phone: '+351 934 567 890', streetNumber: '14', apartment: '2º Dto.', floor: '2º andar', accessCode: '5678' },
+        { firstName: 'Pedro', lastName: 'Costa', email: 'p.costa@hotmail.pt', phone: '+351 945 678 901', streetNumber: '88', parkingInfo: 'Garagem privada' },
+        { firstName: 'Catarina', lastName: 'Ferreira', email: 'c.ferreira@gmail.com', phone: '+351 956 789 012', streetNumber: '5', apartment: '4º Esq.', floor: '4º andar', accessCode: '9012' },
+      ],
+    };
     
     // Get stores per country
     const storesByCountry: Record<string, any[]> = {};
@@ -1824,143 +1913,137 @@ async function main() {
     const pyxisSystem = await prisma.salesSystem.findFirst({ where: { code: 'PYXIS' } });
     const tempoSystem = await prisma.salesSystem.findFirst({ where: { code: 'TEMPO' } });
     
+    // =========================================================================
+    // CREATE RICH SERVICE ORDERS FOR WORK TEAM DEMO EXPERIENCE
+    // Key principle: ALL orders assigned to work teams MUST have scheduling data
+    // =========================================================================
+    console.log('📦 Creating rich service orders for work team demo...');
+    
     for (const loc of locations) {
-      // Find a provider in this country
+      // Find a provider and work team for this country
       const localProvider = allProvidersForTeams.find(p => p.countryCode === loc.country);
       const localTeam = workTeams.find(t => t.providerId === localProvider?.id);
       
       // Get a store for this country
       const countryStores = storesByCountry[loc.country] || [];
       const store = countryStores[Math.floor(Math.random() * countryStores.length)];
+      
+      // Get customer data for this country
+      const customers = customerData[loc.country] || customerData['FR'];
 
-      // Create 5 orders per location with VARIETY for demo
+      // Create 5 orders per location - ALL SCHEDULED for work team demo
       for (let i = 0; i < 5; i++) {
-        // Jitter location slightly for heatmap
-        const lat = loc.lat + (Math.random() - 0.5) * 0.1;
-        const lon = loc.lon + (Math.random() - 0.5) * 0.1;
+        // Slight location jitter for map visualization
+        const lat = loc.lat + (Math.random() - 0.5) * 0.05;
+        const lon = loc.lon + (Math.random() - 0.5) * 0.05;
         
-        // ENHANCED: Variety in states for demo
-        const stateOptions = [
-          ServiceOrderState.CREATED,
-          ServiceOrderState.SCHEDULED,
-          ServiceOrderState.ASSIGNED,
-          ServiceOrderState.SCHEDULED,
-          ServiceOrderState.CREATED,
-        ];
-        const status = stateOptions[i];
+        // Customer for this order
+        const customer = customers[i % customers.length];
+        const customerName = `${customer.firstName} ${customer.lastName}`;
         
-        // ENHANCED: Mix of urgency levels (URGENT, STANDARD, LOW)
-        const urgency = i === 0 ? ServiceUrgency.URGENT : ServiceUrgency.STANDARD;
+        // Select product + service combination
+        const productIndex = i % sampleProducts.length;
+        const serviceIndex = i % sampleServices.length;
+        const product = sampleProducts[productIndex];
+        const svcItem = sampleServices[serviceIndex];
         
-        // ENHANCED: Variety of service types
-        const serviceTypes = [
-          ServiceType.INSTALLATION,
-          ServiceType.CONFIRMATION_TV,
-          ServiceType.INSTALLATION,
-          ServiceType.MAINTENANCE,
-          ServiceType.INSTALLATION,
-        ];
-        const orderServiceType = serviceTypes[i];
+        // Determine urgency (first 2 are urgent for demo visibility)
+        const urgency = i < 2 ? ServiceUrgency.URGENT : ServiceUrgency.STANDARD;
         
-        // ENHANCED: Sales potential for demo visibility (using enum values)
-        const salesPotentials = [SalesPotential.LOW, SalesPotential.MEDIUM, SalesPotential.HIGH, SalesPotential.HIGH, SalesPotential.MEDIUM];
-        const salesPotential = salesPotentials[i];
+        // Service type based on service
+        const serviceType = svcItem.sku.includes('TV') ? ServiceType.CONFIRMATION_TV : 
+                           svcItem.sku.includes('MAINT') ? ServiceType.MAINTENANCE : 
+                           ServiceType.INSTALLATION;
         
-        // ENHANCED: Risk levels for demo
-        const riskLevels = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.LOW, RiskLevel.HIGH, RiskLevel.LOW];
-        const riskLevel = riskLevels[i];
+        // Risk & sales potential (varied for demo)
+        const riskLevels = [RiskLevel.LOW, RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.LOW, RiskLevel.HIGH];
+        const salesPotentials = [SalesPotential.MEDIUM, SalesPotential.HIGH, SalesPotential.LOW, SalesPotential.HIGH, SalesPotential.MEDIUM];
         
-        // Determine sales channel and system
+        // Sales channel
         const isOnline = i % 3 === 0;
         const salesChannel = isOnline ? SalesChannel.ONLINE : SalesChannel.IN_STORE;
         const salesSystem = isOnline ? tempoSystem : pyxisSystem;
         
-        // Generate realistic IDs
-        const salesOrderId = `SO-${loc.country}-${Date.now()}-${i}`;
-        const purchaseOrderId = isOnline ? null : `PO-${loc.country}-${Date.now()}-${i}`;
-        const ticketId = `TKT-${Date.now()}-${i}`;
-        
-        // Random product and service
-        const product = sampleProducts[Math.floor(Math.random() * sampleProducts.length)];
-        const svcItem = sampleServices[Math.floor(Math.random() * sampleServices.length)];
-        
-        // Calculate totals
-        const productQuantity = Math.floor(Math.random() * 2) + 1;
+        // Calculate pricing
+        const productQuantity = 1;
         const productSubtotal = product.unitPrice * productQuantity;
         const productTax = productSubtotal * (product.taxRate / 100);
         const serviceSubtotal = svcItem.unitPrice;
         const serviceTax = serviceSubtotal * (svcItem.taxRate / 100);
-        
         const subtotal = productSubtotal + serviceSubtotal;
         const taxTotal = productTax + serviceTax;
         const totalAmount = subtotal + taxTotal;
-        
         const providerProductCost = product.providerUnitCost * productQuantity;
         const providerServiceCost = svcItem.providerUnitCost;
         const providerTotalCost = providerProductCost + providerServiceCost;
         
-        // Customer names by country
-        // Realistic French customer names with full details
-    const customerData: Record<string, Array<{firstName: string, lastName: string, email: string, phone: string}>> = {
-      'FR': [
-        { firstName: 'Marie', lastName: 'Dupont', email: 'marie.dupont@gmail.com', phone: '+33 6 12 34 56 78' },
-        { firstName: 'Jean-Pierre', lastName: 'Martin', email: 'jp.martin@orange.fr', phone: '+33 6 23 45 67 89' },
-        { firstName: 'Sophie', lastName: 'Bernard', email: 'sophie.bernard@free.fr', phone: '+33 6 34 56 78 90' },
-        { firstName: 'Pierre', lastName: 'Durand', email: 'p.durand@wanadoo.fr', phone: '+33 6 45 67 89 01' },
-        { firstName: 'Isabelle', lastName: 'Moreau', email: 'i.moreau@gmail.com', phone: '+33 6 56 78 90 12' },
-        { firstName: 'François', lastName: 'Leroy', email: 'f.leroy@outlook.fr', phone: '+33 6 67 89 01 23' },
-        { firstName: 'Nathalie', lastName: 'Petit', email: 'n.petit@gmail.com', phone: '+33 6 78 90 12 34' },
-        { firstName: 'Laurent', lastName: 'Roux', email: 'l.roux@sfr.fr', phone: '+33 6 89 01 23 45' },
-      ],
-      'ES': [
-        { firstName: 'María', lastName: 'García López', email: 'maria.garcia@gmail.com', phone: '+34 612 345 678' },
-        { firstName: 'Juan', lastName: 'Martínez', email: 'j.martinez@hotmail.es', phone: '+34 623 456 789' },
-        { firstName: 'Carmen', lastName: 'López Rodríguez', email: 'c.lopez@gmail.com', phone: '+34 634 567 890' },
-        { firstName: 'Carlos', lastName: 'Rodríguez', email: 'c.rodriguez@yahoo.es', phone: '+34 645 678 901' },
-        { firstName: 'Ana', lastName: 'Fernández', email: 'ana.fernandez@gmail.com', phone: '+34 656 789 012' },
-      ],
-      'IT': [
-        { firstName: 'Maria', lastName: 'Rossi', email: 'maria.rossi@gmail.com', phone: '+39 320 123 4567' },
-        { firstName: 'Giuseppe', lastName: 'Russo', email: 'g.russo@libero.it', phone: '+39 330 234 5678' },
-        { firstName: 'Anna', lastName: 'Ferrari', email: 'anna.ferrari@gmail.com', phone: '+39 340 345 6789' },
-        { firstName: 'Marco', lastName: 'Esposito', email: 'm.esposito@virgilio.it', phone: '+39 350 456 7890' },
-        { firstName: 'Francesca', lastName: 'Romano', email: 'f.romano@gmail.com', phone: '+39 360 567 8901' },
-      ],
-      'PT': [
-        { firstName: 'Maria', lastName: 'Silva', email: 'maria.silva@gmail.com', phone: '+351 912 345 678' },
-        { firstName: 'João', lastName: 'Santos', email: 'j.santos@sapo.pt', phone: '+351 923 456 789' },
-        { firstName: 'Ana', lastName: 'Oliveira', email: 'ana.oliveira@gmail.com', phone: '+351 934 567 890' },
-        { firstName: 'Pedro', lastName: 'Costa', email: 'p.costa@hotmail.pt', phone: '+351 945 678 901' },
-        { firstName: 'Catarina', lastName: 'Ferreira', email: 'c.ferreira@gmail.com', phone: '+351 956 789 012' },
-      ],
-    };
-    const customers = customerData[loc.country] || customerData['FR'];
-    const customer = customers[i % customers.length];
-    const customerName = `${customer.firstName} ${customer.lastName}`;
+        // Estimated duration from service
+        const estimatedDuration = svcItem.durationMinutes || 120;
+        
+        // =====================================================================
+        // CRITICAL: Schedule ALL orders for work team demo
+        // Orders are distributed across today and the next 6 days
+        // =====================================================================
+        const scheduledDate = new Date(today);
+        scheduledDate.setDate(today.getDate() + (i % 7)); // Today + 0 to 6 days
+        
+        // Time slots: 08:00, 09:30, 11:00, 14:00, 15:30 (based on location index for variety)
+        const timeSlots = [
+          { hour: 8, minute: 0 },
+          { hour: 9, minute: 30 },
+          { hour: 11, minute: 0 },
+          { hour: 14, minute: 0 },
+          { hour: 15, minute: 30 },
+        ];
+        const timeSlot = timeSlots[(locations.indexOf(loc) + i) % timeSlots.length];
+        
+        const scheduledStartTime = new Date(scheduledDate);
+        scheduledStartTime.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
+        
+        const scheduledEndTime = new Date(scheduledStartTime);
+        scheduledEndTime.setMinutes(scheduledEndTime.getMinutes() + estimatedDuration);
+        
+        // Full street address
+        const fullStreet = `${customer.streetNumber} ${loc.street}`;
         
         const order = await prisma.serviceOrder.create({
           data: {
-            externalServiceOrderId: `ORD-${loc.country}-${Date.now()}-${i}-${Math.floor(Math.random() * 1000)}`,
+            externalServiceOrderId: `ORD-${loc.country}-${loc.city.substring(0,3).toUpperCase()}-${Date.now()}-${i}`,
             serviceId: service.id,
-            state: status,
-            serviceType: orderServiceType, // ENHANCED: Use varied service type
-            urgency: urgency, // ENHANCED: Use varied urgency levels (URGENT, STANDARD, LOW)
-            estimatedDurationMinutes: 120,
+            
+            // CRITICAL: State is ASSIGNED (assigned to work team with schedule)
+            state: ServiceOrderState.ASSIGNED,
+            serviceType: serviceType,
+            urgency: urgency,
+            estimatedDurationMinutes: estimatedDuration,
+            
+            // CRITICAL: Scheduling data
+            scheduledDate: scheduledDate,
+            scheduledStartTime: scheduledStartTime,
+            scheduledEndTime: scheduledEndTime,
+            
+            // CRITICAL: Assignment to provider AND work team (for filtering)
+            assignedProviderId: localProvider?.id,
+            assignedWorkTeamId: localTeam?.id,
+            
+            // Geography
             countryCode: loc.country,
             businessUnit: 'LEROY_MERLIN',
-            riskLevel: riskLevel, // ENHANCED: Varied risk levels
-            salesPotential: salesPotential, // ENHANCED: Sales potential rating
             
-            // NEW: Sales context fields
+            // Risk & Sales
+            riskLevel: riskLevels[i],
+            salesPotential: salesPotentials[i],
+            
+            // Sales context
             salesSystemId: salesSystem?.id,
             storeId: store?.id,
             buCode: store?.buCode || `LM_${loc.country}_001`,
-            salesOrderNumber: salesOrderId,
+            salesOrderNumber: `SO-${loc.country}-${Date.now()}-${i}`,
             salesChannel: salesChannel,
-            orderDate: new Date(today.getTime() - i * 24 * 60 * 60 * 1000), // Order date was before today
+            orderDate: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000), // Order placed 3 days ago
             
-            // NEW: Financial fields
-            currency: loc.country === 'ES' || loc.country === 'FR' || loc.country === 'IT' || loc.country === 'PT' ? 'EUR' : 'PLN',
+            // Financials
+            currency: 'EUR',
             totalAmountCustomer: totalAmount,
             totalAmountCustomerExclTax: subtotal,
             totalTaxCustomer: taxTotal,
@@ -1969,42 +2052,53 @@ async function main() {
             totalTaxProvider: providerTotalCost * 0.17,
             totalMargin: totalAmount - providerTotalCost,
             marginPercent: ((totalAmount - providerTotalCost) / totalAmount),
-            paymentStatus: i % 4 === 0 ? PaymentStatus.PENDING : PaymentStatus.PAID,
+            paymentStatus: PaymentStatus.PAID,
             
-            // NEW: Delivery fields (for products)
-            productDeliveryStatus: i < 2 ? DeliveryStatus.DELIVERED : DeliveryStatus.PENDING,
-            earliestDeliveryDate: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000),
-            latestDeliveryDate: new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000),
-            allProductsDelivered: i < 2,
+            // Delivery (products are delivered for installation)
+            productDeliveryStatus: DeliveryStatus.DELIVERED,
+            earliestDeliveryDate: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000),
+            latestDeliveryDate: new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000),
+            allProductsDelivered: true,
             
-            // Preserved: Legacy JSON fields for backward compatibility
+            // RICH Customer info for mobile app display
             customerInfo: {
               name: customerName,
               firstName: customer.firstName,
               lastName: customer.lastName,
               email: customer.email,
               phone: customer.phone,
+              preferredContactMethod: 'PHONE',
               address: {
-                street: `${Math.floor(Math.random() * 100) + 1} ${loc.country === 'FR' ? 'Rue de la République' : loc.country === 'ES' ? 'Calle Mayor' : loc.country === 'IT' ? 'Via Roma' : 'Rua Augusta'}`,
+                street: fullStreet,
                 city: loc.city,
-                postalCode: `${loc.country === 'PT' ? '1000-' : ''}${Math.floor(10000 + Math.random() * 89999)}`,
+                postalCode: loc.postalCode,
                 country: loc.country
               }
             },
+            
+            // RICH Service address with Google Maps coordinates
             serviceAddress: {
-              street: `Calle Principal ${Math.floor(Math.random() * 100) + 1}`,
+              street: fullStreet,
+              streetNumber: customer.streetNumber,
+              apartment: customer.apartment,
+              floor: customer.floor,
               city: loc.city,
-              postalCode: `${loc.country === 'PT' ? '1000-' : ''}${Math.floor(10000 + Math.random() * 89999)}`,
+              postalCode: loc.postalCode,
               country: loc.country,
               lat: lat,
-              lng: lon
+              lng: lon,
+              accessCode: customer.accessCode,
+              parkingInfo: customer.parkingInfo,
+              accessInstructions: customer.floor ? `${customer.floor}${customer.accessCode ? ` - Code: ${customer.accessCode}` : ''}` : undefined,
             },
-            requestedStartDate: new Date(today.getTime() + i * 24 * 60 * 60 * 1000),
-            requestedEndDate: new Date(today.getTime() + (i + 7) * 24 * 60 * 60 * 1000),
+            
+            // Requested dates
+            requestedStartDate: scheduledDate,
+            requestedEndDate: new Date(scheduledDate.getTime() + 7 * 24 * 60 * 60 * 1000),
           }
         });
         
-        // Create line items for this order
+        // Create line items (product + service)
         await prisma.serviceOrderLineItem.createMany({
           data: [
             {
@@ -2013,22 +2107,24 @@ async function main() {
               lineType: LineItemType.PRODUCT,
               sku: product.sku,
               name: product.name,
+              productBrand: product.brand,
+              productModel: product.model,
               quantity: productQuantity,
               unitOfMeasure: 'UNIT',
               unitPriceCustomer: product.unitPrice,
-              taxRateCustomer: product.taxRate / 100, // Convert to decimal (0.21)
+              taxRateCustomer: product.taxRate / 100,
               lineTotalCustomer: productSubtotal + productTax,
               lineTotalCustomerExclTax: productSubtotal,
               lineTaxAmountCustomer: productTax,
               unitPriceProvider: product.providerUnitCost,
               taxRateProvider: product.taxRate / 100,
-              lineTotalProvider: providerProductCost * 1.21,
+              lineTotalProvider: providerProductCost * 1.20,
               lineTotalProviderExclTax: providerProductCost,
-              lineTaxAmountProvider: providerProductCost * 0.21,
-              marginAmount: (productSubtotal + productTax) - (providerProductCost * 1.21),
-              marginPercent: ((productSubtotal + productTax) - (providerProductCost * 1.21)) / (productSubtotal + productTax),
-              deliveryStatus: i < 2 ? DeliveryStatus.DELIVERED : DeliveryStatus.PENDING,
-              executionStatus: i < 2 ? LineExecutionStatus.COMPLETED : LineExecutionStatus.PENDING,
+              lineTaxAmountProvider: providerProductCost * 0.20,
+              marginAmount: (productSubtotal + productTax) - (providerProductCost * 1.20),
+              marginPercent: ((productSubtotal + productTax) - (providerProductCost * 1.20)) / (productSubtotal + productTax),
+              deliveryStatus: DeliveryStatus.DELIVERED,
+              executionStatus: LineExecutionStatus.PENDING,
             },
             {
               serviceOrderId: order.id,
@@ -2045,17 +2141,17 @@ async function main() {
               lineTaxAmountCustomer: serviceTax,
               unitPriceProvider: svcItem.providerUnitCost,
               taxRateProvider: svcItem.taxRate / 100,
-              lineTotalProvider: providerServiceCost * 1.21,
+              lineTotalProvider: providerServiceCost * 1.20,
               lineTotalProviderExclTax: providerServiceCost,
-              lineTaxAmountProvider: providerServiceCost * 0.21,
-              marginAmount: (serviceSubtotal + serviceTax) - (providerServiceCost * 1.21),
-              marginPercent: ((serviceSubtotal + serviceTax) - (providerServiceCost * 1.21)) / (serviceSubtotal + serviceTax),
-              executionStatus: status === ServiceOrderState.ASSIGNED ? LineExecutionStatus.IN_PROGRESS : LineExecutionStatus.PENDING,
+              lineTaxAmountProvider: providerServiceCost * 0.20,
+              marginAmount: (serviceSubtotal + serviceTax) - (providerServiceCost * 1.20),
+              marginPercent: ((serviceSubtotal + serviceTax) - (providerServiceCost * 1.20)) / (serviceSubtotal + serviceTax),
+              executionStatus: LineExecutionStatus.PENDING,
             },
           ],
         });
         
-        // Create contacts for this order
+        // Create contacts
         await prisma.serviceOrderContact.createMany({
           data: [
             {
@@ -2071,26 +2167,20 @@ async function main() {
             {
               serviceOrderId: order.id,
               contactType: ContactType.SITE_CONTACT,
-              firstName: 'Site',
+              firstName: customer.firstName,
               lastName: customer.lastName,
               phone: customer.phone,
               preferredMethod: ContactMethod.SMS,
               isPrimary: false,
-              availabilityNotes: 'Contact at service location',
+              availabilityNotes: customer.floor ? `${customer.floor}${customer.accessCode ? ` - Digicode: ${customer.accessCode}` : ''}` : 'Contact sur site',
             },
           ],
         });
         
         orderCount++;
 
-        if (status === ServiceOrderState.ASSIGNED && localProvider && localTeam) {
-          // Update ServiceOrder with assignedProviderId
-          await prisma.serviceOrder.update({
-            where: { id: order.id },
-            data: { assignedProviderId: localProvider.id }
-          });
-
-          // Create Assignment
+        // Create Assignment to work team
+        if (localProvider && localTeam) {
           await prisma.assignment.create({
             data: {
               serviceOrderId: order.id,
@@ -2103,64 +2193,35 @@ async function main() {
             }
           });
 
-          // Create Booking for the first 2 assigned ones
-          if (i < 2) {
-            const bookingDate = new Date(today);
-            bookingDate.setDate(today.getDate() + i + 1); // Tomorrow and day after
+          // Create Booking for calendar visualization
+          try {
+            const startSlot = Math.floor((scheduledStartTime.getHours() * 60 + scheduledStartTime.getMinutes()) / 15);
+            const endSlot = Math.floor((scheduledEndTime.getHours() * 60 + scheduledEndTime.getMinutes()) / 15);
             
-            try {
-              // Deterministic slot to avoid collisions
-              // Base start: 32 (08:00)
-              // Offset by location index to spread them out if same provider
-              const locIndex = locations.indexOf(loc);
-              const start = 32 + (locIndex % 2) * 8; // 08:00 or 10:00
-              
-              await prisma.booking.create({
-                data: {
-                  serviceOrderId: order.id,
-                  providerId: localProvider.id,
-                  workTeamId: localTeam.id,
-                  bookingDate: bookingDate,
-                  startSlot: start,
-                  endSlot: start + 8,   // 2 hours
-                  durationMinutes: 120,
-                  bookingType: BookingType.SERVICE_ORDER,
-                  status: BookingStatus.CONFIRMED,
-                }
-              });
-
-              // Update ServiceOrder with scheduled date
-              const startTime = new Date(bookingDate);
-              startTime.setHours(Math.floor(start * 15 / 60), (start * 15) % 60, 0, 0);
-              
-              const endTime = new Date(startTime);
-              endTime.setMinutes(endTime.getMinutes() + 120);
-
-              await prisma.serviceOrder.update({
-                where: { id: order.id },
-                data: {
-                  state: ServiceOrderState.SCHEDULED,
-                  scheduledDate: bookingDate,
-                  scheduledStartTime: startTime,
-                  scheduledEndTime: endTime,
-                }
-              });
-
-              bookingCount++;
-            } catch (e: any) {
-              // Ignore unique constraint violation (P2002)
-              if (e.code !== 'P2002') {
-                console.warn('Failed to create booking:', e);
-              } else {
-                console.warn(`Collision for ${loc.city} on ${bookingDate.toISOString()}`);
+            await prisma.booking.create({
+              data: {
+                serviceOrderId: order.id,
+                providerId: localProvider.id,
+                workTeamId: localTeam.id,
+                bookingDate: scheduledDate,
+                startSlot: startSlot,
+                endSlot: endSlot,
+                durationMinutes: estimatedDuration,
+                bookingType: BookingType.SERVICE_ORDER,
+                status: BookingStatus.CONFIRMED,
               }
+            });
+            bookingCount++;
+          } catch (e: any) {
+            if (e.code !== 'P2002') {
+              console.warn('Failed to create booking:', e.message);
             }
           }
         }
       }
     }
     
-    console.log(`✅ Created ${orderCount} service orders and ${bookingCount} bookings for visualization`);
+    console.log(`✅ Created ${orderCount} service orders and ${bookingCount} bookings for work team demo`);
     
     // ============================================================================
     // SEED TASKS FOR DEMO - Critical Actions & Priority Tasks
