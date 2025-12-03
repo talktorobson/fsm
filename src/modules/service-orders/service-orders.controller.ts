@@ -66,6 +66,7 @@ export class ServiceOrdersController {
 
   /**
    * Lists all service orders with optional filtering.
+   * WorkTeam users (technicians) can only see orders assigned to their team.
    *
    * @param skip - Number of records to skip.
    * @param take - Number of records to take.
@@ -74,11 +75,15 @@ export class ServiceOrdersController {
    * @param state - Filter by service order state.
    * @param urgency - Filter by urgency level (URGENT, STANDARD, LOW).
    * @param assignedProviderId - Filter by assigned provider.
+   * @param assignedWorkTeamId - Filter by assigned work team.
    * @param projectId - Filter by project ID.
+   * @param scheduledFrom - Filter by scheduled date start (ISO string).
+   * @param scheduledTo - Filter by scheduled date end (ISO string).
+   * @param req - The HTTP request containing user info.
    * @returns A list of service orders.
    */
   @Get()
-  @Roles('ADMIN', 'OPERATOR', 'PROVIDER_MANAGER')
+  @Roles('ADMIN', 'OPERATOR', 'PROVIDER_MANAGER', 'TECHNICIAN')
   @ApiOperation({ summary: 'List all service orders with filters' })
   @ApiQuery({ name: 'skip', required: false, type: Number })
   @ApiQuery({ name: 'take', required: false, type: Number })
@@ -87,7 +92,10 @@ export class ServiceOrdersController {
   @ApiQuery({ name: 'state', required: false, enum: ServiceOrderState })
   @ApiQuery({ name: 'urgency', required: false })
   @ApiQuery({ name: 'assignedProviderId', required: false })
+  @ApiQuery({ name: 'assignedWorkTeamId', required: false })
   @ApiQuery({ name: 'projectId', required: false })
+  @ApiQuery({ name: 'scheduledFrom', required: false, description: 'ISO date string' })
+  @ApiQuery({ name: 'scheduledTo', required: false, description: 'ISO date string' })
   @ApiResponse({
     status: 200,
     description: 'List of service orders',
@@ -101,8 +109,33 @@ export class ServiceOrdersController {
     @Query('state') state?: ServiceOrderState,
     @Query('urgency') urgency?: string,
     @Query('assignedProviderId') assignedProviderId?: string,
+    @Query('assignedWorkTeamId') assignedWorkTeamId?: string,
     @Query('projectId') projectId?: string,
+    @Query('scheduledFrom') scheduledFrom?: string,
+    @Query('scheduledTo') scheduledTo?: string,
+    @Request() req?: any,
   ) {
+    // If user is a technician (has workTeamId), automatically filter by their team
+    const effectiveWorkTeamId = req?.user?.workTeamId || assignedWorkTeamId;
+    
+    // Technicians can ONLY see orders assigned to their team
+    if (req?.user?.workTeamId && assignedWorkTeamId && assignedWorkTeamId !== req.user.workTeamId) {
+      // If technician tries to filter by another team, override with their own
+      return this.serviceOrdersService.findAll({
+        skip: skip ? parseInt(skip, 10) : undefined,
+        take: take ? parseInt(take, 10) : undefined,
+        countryCode,
+        businessUnit,
+        state,
+        urgency,
+        assignedProviderId,
+        assignedWorkTeamId: req.user.workTeamId, // Force their team ID
+        projectId,
+        scheduledFrom,
+        scheduledTo,
+      });
+    }
+
     return this.serviceOrdersService.findAll({
       skip: skip ? parseInt(skip, 10) : undefined,
       take: take ? parseInt(take, 10) : undefined,
@@ -111,7 +144,10 @@ export class ServiceOrdersController {
       state,
       urgency,
       assignedProviderId,
+      assignedWorkTeamId: effectiveWorkTeamId,
       projectId,
+      scheduledFrom,
+      scheduledTo,
     });
   }
 
@@ -122,7 +158,7 @@ export class ServiceOrdersController {
    * @returns {Promise<ServiceOrderResponseDto>} The service order details.
    */
   @Get(':id')
-  @Roles('ADMIN', 'OPERATOR', 'PROVIDER_MANAGER')
+  @Roles('ADMIN', 'OPERATOR', 'PROVIDER_MANAGER', 'TECHNICIAN')
   @ApiOperation({ summary: 'Get a service order by ID' })
   @ApiResponse({
     status: 200,

@@ -15,31 +15,31 @@ datasource db {
 // ============================================================================
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String?  // bcrypt hashed (nullable for future SSO-only users)
-  firstName String   @map("first_name")
-  lastName  String   @map("last_name")
+  id        String  @id @default(uuid())
+  email     String  @unique
+  password  String? // bcrypt hashed (nullable for future SSO-only users)
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
   phone     String?
 
   // Multi-tenancy (application-level)
-  countryCode String @map("country_code") @db.VarChar(3) // ES, FR, IT, PL
+  countryCode  String @map("country_code") @db.VarChar(3) // ES, FR, IT, PL
   businessUnit String @map("business_unit") @db.VarChar(50) // LM_ES, BD_FR
 
   // User classification and auth method
-  userType     UserType @default(INTERNAL) @map("user_type")
-  authProvider String   @default("local") @map("auth_provider") @db.VarChar(20) // local, sso, auth0
-  externalAuthId String? @unique @map("external_auth_id") // For future Auth0 migration
+  userType       UserType @default(INTERNAL) @map("user_type")
+  authProvider   String   @default("local") @map("auth_provider") @db.VarChar(20) // local, sso, auth0
+  externalAuthId String?  @unique @map("external_auth_id") // For future Auth0 migration
 
   // Provider linkage (only for EXTERNAL users)
-  providerId   String? @map("provider_id")
-  provider     Provider? @relation(fields: [providerId], references: [id])
+  providerId String?   @map("provider_id")
+  provider   Provider? @relation(fields: [providerId], references: [id])
 
-  workTeamId   String? @map("work_team_id")
-  workTeam     WorkTeam? @relation(fields: [workTeamId], references: [id])
+  workTeamId String?   @map("work_team_id")
+  workTeam   WorkTeam? @relation(fields: [workTeamId], references: [id])
 
   // Account status
-  isActive  Boolean  @default(true) @map("is_active")
+  isActive   Boolean @default(true) @map("is_active")
   isVerified Boolean @default(false) @map("is_verified")
 
   // Multi-factor authentication
@@ -55,10 +55,13 @@ model User {
   notificationPreference NotificationPreference?
 
   // Offline sync (Phase 3)
-  deviceSyncs   DeviceSync[]
+  deviceSyncs DeviceSync[]
 
   // Project ownership (Phase 2)
   pilotedProjects Project[] @relation("ProjectPilot")
+
+  // Chat/Messaging (Phase 3)
+  conversationParticipants ConversationParticipant[]
 
   // Audit
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -74,31 +77,31 @@ model User {
 }
 
 enum UserType {
-  INTERNAL             // Operators, admins, managers
-  EXTERNAL_PROVIDER    // Provider company users (managers)
-  EXTERNAL_TECHNICIAN  // Field technicians
+  INTERNAL // Operators, admins, managers
+  EXTERNAL_PROVIDER // Provider company users (managers)
+  EXTERNAL_TECHNICIAN // Field technicians
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique // OPERATOR, ADMIN, PROVIDER_MANAGER, TECHNICIAN
+  id          String           @id @default(uuid())
+  name        String           @unique // OPERATOR, ADMIN, PROVIDER_MANAGER, TECHNICIAN
   description String?
   permissions RolePermission[]
   users       UserRole[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("roles")
 }
 
 model Permission {
-  id          String   @id @default(uuid())
-  resource    String   // service_orders, providers, assignments
-  action      String   // create, read, update, delete, assign
+  id          String  @id @default(uuid())
+  resource    String // service_orders, providers, assignments
+  action      String // create, read, update, delete, assign
   description String?
 
-  roles       RolePermission[]
+  roles RolePermission[]
 
   @@unique([resource, action])
   @@map("permissions")
@@ -109,8 +112,8 @@ model UserRole {
   userId String @map("user_id")
   roleId String @map("role_id")
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
   @@map("user_roles")
@@ -120,8 +123,8 @@ model RolePermission {
   roleId       String @map("role_id")
   permissionId String @map("permission_id")
 
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
@@ -145,15 +148,15 @@ model RefreshToken {
 
 // Device registration for biometric authentication (technicians)
 model RegisteredDevice {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  deviceId   String   @unique @map("device_id")
-  publicKey  String   @map("public_key") @db.Text // For biometric challenge-response
-  platform   String   @db.VarChar(20) // ios, android
-  deviceName String   @map("device_name") @db.VarChar(255)
+  id          String  @id @default(uuid())
+  userId      String  @map("user_id")
+  deviceId    String  @unique @map("device_id")
+  publicKey   String  @map("public_key") @db.Text // For biometric challenge-response
+  platform    String  @db.VarChar(20) // ios, android
+  deviceName  String  @map("device_name") @db.VarChar(255)
   deviceModel String? @map("device_model") @db.VarChar(100)
 
-  isActive   Boolean  @default(true) @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
   lastLoginAt DateTime? @map("last_login_at")
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -177,8 +180,8 @@ model SystemConfig {
 
   description String?
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("system_config")
 }
@@ -187,22 +190,22 @@ model CountryConfig {
   countryCode String @id @map("country_code") @db.VarChar(3) // ES, FR, IT, PL
 
   // Regional settings
-  timezone    String @db.VarChar(50) // Europe/Madrid, Europe/Paris
-  currency    String @db.VarChar(3) // EUR
-  locale      String @db.VarChar(10) // es-ES, fr-FR
+  timezone String @db.VarChar(50) // Europe/Madrid, Europe/Paris
+  currency String @db.VarChar(3) // EUR
+  locale   String @db.VarChar(10) // es-ES, fr-FR
 
   // Working days
   workingDays Json // ["MON", "TUE", "WED", "THU", "FRI"]
 
   // Buffers (global defaults)
-  globalBufferDays  Int @default(2) @map("global_buffer_days")
-  staticBufferDays  Int @default(1) @map("static_buffer_days")
+  globalBufferDays Int @default(2) @map("global_buffer_days")
+  staticBufferDays Int @default(1) @map("static_buffer_days")
 
   // Assignment settings
-  autoAccept  Boolean @default(false) @map("auto_accept") // ES/IT = true
+  autoAccept Boolean @default(false) @map("auto_accept") // ES/IT = true
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("country_config")
 }
@@ -212,15 +215,15 @@ model BusinessUnitConfig {
   businessUnit String @unique @map("business_unit") @db.VarChar(50) // LM_ES
   countryCode  String @map("country_code") @db.VarChar(3)
 
-  name         String @db.VarChar(255)
-  isActive     Boolean @default(true) @map("is_active")
+  name     String  @db.VarChar(255)
+  isActive Boolean @default(true) @map("is_active")
 
   // Contact
-  email        String?
-  phone        String?
+  email String?
+  phone String?
 
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([countryCode])
   @@map("business_unit_config")
@@ -231,74 +234,77 @@ model BusinessUnitConfig {
 // ============================================================================
 
 model Provider {
-  id                      String           @id @default(uuid())
-  externalId              String?          @unique @map("external_id") // SAP ID
+  id         String  @id @default(uuid())
+  externalId String? @unique @map("external_id") // SAP ID
 
   // Multi-tenancy
-  countryCode             String           @map("country_code") @db.VarChar(3)
-  businessUnit            String           @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Basic info
-  name                    String           @db.VarChar(255)
-  legalName               String           @map("legal_name") @db.VarChar(255)
-  taxId                   String?          @map("tax_id") @db.VarChar(50)
+  name      String  @db.VarChar(255)
+  legalName String  @map("legal_name") @db.VarChar(255)
+  taxId     String? @map("tax_id") @db.VarChar(50)
 
   // Contact
-  email                   String?
-  phone                   String?
-  
+  email String?
+  phone String?
+
   // Address (enhanced - flattened for better querying)
-  addressStreet           String?          @map("address_street") @db.VarChar(255)
-  addressCity             String?          @map("address_city") @db.VarChar(100)
-  addressPostalCode       String?          @map("address_postal_code") @db.VarChar(20)
-  addressRegion           String?          @map("address_region") @db.VarChar(50)
-  addressCountry          String?          @map("address_country") @db.VarChar(3)
-  coordinates             Json?            // {lat: number, lng: number}
-  
+  addressStreet     String? @map("address_street") @db.VarChar(255)
+  addressCity       String? @map("address_city") @db.VarChar(100)
+  addressPostalCode String? @map("address_postal_code") @db.VarChar(20)
+  addressRegion     String? @map("address_region") @db.VarChar(50)
+  addressCountry    String? @map("address_country") @db.VarChar(3)
+  coordinates       Json? // {lat: number, lng: number}
+
   // Legacy JSON address (deprecated, kept for migration)
-  address                 Json?            // DEPRECATED - use flattened fields
+  address Json? // DEPRECATED - use flattened fields
 
   // Provider type & hierarchy
-  providerType            ProviderTypeEnum @default(P1) @map("provider_type")
-  parentProviderId        String?          @map("parent_provider_id")
-  parentProvider          Provider?        @relation("ProviderHierarchy", fields: [parentProviderId], references: [id])
-  subProviders            Provider[]       @relation("ProviderHierarchy")
+  providerType     ProviderTypeEnum @default(P1) @map("provider_type")
+  parentProviderId String?          @map("parent_provider_id")
+  parentProvider   Provider?        @relation("ProviderHierarchy", fields: [parentProviderId], references: [id])
+  subProviders     Provider[]       @relation("ProviderHierarchy")
 
   // Status & Risk
-  status                  ProviderStatus   @default(ACTIVE)
-  riskLevel               RiskLevel        @default(NONE) @map("risk_level")
-  riskReason              String?          @map("risk_reason") @db.Text
-  riskAssessedAt          DateTime?        @map("risk_assessed_at")
+  status         ProviderStatus @default(ACTIVE)
+  riskLevel      RiskLevel      @default(NONE) @map("risk_level")
+  riskReason     String?        @map("risk_reason") @db.Text
+  riskAssessedAt DateTime?      @map("risk_assessed_at")
 
   // Commercial terms
-  contractStartDate       DateTime?        @map("contract_start_date") @db.Date
-  contractEndDate         DateTime?        @map("contract_end_date") @db.Date
-  paymentTermsDays        Int              @default(30) @map("payment_terms_days")
+  contractStartDate DateTime? @map("contract_start_date") @db.Date
+  contractEndDate   DateTime? @map("contract_end_date") @db.Date
+  paymentTermsDays  Int       @default(30) @map("payment_terms_days")
 
   // Relations
-  workTeams               WorkTeam[]
-  users                   User[]
+  workTeams WorkTeam[]
+  users     User[]
 
   // Working schedule (provider-level calendar settings)
-  workingSchedule         ProviderWorkingSchedule?
+  workingSchedule ProviderWorkingSchedule?
 
   // Service priorities (P1/P2/Opt-out)
-  servicePriorities       ServicePriorityConfig[]
+  servicePriorities ServicePriorityConfig[]
 
   // Intervention zones (geographic coverage)
-  interventionZones       InterventionZone[]
+  interventionZones InterventionZone[]
 
   // Store assignments
-  storeAssignments        ProviderStoreAssignment[]
+  storeAssignments ProviderStoreAssignment[]
 
   // Phase 2 relations
-  serviceOrders           ServiceOrder[]
-  assignments             Assignment[]
-  bookings                Booking[]
+  serviceOrders ServiceOrder[]
+  assignments   Assignment[]
+  bookings      Booking[]
+
+  // Chat/Messaging (Phase 3)
+  conversationParticipants ConversationParticipant[]
 
   // Audit
-  createdAt               DateTime         @default(now()) @map("created_at")
-  updatedAt               DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([countryCode, businessUnit])
   @@index([status])
@@ -309,8 +315,8 @@ model Provider {
 }
 
 enum ProviderTypeEnum {
-  P1    // Primary Provider - direct contracts, primary zones
-  P2    // Subcontractor - works under P1 supervision
+  P1 // Primary Provider - direct contracts, primary zones
+  P2 // Subcontractor - works under P1 supervision
 }
 
 enum ProviderStatus {
@@ -332,60 +338,60 @@ enum RiskLevel {
 // ============================================================================
 
 model ProviderWorkingSchedule {
-  id                          String           @id @default(uuid())
-  providerId                  String           @unique @map("provider_id")
+  id         String @id @default(uuid())
+  providerId String @unique @map("provider_id")
 
   // Reference BU calendar config for defaults
-  calendarConfigId            String?          @map("calendar_config_id")
+  calendarConfigId String? @map("calendar_config_id")
 
   // Working days: 0=Sunday, 1=Monday, ..., 6=Saturday
   // NULL = inherit from CalendarConfig
-  workingDays                 Json?            @map("working_days") // [1,2,3,4,5,6] for Mon-Sat
+  workingDays Json? @map("working_days") // [1,2,3,4,5,6] for Mon-Sat
 
   // Morning shift
-  morningShiftEnabled         Boolean?         @map("morning_shift_enabled")
-  morningShiftStart           String?          @map("morning_shift_start") @db.VarChar(5)
-  morningShiftEnd             String?          @map("morning_shift_end") @db.VarChar(5)
+  morningShiftEnabled Boolean? @map("morning_shift_enabled")
+  morningShiftStart   String?  @map("morning_shift_start") @db.VarChar(5)
+  morningShiftEnd     String?  @map("morning_shift_end") @db.VarChar(5)
 
   // Afternoon shift
-  afternoonShiftEnabled       Boolean?         @map("afternoon_shift_enabled")
-  afternoonShiftStart         String?          @map("afternoon_shift_start") @db.VarChar(5)
-  afternoonShiftEnd           String?          @map("afternoon_shift_end") @db.VarChar(5)
+  afternoonShiftEnabled Boolean? @map("afternoon_shift_enabled")
+  afternoonShiftStart   String?  @map("afternoon_shift_start") @db.VarChar(5)
+  afternoonShiftEnd     String?  @map("afternoon_shift_end") @db.VarChar(5)
 
   // Evening shift (optional)
-  eveningShiftEnabled         Boolean?         @map("evening_shift_enabled")
-  eveningShiftStart           String?          @map("evening_shift_start") @db.VarChar(5)
-  eveningShiftEnd             String?          @map("evening_shift_end") @db.VarChar(5)
+  eveningShiftEnabled Boolean? @map("evening_shift_enabled")
+  eveningShiftStart   String?  @map("evening_shift_start") @db.VarChar(5)
+  eveningShiftEnd     String?  @map("evening_shift_end") @db.VarChar(5)
 
   // Lunch break
-  lunchBreakEnabled           Boolean          @default(true) @map("lunch_break_enabled")
-  lunchBreakStart             String?          @map("lunch_break_start") @db.VarChar(5)
-  lunchBreakEnd               String?          @map("lunch_break_end") @db.VarChar(5)
+  lunchBreakEnabled Boolean @default(true) @map("lunch_break_enabled")
+  lunchBreakStart   String? @map("lunch_break_start") @db.VarChar(5)
+  lunchBreakEnd     String? @map("lunch_break_end") @db.VarChar(5)
 
   // Capacity limits (provider-wide)
-  maxDailyJobsTotal           Int?             @map("max_daily_jobs_total")
-  maxWeeklyJobsTotal          Int?             @map("max_weekly_jobs_total")
+  maxDailyJobsTotal  Int? @map("max_daily_jobs_total")
+  maxWeeklyJobsTotal Int? @map("max_weekly_jobs_total")
 
   // Buffer overrides
-  globalBufferDaysOverride    Int?             @map("global_buffer_days_override")
-  staticBufferDaysOverride    Int?             @map("static_buffer_days_override")
-  travelBufferMinutesOverride Int?             @map("travel_buffer_minutes_override")
+  globalBufferDaysOverride    Int? @map("global_buffer_days_override")
+  staticBufferDaysOverride    Int? @map("static_buffer_days_override")
+  travelBufferMinutesOverride Int? @map("travel_buffer_minutes_override")
 
   // Cross-day/shift jobs
-  allowCrossDayJobs           Boolean?         @map("allow_cross_day_jobs")
-  allowCrossShiftJobs         Boolean?         @map("allow_cross_shift_jobs")
+  allowCrossDayJobs   Boolean? @map("allow_cross_day_jobs")
+  allowCrossShiftJobs Boolean? @map("allow_cross_shift_jobs")
 
   // Timezone override
-  timezoneOverride            String?          @map("timezone_override") @db.VarChar(50)
+  timezoneOverride String? @map("timezone_override") @db.VarChar(50)
 
   // Relations
-  provider                    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  calendarConfig              CalendarConfig?  @relation(fields: [calendarConfigId], references: [id])
+  provider       Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  calendarConfig CalendarConfig? @relation(fields: [calendarConfigId], references: [id])
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
-  updatedBy                   String?          @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
 
   @@index([providerId])
   @@map("provider_working_schedules")
@@ -396,36 +402,36 @@ model ProviderWorkingSchedule {
 // ============================================================================
 
 model ServicePriorityConfig {
-  id                          String              @id @default(uuid())
-  providerId                  String              @map("provider_id")
+  id         String @id @default(uuid())
+  providerId String @map("provider_id")
 
   // Service Reference (links to ProviderSpecialty)
-  specialtyId                 String              @map("specialty_id")
+  specialtyId String @map("specialty_id")
 
   // Priority Classification
-  priority                    ServicePriorityType @default(P2)
+  priority ServicePriorityType @default(P2)
 
   // Bundling rules: For P2, which P1 service(s) can unlock this P2 service
-  bundledWithSpecialtyIds     Json?               @map("bundled_with_specialty_ids") // String[]
+  bundledWithSpecialtyIds Json? @map("bundled_with_specialty_ids") // String[]
 
   // Volume constraints
-  maxMonthlyVolume            Int?                @map("max_monthly_volume")
-  currentMonthlyVolume        Int                 @default(0) @map("current_monthly_volume")
+  maxMonthlyVolume     Int? @map("max_monthly_volume")
+  currentMonthlyVolume Int  @default(0) @map("current_monthly_volume")
 
   // Pricing override
-  priceOverridePercent        Decimal?            @map("price_override_percent") @db.Decimal(5, 2)
+  priceOverridePercent Decimal? @map("price_override_percent") @db.Decimal(5, 2)
 
   // Validity period
-  validFrom                   DateTime            @default(now()) @map("valid_from") @db.Date
-  validUntil                  DateTime?           @map("valid_until") @db.Date
+  validFrom  DateTime  @default(now()) @map("valid_from") @db.Date
+  validUntil DateTime? @map("valid_until") @db.Date
 
   // Relations
-  provider                    Provider            @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  specialty                   ProviderSpecialty   @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  provider  Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  specialty ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime            @default(now()) @map("created_at")
-  updatedAt                   DateTime            @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([providerId, specialtyId])
   @@index([providerId])
@@ -434,9 +440,9 @@ model ServicePriorityConfig {
 }
 
 enum ServicePriorityType {
-  P1       // Always Accept - core competency
-  P2       // Bundle Only - requires P1 service in same order
-  OPT_OUT  // Never Accept - provider declines this service
+  P1 // Always Accept - core competency
+  P2 // Bundle Only - requires P1 service in same order
+  OPT_OUT // Never Accept - provider declines this service
 }
 
 // ============================================================================
@@ -444,38 +450,38 @@ enum ServicePriorityType {
 // ============================================================================
 
 model InterventionZone {
-  id                          String           @id @default(uuid())
-  providerId                  String           @map("provider_id")
+  id         String @id @default(uuid())
+  providerId String @map("provider_id")
 
   // Zone identification
-  name                        String           @db.VarChar(255)
-  zoneCode                    String?          @map("zone_code") @db.VarChar(50)
+  name     String  @db.VarChar(255)
+  zoneCode String? @map("zone_code") @db.VarChar(50)
 
   // Zone type
-  zoneType                    ZoneType         @default(PRIMARY) @map("zone_type")
+  zoneType ZoneType @default(PRIMARY) @map("zone_type")
 
   // Geographic coverage
-  postalCodes                 Json?            @map("postal_codes") // String[] of postal codes
-  postalCodeVectors           Json?            @map("postal_code_vectors") // [{from, to}]
-  boundaryGeoJson             Json?            @map("boundary_geojson") // GeoJSON Polygon
+  postalCodes       Json? @map("postal_codes") // String[] of postal codes
+  postalCodeVectors Json? @map("postal_code_vectors") // [{from, to}]
+  boundaryGeoJson   Json? @map("boundary_geojson") // GeoJSON Polygon
 
   // Commute parameters
-  maxCommuteMinutes           Int              @default(60) @map("max_commute_minutes")
-  defaultTravelBuffer         Int              @default(30) @map("default_travel_buffer")
+  maxCommuteMinutes   Int @default(60) @map("max_commute_minutes")
+  defaultTravelBuffer Int @default(30) @map("default_travel_buffer")
 
   // Capacity in this zone
-  maxDailyJobsInZone          Int?             @map("max_daily_jobs_in_zone")
+  maxDailyJobsInZone Int? @map("max_daily_jobs_in_zone")
 
   // Assignment priority (1 = highest)
-  assignmentPriority          Int              @default(1) @map("assignment_priority")
+  assignmentPriority Int @default(1) @map("assignment_priority")
 
   // Relations
-  provider                    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  workTeamZoneAssignments     WorkTeamZoneAssignment[]
+  provider                Provider                 @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workTeamZoneAssignments WorkTeamZoneAssignment[]
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([providerId, zoneCode])
   @@index([providerId])
@@ -484,9 +490,9 @@ model InterventionZone {
 }
 
 enum ZoneType {
-  PRIMARY    // Main coverage area - prioritized
-  SECONDARY  // Extended coverage - lower priority
-  OVERFLOW   // Emergency coverage only
+  PRIMARY // Main coverage area - prioritized
+  SECONDARY // Extended coverage - lower priority
+  OVERFLOW // Emergency coverage only
 }
 
 // ============================================================================
@@ -494,27 +500,27 @@ enum ZoneType {
 // ============================================================================
 
 model ProviderStoreAssignment {
-  id                          String              @id @default(uuid())
-  providerId                  String              @map("provider_id")
-  storeId                     String              @map("store_id")
+  id         String @id @default(uuid())
+  providerId String @map("provider_id")
+  storeId    String @map("store_id")
 
   // Assignment type
-  assignmentType              StoreAssignmentType @default(PRIMARY) @map("assignment_type")
+  assignmentType StoreAssignmentType @default(PRIMARY) @map("assignment_type")
 
   // Service scope (optional filter)
-  serviceSpecialtyIds         Json?               @map("service_specialty_ids") // String[]
+  serviceSpecialtyIds Json? @map("service_specialty_ids") // String[]
 
   // Active period
-  activeFrom                  DateTime            @default(now()) @map("active_from") @db.Date
-  activeUntil                 DateTime?           @map("active_until") @db.Date
+  activeFrom  DateTime  @default(now()) @map("active_from") @db.Date
+  activeUntil DateTime? @map("active_until") @db.Date
 
   // Relations
-  provider                    Provider            @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  store                       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime            @default(now()) @map("created_at")
-  updatedAt                   DateTime            @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([providerId, storeId])
   @@index([providerId])
@@ -523,9 +529,9 @@ model ProviderStoreAssignment {
 }
 
 enum StoreAssignmentType {
-  PRIMARY    // Main provider for this store
-  BACKUP     // Backup provider (when primary unavailable)
-  OVERFLOW   // Overflow capacity only
+  PRIMARY // Main provider for this store
+  BACKUP // Backup provider (when primary unavailable)
+  OVERFLOW // Overflow capacity only
 }
 
 // ============================================================================
@@ -533,59 +539,62 @@ enum StoreAssignmentType {
 // ============================================================================
 
 model WorkTeam {
-  id                          String           @id @default(uuid())
-  providerId                  String           @map("provider_id")
+  id         String @id @default(uuid())
+  providerId String @map("provider_id")
 
   // Multi-tenancy (inherited from provider)
-  countryCode                 String           @map("country_code") @db.VarChar(3)
+  countryCode String @map("country_code") @db.VarChar(3)
 
   // Identification
-  name                        String           @db.VarChar(255)
-  externalId                  String?          @unique @map("external_id")
+  name       String  @db.VarChar(255)
+  externalId String? @unique @map("external_id")
 
   // Status
-  status                      WorkTeamStatus   @default(ACTIVE)
+  status WorkTeamStatus @default(ACTIVE)
 
   // Team composition
-  minTechnicians              Int              @default(1) @map("min_technicians")
-  maxTechnicians              Int              @default(2) @map("max_technicians")
+  minTechnicians Int @default(1) @map("min_technicians")
+  maxTechnicians Int @default(2) @map("max_technicians")
 
   // Capacity (deprecated - use WorkTeamCalendar)
-  maxDailyJobs                Int              @default(5) @map("max_daily_jobs")
+  maxDailyJobs Int @default(5) @map("max_daily_jobs")
 
   // Skills (DEPRECATED - will be migrated to ProviderSpecialtyAssignment)
-  skills                      Json?            // ["installation", "repair", "tv"]
-  serviceTypes                Json?            @map("service_types") // ["P1", "P2"]
+  skills       Json? // ["installation", "repair", "tv"]
+  serviceTypes Json? @map("service_types") // ["P1", "P2"]
 
   // Geographic coverage (DEPRECATED - use WorkTeamZoneAssignment)
-  postalCodes                 Json?            @map("postal_codes") // ["28001", "28002", ...]
+  postalCodes Json? @map("postal_codes") // ["28001", "28002", ...]
 
   // Calendar (DEPRECATED - use WorkTeamCalendar)
-  workingDays                 Json?            @map("working_days") // ["MON", "TUE", ...]
-  shifts                      Json?            // [{code:"M", startLocal:"08:00", endLocal:"13:00"}]
+  workingDays Json? @map("working_days") // ["MON", "TUE", ...]
+  shifts      Json? // [{code:"M", startLocal:"08:00", endLocal:"13:00"}]
 
   // Relations
-  provider                    Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  technicians                 Technician[]
-  users                       User[]
+  provider    Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  technicians Technician[]
+  users       User[]
 
   // Zone assignments (subset of provider's zones)
-  zoneAssignments             WorkTeamZoneAssignment[]
+  zoneAssignments WorkTeamZoneAssignment[]
 
   // Structured specialties
-  specialtyAssignments        ProviderSpecialtyAssignment[]
+  specialtyAssignments ProviderSpecialtyAssignment[]
 
   // Calendar (with inheritance from provider)
-  calendar                    WorkTeamCalendar?
+  calendar WorkTeamCalendar?
 
   // Phase 2 relations
-  serviceOrders               ServiceOrder[]
-  assignments                 Assignment[]
-  bookings                    Booking[]
+  serviceOrders ServiceOrder[]
+  assignments   Assignment[]
+  bookings      Booking[]
+
+  // Chat/Messaging (Phase 3)
+  conversationParticipants ConversationParticipant[]
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([providerId])
   @@index([countryCode])
@@ -605,26 +614,26 @@ enum WorkTeamStatus {
 // ============================================================================
 
 model WorkTeamZoneAssignment {
-  id                          String           @id @default(uuid())
-  workTeamId                  String           @map("work_team_id")
-  interventionZoneId          String           @map("intervention_zone_id")
+  id                 String @id @default(uuid())
+  workTeamId         String @map("work_team_id")
+  interventionZoneId String @map("intervention_zone_id")
 
   // Override provider's zone settings
-  maxDailyJobsOverride        Int?             @map("max_daily_jobs_override")
-  travelBufferOverride        Int?             @map("travel_buffer_override")
-  assignmentPriorityOverride  Int?             @map("assignment_priority_override")
+  maxDailyJobsOverride       Int? @map("max_daily_jobs_override")
+  travelBufferOverride       Int? @map("travel_buffer_override")
+  assignmentPriorityOverride Int? @map("assignment_priority_override")
 
   // Active period
-  activeFrom                  DateTime         @default(now()) @map("active_from") @db.Date
-  activeUntil                 DateTime?        @map("active_until") @db.Date
+  activeFrom  DateTime  @default(now()) @map("active_from") @db.Date
+  activeUntil DateTime? @map("active_until") @db.Date
 
   // Relations
-  workTeam                    WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
-  interventionZone            InterventionZone @relation(fields: [interventionZoneId], references: [id], onDelete: Cascade)
+  workTeam         WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  interventionZone InterventionZone @relation(fields: [interventionZoneId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([workTeamId, interventionZoneId])
   @@index([workTeamId])
@@ -637,58 +646,58 @@ model WorkTeamZoneAssignment {
 // ============================================================================
 
 model WorkTeamCalendar {
-  id                          String           @id @default(uuid())
-  workTeamId                  String           @unique @map("work_team_id")
+  id         String @id @default(uuid())
+  workTeamId String @unique @map("work_team_id")
 
   // Inheritance flag
-  inheritFromProvider         Boolean          @default(true) @map("inherit_from_provider")
+  inheritFromProvider Boolean @default(true) @map("inherit_from_provider")
 
   // Working days (NULL = inherit from provider)
-  workingDays                 Json?            @map("working_days") // [1,2,3,4,5]
+  workingDays Json? @map("working_days") // [1,2,3,4,5]
 
   // Morning shift
-  morningShiftEnabled         Boolean?         @map("morning_shift_enabled")
-  morningShiftStart           String?          @map("morning_shift_start") @db.VarChar(5)
-  morningShiftEnd             String?          @map("morning_shift_end") @db.VarChar(5)
-  morningCapacity             Int?             @map("morning_capacity")
+  morningShiftEnabled Boolean? @map("morning_shift_enabled")
+  morningShiftStart   String?  @map("morning_shift_start") @db.VarChar(5)
+  morningShiftEnd     String?  @map("morning_shift_end") @db.VarChar(5)
+  morningCapacity     Int?     @map("morning_capacity")
 
   // Afternoon shift
-  afternoonShiftEnabled       Boolean?         @map("afternoon_shift_enabled")
-  afternoonShiftStart         String?          @map("afternoon_shift_start") @db.VarChar(5)
-  afternoonShiftEnd           String?          @map("afternoon_shift_end") @db.VarChar(5)
-  afternoonCapacity           Int?             @map("afternoon_capacity")
+  afternoonShiftEnabled Boolean? @map("afternoon_shift_enabled")
+  afternoonShiftStart   String?  @map("afternoon_shift_start") @db.VarChar(5)
+  afternoonShiftEnd     String?  @map("afternoon_shift_end") @db.VarChar(5)
+  afternoonCapacity     Int?     @map("afternoon_capacity")
 
   // Evening shift
-  eveningShiftEnabled         Boolean?         @map("evening_shift_enabled")
-  eveningShiftStart           String?          @map("evening_shift_start") @db.VarChar(5)
-  eveningShiftEnd             String?          @map("evening_shift_end") @db.VarChar(5)
-  eveningCapacity             Int?             @map("evening_capacity")
+  eveningShiftEnabled Boolean? @map("evening_shift_enabled")
+  eveningShiftStart   String?  @map("evening_shift_start") @db.VarChar(5)
+  eveningShiftEnd     String?  @map("evening_shift_end") @db.VarChar(5)
+  eveningCapacity     Int?     @map("evening_capacity")
 
   // Lunch break
-  lunchBreakEnabled           Boolean?         @map("lunch_break_enabled")
-  lunchBreakStart             String?          @map("lunch_break_start") @db.VarChar(5)
-  lunchBreakEnd               String?          @map("lunch_break_end") @db.VarChar(5)
+  lunchBreakEnabled Boolean? @map("lunch_break_enabled")
+  lunchBreakStart   String?  @map("lunch_break_start") @db.VarChar(5)
+  lunchBreakEnd     String?  @map("lunch_break_end") @db.VarChar(5)
 
   // Capacity limits (team-level)
-  maxDailyJobs                Int?             @map("max_daily_jobs")
-  maxWeeklyJobs               Int?             @map("max_weekly_jobs")
+  maxDailyJobs  Int? @map("max_daily_jobs")
+  maxWeeklyJobs Int? @map("max_weekly_jobs")
 
   // Buffer overrides
-  travelBufferMinutes         Int?             @map("travel_buffer_minutes")
+  travelBufferMinutes Int? @map("travel_buffer_minutes")
 
   // Cross-day/shift jobs
-  allowCrossDayJobs           Boolean?         @map("allow_cross_day_jobs")
-  allowCrossShiftJobs         Boolean?         @map("allow_cross_shift_jobs")
+  allowCrossDayJobs   Boolean? @map("allow_cross_day_jobs")
+  allowCrossShiftJobs Boolean? @map("allow_cross_shift_jobs")
 
   // Relations
-  workTeam                    WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
-  plannedAbsences             PlannedAbsence[]
-  dedicatedWorkingDays        DedicatedWorkingDay[]
+  workTeam             WorkTeam              @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  plannedAbsences      PlannedAbsence[]
+  dedicatedWorkingDays DedicatedWorkingDay[]
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
-  updatedBy                   String?          @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
 
   @@index([workTeamId])
   @@map("work_team_calendars")
@@ -699,29 +708,29 @@ model WorkTeamCalendar {
 // ============================================================================
 
 model PlannedAbsence {
-  id                          String           @id @default(uuid())
-  workTeamCalendarId          String           @map("work_team_calendar_id")
+  id                 String @id @default(uuid())
+  workTeamCalendarId String @map("work_team_calendar_id")
 
   // Absence period
-  startDate                   DateTime         @map("start_date") @db.Date
-  endDate                     DateTime         @map("end_date") @db.Date
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
 
   // Absence type
-  absenceType                 AbsenceType      @map("absence_type")
-  reason                      String?          @db.VarChar(500)
+  absenceType AbsenceType @map("absence_type")
+  reason      String?     @db.VarChar(500)
 
   // Approval
-  status                      AbsenceStatus    @default(PENDING)
-  approvedBy                  String?          @map("approved_by") @db.VarChar(100)
-  approvedAt                  DateTime?        @map("approved_at")
+  status     AbsenceStatus @default(PENDING)
+  approvedBy String?       @map("approved_by") @db.VarChar(100)
+  approvedAt DateTime?     @map("approved_at")
 
   // Relations
-  workTeamCalendar            WorkTeamCalendar @relation(fields: [workTeamCalendarId], references: [id], onDelete: Cascade)
+  workTeamCalendar WorkTeamCalendar @relation(fields: [workTeamCalendarId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
-  createdBy                   String           @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String   @map("created_by") @db.VarChar(100)
 
   @@index([workTeamCalendarId])
   @@index([startDate, endDate])
@@ -749,26 +758,26 @@ enum AbsenceStatus {
 // ============================================================================
 
 model DedicatedWorkingDay {
-  id                          String           @id @default(uuid())
-  workTeamCalendarId          String           @map("work_team_calendar_id")
+  id                 String @id @default(uuid())
+  workTeamCalendarId String @map("work_team_calendar_id")
 
   // The special working day
-  date                        DateTime         @db.Date
+  date DateTime @db.Date
 
   // Override capacity for this day
-  morningCapacity             Int?             @map("morning_capacity")
-  afternoonCapacity           Int?             @map("afternoon_capacity")
-  eveningCapacity             Int?             @map("evening_capacity")
+  morningCapacity   Int? @map("morning_capacity")
+  afternoonCapacity Int? @map("afternoon_capacity")
+  eveningCapacity   Int? @map("evening_capacity")
 
   // Reason for extra capacity
-  reason                      String?          @db.VarChar(500)
+  reason String? @db.VarChar(500)
 
   // Relations
-  workTeamCalendar            WorkTeamCalendar @relation(fields: [workTeamCalendarId], references: [id], onDelete: Cascade)
+  workTeamCalendar WorkTeamCalendar @relation(fields: [workTeamCalendarId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  createdBy                   String           @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String   @map("created_by") @db.VarChar(100)
 
   @@unique([workTeamCalendarId, date])
   @@index([workTeamCalendarId])
@@ -781,31 +790,31 @@ model DedicatedWorkingDay {
 // ============================================================================
 
 model Technician {
-  id                          String           @id @default(uuid())
-  workTeamId                  String           @map("work_team_id")
+  id         String @id @default(uuid())
+  workTeamId String @map("work_team_id")
 
   // Identification
-  externalId                  String?          @unique @map("external_id")
-  firstName                   String           @map("first_name") @db.VarChar(255)
-  lastName                    String           @map("last_name") @db.VarChar(255)
+  externalId String? @unique @map("external_id")
+  firstName  String  @map("first_name") @db.VarChar(255)
+  lastName   String  @map("last_name") @db.VarChar(255)
 
   // Contact
-  email                       String?
-  phone                       String
+  email String?
+  phone String
 
   // Status
-  isActive                    Boolean          @default(true) @map("is_active")
-  isTeamLead                  Boolean          @default(false) @map("is_team_lead")
+  isActive   Boolean @default(true) @map("is_active")
+  isTeamLead Boolean @default(false) @map("is_team_lead")
 
   // Certifications
-  certifications              TechnicianCertification[]
+  certifications TechnicianCertification[]
 
   // Relations
-  workTeam                    WorkTeam         @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  workTeam WorkTeam @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([workTeamId])
   @@map("technicians")
@@ -816,36 +825,36 @@ model Technician {
 // ============================================================================
 
 model TechnicianCertification {
-  id                          String           @id @default(uuid())
-  technicianId                String           @map("technician_id")
+  id           String @id @default(uuid())
+  technicianId String @map("technician_id")
 
   // Certification details
-  certificationType           CertificationType @map("certification_type")
-  certificateName             String           @map("certificate_name") @db.VarChar(255)
-  certificateNumber           String?          @map("certificate_number") @db.VarChar(100)
-  issuingAuthority            String?          @map("issuing_authority") @db.VarChar(255)
+  certificationType CertificationType @map("certification_type")
+  certificateName   String            @map("certificate_name") @db.VarChar(255)
+  certificateNumber String?           @map("certificate_number") @db.VarChar(100)
+  issuingAuthority  String?           @map("issuing_authority") @db.VarChar(255)
 
   // Validity
-  issuedAt                    DateTime         @map("issued_at") @db.Date
-  expiresAt                   DateTime?        @map("expires_at") @db.Date
+  issuedAt  DateTime  @map("issued_at") @db.Date
+  expiresAt DateTime? @map("expires_at") @db.Date
 
   // Skills covered
-  coveredSpecialtyIds         Json             @map("covered_specialty_ids") // String[]
+  coveredSpecialtyIds Json @map("covered_specialty_ids") // String[]
 
   // Document
-  documentUrl                 String?          @map("document_url") @db.VarChar(500)
+  documentUrl String? @map("document_url") @db.VarChar(500)
 
   // Status
-  isVerified                  Boolean          @default(false) @map("is_verified")
-  verifiedAt                  DateTime?        @map("verified_at")
-  verifiedBy                  String?          @map("verified_by") @db.VarChar(100)
+  isVerified Boolean   @default(false) @map("is_verified")
+  verifiedAt DateTime? @map("verified_at")
+  verifiedBy String?   @map("verified_by") @db.VarChar(100)
 
   // Relations
-  technician                  Technician       @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  technician Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt                   DateTime         @default(now()) @map("created_at")
-  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([technicianId])
   @@index([expiresAt])
@@ -869,15 +878,15 @@ enum CertificationType {
 // ============================================================================
 
 model EventOutbox {
-  id            String   @id @default(uuid())
-  aggregateType String   @map("aggregate_type") @db.VarChar(50)
-  aggregateId   String   @map("aggregate_id") @db.VarChar(100)
-  eventType     String   @map("event_type") @db.VarChar(100)
+  id            String      @id @default(uuid())
+  aggregateType String      @map("aggregate_type") @db.VarChar(50)
+  aggregateId   String      @map("aggregate_id") @db.VarChar(100)
+  eventType     String      @map("event_type") @db.VarChar(100)
   payload       Json
   status        EventStatus @default(PENDING)
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  publishedAt   DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  publishedAt DateTime? @map("published_at")
 
   @@index([status, createdAt])
   @@map("event_outbox")
@@ -898,36 +907,36 @@ enum EventStatus {
 // ----------------------------------------------------------------------------
 
 model Country {
-  id          String   @id @default(uuid())
-  code        String   @unique @db.VarChar(3) // ES, FR, IT, PL
-  name        String   @db.VarChar(100)
+  id   String @id @default(uuid())
+  code String @unique @db.VarChar(3) // ES, FR, IT, PL
+  name String @db.VarChar(100)
 
   // Regional settings
-  timezone    String   @db.VarChar(50) // Europe/Madrid, Europe/Paris
-  currency    String   @db.VarChar(3)  // EUR
-  locale      String   @db.VarChar(10) // es-ES, fr-FR
+  timezone String @db.VarChar(50) // Europe/Madrid, Europe/Paris
+  currency String @db.VarChar(3) // EUR
+  locale   String @db.VarChar(10) // es-ES, fr-FR
 
   // Relations
-  provinces   Province[]
+  provinces Province[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("countries")
 }
 
 model Province {
-  id          String   @id @default(uuid())
-  countryCode String   @map("country_code") @db.VarChar(3)
-  code        String   @db.VarChar(10) // 28 (Madrid), 75 (Paris)
-  name        String   @db.VarChar(100)
+  id          String @id @default(uuid())
+  countryCode String @map("country_code") @db.VarChar(3)
+  code        String @db.VarChar(10) // 28 (Madrid), 75 (Paris)
+  name        String @db.VarChar(100)
 
   // Relations
-  country     Country  @relation(fields: [countryCode], references: [code], onDelete: Cascade)
-  cities      City[]
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+  cities  City[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([countryCode, code])
   @@index([countryCode])
@@ -935,17 +944,17 @@ model Province {
 }
 
 model City {
-  id         String   @id @default(uuid())
-  provinceId String   @map("province_id")
-  code       String   @db.VarChar(20) // INE/INSEE codes
-  name       String   @db.VarChar(100)
+  id         String @id @default(uuid())
+  provinceId String @map("province_id")
+  code       String @db.VarChar(20) // INE/INSEE codes
+  name       String @db.VarChar(100)
 
   // Relations
   province    Province     @relation(fields: [provinceId], references: [id], onDelete: Cascade)
   postalCodes PostalCode[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([provinceId, code])
   @@index([provinceId])
@@ -962,8 +971,8 @@ model PostalCode {
   longitude Decimal? @db.Decimal(11, 8) // e.g., -3.70378876
 
   // Relations
-  city            City             @relation(fields: [cityId], references: [id], onDelete: Cascade)
-  servicePricing  ServicePricing[]
+  city           City             @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  servicePricing ServicePricing[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -980,55 +989,55 @@ model PostalCode {
 
 // External sales systems that feed orders into FSM
 model SalesSystem {
-  id                String   @id @default(uuid())
-  code              String   @unique @db.VarChar(20) // PYXIS, TEMPO, SAP, MANUAL
-  name              String   @db.VarChar(100)
-  description       String?  @db.Text
-  
+  id          String  @id @default(uuid())
+  code        String  @unique @db.VarChar(20) // PYXIS, TEMPO, SAP, MANUAL
+  name        String  @db.VarChar(100)
+  description String? @db.Text
+
   // Integration settings
-  apiEndpoint       String?  @map("api_endpoint") @db.VarChar(500)
-  isActive          Boolean  @default(true) @map("is_active")
-  
+  apiEndpoint String? @map("api_endpoint") @db.VarChar(500)
+  isActive    Boolean @default(true) @map("is_active")
+
   // Relations
-  serviceOrders     ServiceOrder[]
-  projects          Project[]
-  
+  serviceOrders ServiceOrder[]
+  projects      Project[]
+
   // Audit
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@map("sales_systems")
 }
 
 // Physical store locations within business units
 model Store {
-  id                String   @id @default(uuid())
-  externalStoreId   String?  @unique @map("external_store_id") // Store code from sales system
-  
+  id              String  @id @default(uuid())
+  externalStoreId String? @unique @map("external_store_id") // Store code from sales system
+
   // Multi-tenancy
-  countryCode       String   @map("country_code") @db.VarChar(3)
-  businessUnit      String   @map("business_unit") @db.VarChar(50)
-  buCode            String   @map("bu_code") @db.VarChar(20) // LM_ES_001, BD_FR_042
-  
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
+  buCode       String @map("bu_code") @db.VarChar(20) // LM_ES_001, BD_FR_042
+
   // Store details
-  name              String   @db.VarChar(255)
-  address           Json     @map("address") // {street, city, postalCode, country, lat, lng}
-  phone             String?  @db.VarChar(50)
-  email             String?  @db.VarChar(255)
-  
+  name    String  @db.VarChar(255)
+  address Json    @map("address") // {street, city, postalCode, country, lat, lng}
+  phone   String? @db.VarChar(50)
+  email   String? @db.VarChar(255)
+
   // Operational
-  timezone          String   @db.VarChar(50) // Europe/Madrid
-  isActive          Boolean  @default(true) @map("is_active")
-  
+  timezone String  @db.VarChar(50) // Europe/Madrid
+  isActive Boolean @default(true) @map("is_active")
+
   // Relations
-  serviceOrders     ServiceOrder[]
-  projects          Project[]
+  serviceOrders       ServiceOrder[]
+  projects            Project[]
   providerAssignments ProviderStoreAssignment[]
-  
+
   // Audit
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@unique([countryCode, buCode])
   @@index([countryCode, businessUnit])
   @@index([buCode])
@@ -1040,59 +1049,59 @@ model Store {
 // ----------------------------------------------------------------------------
 
 model ServiceCatalog {
-  id                  String        @id @default(uuid())
+  id String @id @default(uuid())
 
   // External sync tracking
-  externalServiceCode String        @unique @map("external_service_code") @db.VarChar(100) // PYX_ES_HVAC_00123
-  fsmServiceCode      String        @unique @map("fsm_service_code") @db.VarChar(50) // SVC_ES_001
-  externalSource      String        @map("external_source") @db.VarChar(20) // PYXIS, TEMPO, SAP, FSM_CUSTOM
+  externalServiceCode String @unique @map("external_service_code") @db.VarChar(100) // PYX_ES_HVAC_00123
+  fsmServiceCode      String @unique @map("fsm_service_code") @db.VarChar(50) // SVC_ES_001
+  externalSource      String @map("external_source") @db.VarChar(20) // PYXIS, TEMPO, SAP, FSM_CUSTOM
 
   // Multi-tenancy
-  countryCode         String        @map("country_code") @db.VarChar(3)
-  businessUnit        String        @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Basic attributes
-  serviceType         ServiceType   @map("service_type")
-  serviceCategory     ServiceCategory @map("service_category")
-  name                String        @db.VarChar(255)
-  description         String?       @db.Text
+  serviceType     ServiceType     @map("service_type")
+  serviceCategory ServiceCategory @map("service_category")
+  name            String          @db.VarChar(255)
+  description     String?         @db.Text
 
   // Scope definition
-  scopeIncluded       Json          @map("scope_included")  // ["Remove old unit", "Install new unit"]
-  scopeExcluded       Json          @map("scope_excluded")  // ["Wall modifications"]
-  worksiteRequirements Json         @map("worksite_requirements") // ["Electrical outlet within 2m"]
-  productPrerequisites Json         @map("product_prerequisites") // ["HVAC unit pre-delivered"]
+  scopeIncluded        Json @map("scope_included") // ["Remove old unit", "Install new unit"]
+  scopeExcluded        Json @map("scope_excluded") // ["Wall modifications"]
+  worksiteRequirements Json @map("worksite_requirements") // ["Electrical outlet within 2m"]
+  productPrerequisites Json @map("product_prerequisites") // ["HVAC unit pre-delivered"]
 
   // Operational settings
-  estimatedDurationMinutes Int      @map("estimated_duration_minutes")
+  estimatedDurationMinutes   Int     @map("estimated_duration_minutes")
   requiresPreServiceContract Boolean @default(false) @map("requires_pre_service_contract")
-  requiresPostServiceWCF    Boolean @default(true) @map("requires_post_service_wcf")
-  contractTemplateId        String? @map("contract_template_id")
+  requiresPostServiceWCF     Boolean @default(true) @map("requires_post_service_wcf")
+  contractTemplateId         String? @map("contract_template_id")
 
   // Status
-  status              ServiceStatus @default(CREATED)
-  deprecatedAt        DateTime?     @map("deprecated_at")
-  deprecationReason   String?       @map("deprecation_reason") @db.Text
+  status            ServiceStatus @default(CREATED)
+  deprecatedAt      DateTime?     @map("deprecated_at")
+  deprecationReason String?       @map("deprecation_reason") @db.Text
 
   // Sync metadata
-  syncChecksum        String        @map("sync_checksum") @db.VarChar(64) // SHA256
-  lastSyncedAt        DateTime?     @map("last_synced_at")
+  syncChecksum String    @map("sync_checksum") @db.VarChar(64) // SHA256
+  lastSyncedAt DateTime? @map("last_synced_at")
 
   // Relations
-  contractTemplate    ContractTemplate?        @relation(fields: [contractTemplateId], references: [id], onDelete: SetNull)
-  pricing             ServicePricing[]
-  skillRequirements   ServiceSkillRequirement[]
-  specialtyMappings   SpecialtyServiceMapping[]
+  contractTemplate  ContractTemplate?         @relation(fields: [contractTemplateId], references: [id], onDelete: SetNull)
+  pricing           ServicePricing[]
+  skillRequirements ServiceSkillRequirement[]
+  specialtyMappings SpecialtyServiceMapping[]
 
   // Phase 2 relations
-  serviceOrders       ServiceOrder[]
-  lineItems           ServiceOrderLineItem[]
+  serviceOrders ServiceOrder[]
+  lineItems     ServiceOrderLineItem[]
 
   // Audit
-  createdAt           DateTime      @default(now()) @map("created_at")
-  updatedAt           DateTime      @updatedAt @map("updated_at")
-  createdBy           String?       @map("created_by") @db.VarChar(100) // SYNC_JOB, user email
-  updatedBy           String?       @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100) // SYNC_JOB, user email
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
 
   @@index([countryCode, businessUnit])
   @@index([serviceType])
@@ -1112,61 +1121,61 @@ enum ServiceType {
 }
 
 enum ServiceCategory {
-  HVAC              // Heating, Ventilation, Air Conditioning
-  PLUMBING          // Plumbing installations
-  ELECTRICAL        // Electrical work
-  KITCHEN           // Kitchen installations
-  BATHROOM          // Bathroom installations
-  FLOORING          // Flooring installations
-  WINDOWS_DOORS     // Windows and doors
-  GARDEN            // Garden installations
-  FURNITURE         // Furniture assembly
-  OTHER             // Miscellaneous
+  HVAC // Heating, Ventilation, Air Conditioning
+  PLUMBING // Plumbing installations
+  ELECTRICAL // Electrical work
+  KITCHEN // Kitchen installations
+  BATHROOM // Bathroom installations
+  FLOORING // Flooring installations
+  WINDOWS_DOORS // Windows and doors
+  GARDEN // Garden installations
+  FURNITURE // Furniture assembly
+  OTHER // Miscellaneous
 }
 
 enum ServiceStatus {
-  CREATED           // Initial creation
-  ACTIVE            // Ready for use
-  DEPRECATED        // No longer offered (but historical orders remain)
-  ARCHIVED          // Fully archived
+  CREATED // Initial creation
+  ACTIVE // Ready for use
+  DEPRECATED // No longer offered (but historical orders remain)
+  ARCHIVED // Fully archived
 }
 
 // Regional pricing with postal code granularity
 model ServicePricing {
-  id           String   @id @default(uuid())
-  serviceId    String   @map("service_id")
+  id        String @id @default(uuid())
+  serviceId String @map("service_id")
 
   // Multi-tenancy
-  countryCode  String   @map("country_code") @db.VarChar(3)
-  businessUnit String   @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Geographic scope (NULL postal code = country default)
-  postalCodeId String?  @map("postal_code_id")
+  postalCodeId String? @map("postal_code_id")
 
   // Pricing
-  baseRate     Decimal  @map("base_rate") @db.Decimal(10, 2) // Base hourly/fixed rate
-  currency     String   @db.VarChar(3) // EUR
-  rateType     RateType @map("rate_type") // HOURLY, FIXED
+  baseRate Decimal  @map("base_rate") @db.Decimal(10, 2) // Base hourly/fixed rate
+  currency String   @db.VarChar(3) // EUR
+  rateType RateType @map("rate_type") // HOURLY, FIXED
 
   // Multipliers (defaults if not specified)
-  overtimeMultiplier  Decimal @default(1.5) @map("overtime_multiplier") @db.Decimal(3, 2)
-  weekendMultiplier   Decimal @default(1.3) @map("weekend_multiplier") @db.Decimal(3, 2)
-  holidayMultiplier   Decimal @default(1.5) @map("holiday_multiplier") @db.Decimal(3, 2)
-  urgentMultiplier    Decimal @default(1.2) @map("urgent_multiplier") @db.Decimal(3, 2)
+  overtimeMultiplier Decimal @default(1.5) @map("overtime_multiplier") @db.Decimal(3, 2)
+  weekendMultiplier  Decimal @default(1.3) @map("weekend_multiplier") @db.Decimal(3, 2)
+  holidayMultiplier  Decimal @default(1.5) @map("holiday_multiplier") @db.Decimal(3, 2)
+  urgentMultiplier   Decimal @default(1.2) @map("urgent_multiplier") @db.Decimal(3, 2)
 
   // Validity
-  validFrom    DateTime @map("valid_from")
-  validUntil   DateTime? @map("valid_until")
+  validFrom  DateTime  @map("valid_from")
+  validUntil DateTime? @map("valid_until")
 
   // Relations
-  service      ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  postalCode   PostalCode?    @relation(fields: [postalCodeId], references: [id], onDelete: SetNull)
+  service    ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  postalCode PostalCode?    @relation(fields: [postalCodeId], references: [id], onDelete: SetNull)
 
   // Audit
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  createdBy    String?  @map("created_by") @db.VarChar(100)
-  updatedBy    String?  @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
 
   @@unique([serviceId, countryCode, businessUnit, postalCodeId, validFrom])
   @@index([serviceId])
@@ -1183,20 +1192,20 @@ enum RateType {
 
 // Service-to-Skill mappings (required skills for a service)
 model ServiceSkillRequirement {
-  id               String  @id @default(uuid())
-  serviceId        String  @map("service_id")
-  specialtyId      String  @map("specialty_id")
+  id          String @id @default(uuid())
+  serviceId   String @map("service_id")
+  specialtyId String @map("specialty_id")
 
   // Requirement details
-  isRequired       Boolean @default(true) @map("is_required") // vs. NICE_TO_HAVE
+  isRequired        Boolean         @default(true) @map("is_required") // vs. NICE_TO_HAVE
   minimumExperience ExperienceLevel @map("minimum_experience")
 
   // Relations
-  service          ServiceCatalog    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  specialty        ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  service   ServiceCatalog    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  specialty ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([serviceId, specialtyId])
   @@index([serviceId])
@@ -1209,34 +1218,34 @@ model ServiceSkillRequirement {
 // ----------------------------------------------------------------------------
 
 model ProviderSpecialty {
-  id          String   @id @default(uuid())
-  code        String   @unique @db.VarChar(50) // HVAC_INSTALL, PLUMBING_REPAIR
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
+  id          String          @id @default(uuid())
+  code        String          @unique @db.VarChar(50) // HVAC_INSTALL, PLUMBING_REPAIR
+  name        String          @db.VarChar(100)
+  description String?         @db.Text
   category    ServiceCategory // Maps to service categories
 
   // Certification requirements
-  requiresCertification Boolean @default(false) @map("requires_certification")
+  requiresCertification  Boolean @default(false) @map("requires_certification")
   certificationAuthority String? @map("certification_authority") @db.VarChar(100)
 
   // Relations
-  serviceRequirements ServiceSkillRequirement[]
-  serviceMappings     SpecialtyServiceMapping[]
-  providerAssignments ProviderSpecialtyAssignment[]
+  serviceRequirements    ServiceSkillRequirement[]
+  serviceMappings        SpecialtyServiceMapping[]
+  providerAssignments    ProviderSpecialtyAssignment[]
   servicePriorityConfigs ServicePriorityConfig[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([category])
   @@map("provider_specialties")
 }
 
 enum ExperienceLevel {
-  JUNIOR        // 0-2 years
-  INTERMEDIATE  // 2-5 years
-  SENIOR        // 5-10 years
-  EXPERT        // 10+ years
+  JUNIOR // 0-2 years
+  INTERMEDIATE // 2-5 years
+  SENIOR // 5-10 years
+  EXPERT // 10+ years
 }
 
 // Many-to-many mapping (Provider Specialty ↔ Service Catalog)
@@ -1246,10 +1255,10 @@ model SpecialtyServiceMapping {
   serviceId   String @map("service_id")
 
   // Relations
-  specialty   ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-  service     ServiceCatalog    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  specialty ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  service   ServiceCatalog    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([specialtyId, serviceId])
   @@index([specialtyId])
@@ -1259,39 +1268,39 @@ model SpecialtyServiceMapping {
 
 // Provider capabilities (Work Team specialties)
 model ProviderSpecialtyAssignment {
-  id         String   @id @default(uuid())
-  workTeamId String   @map("work_team_id")
-  specialtyId String  @map("specialty_id")
+  id          String @id @default(uuid())
+  workTeamId  String @map("work_team_id")
+  specialtyId String @map("specialty_id")
 
   // Certification tracking
-  isCertified Boolean  @default(false) @map("is_certified")
-  certificationNumber String? @map("certification_number") @db.VarChar(100)
-  certificationIssuedAt DateTime? @map("certification_issued_at")
+  isCertified            Boolean   @default(false) @map("is_certified")
+  certificationNumber    String?   @map("certification_number") @db.VarChar(100)
+  certificationIssuedAt  DateTime? @map("certification_issued_at")
   certificationExpiresAt DateTime? @map("certification_expires_at")
 
   // Experience tracking
-  experienceLevel ExperienceLevel @map("experience_level")
-  yearsOfExperience Int @default(0) @map("years_of_experience")
+  experienceLevel   ExperienceLevel @map("experience_level")
+  yearsOfExperience Int             @default(0) @map("years_of_experience")
 
   // Performance metrics (updated after each job)
-  totalJobsCompleted Int @default(0) @map("total_jobs_completed")
-  totalJobsFailed    Int @default(0) @map("total_jobs_failed")
-  avgDurationMinutes Int? @map("avg_duration_minutes")
+  totalJobsCompleted Int      @default(0) @map("total_jobs_completed")
+  totalJobsFailed    Int      @default(0) @map("total_jobs_failed")
+  avgDurationMinutes Int?     @map("avg_duration_minutes")
   avgQualityScore    Decimal? @map("avg_quality_score") @db.Decimal(3, 2) // 0.00-5.00
 
   // Status
-  isActive    Boolean  @default(true) @map("is_active")
-  assignedAt  DateTime @default(now()) @map("assigned_at")
-  revokedAt   DateTime? @map("revoked_at")
-  revocationReason String? @map("revocation_reason") @db.Text
+  isActive         Boolean   @default(true) @map("is_active")
+  assignedAt       DateTime  @default(now()) @map("assigned_at")
+  revokedAt        DateTime? @map("revoked_at")
+  revocationReason String?   @map("revocation_reason") @db.Text
 
   // Relations
-  workTeam    WorkTeam          @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
-  specialty   ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  workTeam  WorkTeam          @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
+  specialty ProviderSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([workTeamId, specialtyId])
   @@index([workTeamId])
@@ -1306,34 +1315,34 @@ model ProviderSpecialtyAssignment {
 // ----------------------------------------------------------------------------
 
 model ContractTemplate {
-  id              String   @id @default(uuid())
-  code            String   @unique @db.VarChar(50) // INSTALL_STD_V1, TV_QUOTE_V2
-  name            String   @db.VarChar(255)
-  description     String?  @db.Text
-  bodyTemplate    String?  @map("body_template") @db.Text // HTML/Markdown template with placeholders
-  defaultPayload  Json?    @map("default_payload")
+  id             String  @id @default(uuid())
+  code           String  @unique @db.VarChar(50) // INSTALL_STD_V1, TV_QUOTE_V2
+  name           String  @db.VarChar(255)
+  description    String? @db.Text
+  bodyTemplate   String? @map("body_template") @db.Text // HTML/Markdown template with placeholders
+  defaultPayload Json?   @map("default_payload")
 
   // Multi-tenancy
-  countryCode     String   @map("country_code") @db.VarChar(3)
-  businessUnit    String?  @map("business_unit") @db.VarChar(50) // NULL = all BUs
+  countryCode  String  @map("country_code") @db.VarChar(3)
+  businessUnit String? @map("business_unit") @db.VarChar(50) // NULL = all BUs
 
   // External template reference (Adobe Sign / DocuSign agnostic)
-  externalTemplateId String @map("external_template_id") @db.VarChar(100)
-  provider        ContractProvider // ADOBE_SIGN, DOCUSIGN
+  externalTemplateId String           @map("external_template_id") @db.VarChar(100)
+  provider           ContractProvider // ADOBE_SIGN, DOCUSIGN
 
   // Versioning
-  version         Int      @default(1)
-  isActive        Boolean  @default(true) @map("is_active")
-  supersededBy    String?  @map("superseded_by") // ID of newer version
+  version      Int     @default(1)
+  isActive     Boolean @default(true) @map("is_active")
+  supersededBy String? @map("superseded_by") // ID of newer version
 
   // Relations
-  services        ServiceCatalog[]
-  contracts       Contract[]
+  services  ServiceCatalog[]
+  contracts Contract[]
 
   // Audit
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  createdBy       String?  @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
 
   @@index([countryCode, businessUnit])
   @@index([isActive])
@@ -1385,41 +1394,41 @@ enum NotificationStatus {
 }
 
 model Contract {
-  id             String         @id @default(uuid())
-  contractNumber String         @unique @map("contract_number") @db.VarChar(30)
-  serviceOrderId String         @map("service_order_id")
-  templateId     String?        @map("template_id")
+  id             String  @id @default(uuid())
+  contractNumber String  @unique @map("contract_number") @db.VarChar(30)
+  serviceOrderId String  @map("service_order_id")
+  templateId     String? @map("template_id")
 
   // Multi-tenancy snapshot
-  countryCode    String         @map("country_code") @db.VarChar(3)
-  businessUnit   String         @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
-  status         ContractStatus @default(DRAFT)
-  payload        Json           // Merged template data for auditing
-  documentBody   String?        @map("document_body") @db.Text
+  status       ContractStatus @default(DRAFT)
+  payload      Json // Merged template data for auditing
+  documentBody String?        @map("document_body") @db.Text
 
-  customerEmail  String?        @map("customer_email")
-  customerPhone  String?        @map("customer_phone")
-  sentAt         DateTime?      @map("sent_at")
-  signedAt       DateTime?      @map("signed_at")
-  expiresAt      DateTime?      @map("expires_at")
-  signatureCode  String?        @map("signature_code") @db.VarChar(20)
+  customerEmail String?   @map("customer_email")
+  customerPhone String?   @map("customer_phone")
+  sentAt        DateTime? @map("sent_at")
+  signedAt      DateTime? @map("signed_at")
+  expiresAt     DateTime? @map("expires_at")
+  signatureCode String?   @map("signature_code") @db.VarChar(20)
 
   // E-Signature Provider Integration
-  providerEnvelopeId    String?  @map("provider_envelope_id") // Envelope ID from e-signature provider
-  signedDocumentUrl     String?  @map("signed_document_url") // URL to signed document in GCS
+  providerEnvelopeId     String? @map("provider_envelope_id") // Envelope ID from e-signature provider
+  signedDocumentUrl      String? @map("signed_document_url") // URL to signed document in GCS
   signedDocumentChecksum String? @map("signed_document_checksum") // SHA-256 checksum for verification
 
   // Relations
-  serviceOrder   ServiceOrder   @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  template       ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  signatures     ContractSignature[]
-  notifications  ContractNotification[]
+  serviceOrder        ServiceOrder           @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  template            ContractTemplate?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  signatures          ContractSignature[]
+  notifications       ContractNotification[]
   workCompletionForms WorkCompletionForm[]
 
   // Audit
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([serviceOrderId])
   @@index([status])
@@ -1427,45 +1436,45 @@ model Contract {
 }
 
 model ContractSignature {
-  id              String           @id @default(uuid())
-  contractId      String           @map("contract_id")
-  signerType      ContractSignerType @map("signer_type")
-  signerName      String           @map("signer_name") @db.VarChar(255)
-  signerEmail     String?          @map("signer_email")
-  signerPhone     String?          @map("signer_phone")
-  signatureMethod SignatureMethod  @map("signature_method")
-  status          SignatureStatus  @default(REQUESTED)
-  signedAt        DateTime?        @map("signed_at")
-  verificationCode String?         @map("verification_code") @db.VarChar(20)
-  ipAddress       String?          @map("ip_address")
-  userAgent       String?          @map("user_agent")
-  evidence        Json?            @map("evidence")
+  id               String             @id @default(uuid())
+  contractId       String             @map("contract_id")
+  signerType       ContractSignerType @map("signer_type")
+  signerName       String             @map("signer_name") @db.VarChar(255)
+  signerEmail      String?            @map("signer_email")
+  signerPhone      String?            @map("signer_phone")
+  signatureMethod  SignatureMethod    @map("signature_method")
+  status           SignatureStatus    @default(REQUESTED)
+  signedAt         DateTime?          @map("signed_at")
+  verificationCode String?            @map("verification_code") @db.VarChar(20)
+  ipAddress        String?            @map("ip_address")
+  userAgent        String?            @map("user_agent")
+  evidence         Json?              @map("evidence")
 
   // Relations
-  contract        Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   // Audit
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([contractId])
   @@map("contract_signatures")
 }
 
 model ContractNotification {
-  id           String             @id @default(uuid())
-  contractId   String             @map("contract_id")
+  id           String              @id @default(uuid())
+  contractId   String              @map("contract_id")
   channel      NotificationChannel
-  destination  String             @db.VarChar(255)
-  status       NotificationStatus @default(QUEUED)
+  destination  String              @db.VarChar(255)
+  status       NotificationStatus  @default(QUEUED)
   payload      Json?
-  errorMessage String?            @map("error_message") @db.Text
-  sentAt       DateTime?          @map("sent_at")
+  errorMessage String?             @map("error_message") @db.Text
+  sentAt       DateTime?           @map("sent_at")
 
   // Relations
-  contract     Contract           @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime           @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([contractId])
   @@index([channel])
@@ -1477,23 +1486,23 @@ model ContractNotification {
 // ----------------------------------------------------------------------------
 
 model ServiceCatalogEventLog {
-  id                  String   @id @default(uuid())
-  eventId             String   @unique @map("event_id") @db.VarChar(100) // For idempotency
+  id      String @id @default(uuid())
+  eventId String @unique @map("event_id") @db.VarChar(100) // For idempotency
 
   // Event metadata
-  eventType           String   @map("event_type") @db.VarChar(50) // service.created, service.updated
-  externalSource      String   @map("external_source") @db.VarChar(20) // PYXIS, TEMPO, SAP
-  externalServiceCode String   @map("external_service_code") @db.VarChar(100)
+  eventType           String @map("event_type") @db.VarChar(50) // service.created, service.updated
+  externalSource      String @map("external_source") @db.VarChar(20) // PYXIS, TEMPO, SAP
+  externalServiceCode String @map("external_service_code") @db.VarChar(100)
 
   // Processing status
-  processingStatus    EventProcessingStatus @map("processing_status")
-  payload             Json     // Full event payload
-  errorMessage        String?  @map("error_message") @db.Text
-  retryCount          Int      @default(0) @map("retry_count")
+  processingStatus EventProcessingStatus @map("processing_status")
+  payload          Json // Full event payload
+  errorMessage     String?               @map("error_message") @db.Text
+  retryCount       Int                   @default(0) @map("retry_count")
 
   // Timestamps
-  receivedAt          DateTime @default(now()) @map("received_at")
-  processedAt         DateTime? @map("processed_at")
+  receivedAt  DateTime  @default(now()) @map("received_at")
+  processedAt DateTime? @map("processed_at")
 
   @@index([eventId])
   @@index([processingStatus, receivedAt])
@@ -1510,29 +1519,29 @@ enum EventProcessingStatus {
 }
 
 model ServiceCatalogReconciliation {
-  id                String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Reconciliation run metadata
-  countryCode       String   @map("country_code") @db.VarChar(3)
-  runDate           DateTime @map("run_date")
-  status            ReconciliationStatus
+  countryCode String               @map("country_code") @db.VarChar(3)
+  runDate     DateTime             @map("run_date")
+  status      ReconciliationStatus
 
   // Metrics
-  totalServicesInFile     Int @map("total_services_in_file")
-  totalServicesInDB       Int @map("total_services_in_db")
-  servicesCreated         Int @default(0) @map("services_created")
-  servicesUpdated         Int @default(0) @map("services_updated")
-  servicesWithDrift       Int @default(0) @map("services_with_drift")
-  driftPercentage         Decimal? @map("drift_percentage") @db.Decimal(5, 2)
+  totalServicesInFile Int      @map("total_services_in_file")
+  totalServicesInDB   Int      @map("total_services_in_db")
+  servicesCreated     Int      @default(0) @map("services_created")
+  servicesUpdated     Int      @default(0) @map("services_updated")
+  servicesWithDrift   Int      @default(0) @map("services_with_drift")
+  driftPercentage     Decimal? @map("drift_percentage") @db.Decimal(5, 2)
 
   // File info
-  s3Bucket          String?  @map("s3_bucket") @db.VarChar(100)
-  s3Key             String?  @map("s3_key") @db.VarChar(255)
+  s3Bucket String? @map("s3_bucket") @db.VarChar(100)
+  s3Key    String? @map("s3_key") @db.VarChar(255)
 
   // Timestamps
-  startedAt         DateTime @default(now()) @map("started_at")
-  completedAt       DateTime? @map("completed_at")
-  errorMessage      String?  @map("error_message") @db.Text
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  errorMessage String?   @map("error_message") @db.Text
 
   @@index([countryCode, runDate])
   @@index([status])
@@ -1551,62 +1560,62 @@ enum ReconciliationStatus {
 // ============================================================================
 
 model Project {
-  id                  String   @id @default(uuid())
-  externalProjectId   String?  @unique @map("external_project_id") // Sales system project ID
+  id                String  @id @default(uuid())
+  externalProjectId String? @unique @map("external_project_id") // Sales system project ID
 
   // Multi-tenancy
-  countryCode         String   @map("country_code") @db.VarChar(3)
-  businessUnit        String   @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Customer information
-  customerName        String   @map("customer_name") @db.VarChar(255)
-  customerEmail       String?  @map("customer_email")
-  customerPhone       String?  @map("customer_phone")
-  customerAddress     Json     @map("customer_address") // {street, city, postalCode, country}
+  customerName    String  @map("customer_name") @db.VarChar(255)
+  customerEmail   String? @map("customer_email")
+  customerPhone   String? @map("customer_phone")
+  customerAddress Json    @map("customer_address") // {street, city, postalCode, country}
 
   // Project metadata
-  projectName         String   @map("project_name") @db.VarChar(255)
-  projectDescription  String?  @map("project_description") @db.Text
+  projectName        String  @map("project_name") @db.VarChar(255)
+  projectDescription String? @map("project_description") @db.Text
 
   // Project ownership (Pilote du Chantier)
-  pilotUserId         String?  @map("pilot_user_id") // Responsible operator
+  pilotUserId         String?             @map("pilot_user_id") // Responsible operator
   pilotAssignmentMode PilotAssignmentMode @default(AUTO) @map("pilot_assignment_mode")
-  pilotAssignedAt     DateTime? @map("pilot_assigned_at")
+  pilotAssignedAt     DateTime?           @map("pilot_assigned_at")
 
   // External references (v2.0)
-  externalSalesOrderId String?  @map("external_sales_order_id")
-  externalLeadId       String?  @map("external_lead_id")
-  externalSystemSource String?  @map("external_system_source") @db.VarChar(50) // PYXIS, TEMPO, SAP
+  externalSalesOrderId String? @map("external_sales_order_id")
+  externalLeadId       String? @map("external_lead_id")
+  externalSystemSource String? @map("external_system_source") @db.VarChar(50) // PYXIS, TEMPO, SAP
 
   // Sales context (v2.1)
-  salesSystemId        String?  @map("sales_system_id")
-  storeId              String?  @map("store_id")
-  buCode               String?  @map("bu_code") @db.VarChar(20)
-  salesChannel         SalesChannel? @map("sales_channel")
+  salesSystemId String?       @map("sales_system_id")
+  storeId       String?       @map("store_id")
+  buCode        String?       @map("bu_code") @db.VarChar(20)
+  salesChannel  SalesChannel? @map("sales_channel")
 
   // Enhanced customer contact (v2.1)
-  customerMobile       String?  @map("customer_mobile") @db.VarChar(50)
-  customerWhatsapp     String?  @map("customer_whatsapp") @db.VarChar(50)
-  customerLanguage     String?  @map("customer_language") @db.VarChar(5) // es, fr, it
-  
+  customerMobile   String? @map("customer_mobile") @db.VarChar(50)
+  customerWhatsapp String? @map("customer_whatsapp") @db.VarChar(50)
+  customerLanguage String? @map("customer_language") @db.VarChar(5) // es, fr, it
+
   // Site contact (if different from customer)
-  siteContactName      String?  @map("site_contact_name") @db.VarChar(255)
-  siteContactPhone     String?  @map("site_contact_phone") @db.VarChar(50)
-  siteContactEmail     String?  @map("site_contact_email") @db.VarChar(255)
+  siteContactName  String? @map("site_contact_name") @db.VarChar(255)
+  siteContactPhone String? @map("site_contact_phone") @db.VarChar(50)
+  siteContactEmail String? @map("site_contact_email") @db.VarChar(255)
 
   // Status
-  status              ProjectStatus @default(CREATED)
+  status ProjectStatus @default(CREATED)
 
   // Relations
-  pilotUser           User?         @relation("ProjectPilot", fields: [pilotUserId], references: [id], onDelete: SetNull)
-  serviceOrders       ServiceOrder[]
-  salesSystem         SalesSystem?  @relation(fields: [salesSystemId], references: [id], onDelete: SetNull)
-  store               Store?        @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  pilotUser     User?          @relation("ProjectPilot", fields: [pilotUserId], references: [id], onDelete: SetNull)
+  serviceOrders ServiceOrder[]
+  salesSystem   SalesSystem?   @relation(fields: [salesSystemId], references: [id], onDelete: SetNull)
+  store         Store?         @relation(fields: [storeId], references: [id], onDelete: SetNull)
 
   // Audit
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
-  createdBy           String?  @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
 
   @@index([countryCode, businessUnit])
   @@index([pilotUserId])
@@ -1619,8 +1628,8 @@ model Project {
 }
 
 enum PilotAssignmentMode {
-  AUTO    // Automatic workload balancing
-  MANUAL  // Manual assignment by manager
+  AUTO // Automatic workload balancing
+  MANUAL // Manual assignment by manager
 }
 
 enum ProjectStatus {
@@ -1631,144 +1640,147 @@ enum ProjectStatus {
 }
 
 model ServiceOrder {
-  id                      String   @id @default(uuid())
-  externalServiceOrderId  String?  @unique @map("external_service_order_id")
+  id                     String  @id @default(uuid())
+  externalServiceOrderId String? @unique @map("external_service_order_id")
 
   // Relations
-  projectId               String?  @map("project_id")
-  serviceId               String   @map("service_id")
-  assignedProviderId      String?  @map("assigned_provider_id")
-  assignedWorkTeamId      String?  @map("assigned_work_team_id")
+  projectId          String? @map("project_id")
+  serviceId          String  @map("service_id")
+  assignedProviderId String? @map("assigned_provider_id")
+  assignedWorkTeamId String? @map("assigned_work_team_id")
 
   // Multi-tenancy
-  countryCode             String   @map("country_code") @db.VarChar(3)
-  businessUnit            String   @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // ============================================================================
   // Sales Context (v2.1)
   // ============================================================================
-  
-  salesSystemId           String?  @map("sales_system_id")
-  storeId                 String?  @map("store_id")
-  buCode                  String?  @map("bu_code") @db.VarChar(20) // LM_ES_001, BD_FR_042
-  salesChannel            SalesChannel? @map("sales_channel")
-  salesOrderNumber        String?  @map("sales_order_number") @db.VarChar(50) // Human-readable: "LM-2025-123456"
-  salesOrderLineId        String?  @map("sales_order_line_id") @db.VarChar(50)
-  orderDate               DateTime? @map("order_date") // When customer placed order
+
+  salesSystemId    String?       @map("sales_system_id")
+  storeId          String?       @map("store_id")
+  buCode           String?       @map("bu_code") @db.VarChar(20) // LM_ES_001, BD_FR_042
+  salesChannel     SalesChannel? @map("sales_channel")
+  salesOrderNumber String?       @map("sales_order_number") @db.VarChar(50) // Human-readable: "LM-2025-123456"
+  salesOrderLineId String?       @map("sales_order_line_id") @db.VarChar(50)
+  orderDate        DateTime?     @map("order_date") // When customer placed order
 
   // ============================================================================
   // Customer information (can override project)
   // ============================================================================
-  customerInfo            Json     @map("customer_info") // {name, email, phone, mobile, address}
+  customerInfo Json @map("customer_info") // {name, email, phone, mobile, address}
 
   // Service details
-  serviceType             ServiceType @map("service_type")
-  urgency                 ServiceUrgency @default(STANDARD)
-  estimatedDurationMinutes Int     @map("estimated_duration_minutes")
+  serviceType              ServiceType    @map("service_type")
+  urgency                  ServiceUrgency @default(STANDARD)
+  estimatedDurationMinutes Int            @map("estimated_duration_minutes")
 
   // Location
-  serviceAddress          Json     @map("service_address") // {street, city, postalCode, lat, lng}
+  serviceAddress Json @map("service_address") // {street, city, postalCode, lat, lng}
 
   // Scheduling window
-  requestedStartDate      DateTime @map("requested_start_date")
-  requestedEndDate        DateTime @map("requested_end_date")
-  requestedTimeSlot       String?  @map("requested_time_slot") // AM, PM, or specific time
+  requestedStartDate DateTime @map("requested_start_date")
+  requestedEndDate   DateTime @map("requested_end_date")
+  requestedTimeSlot  String?  @map("requested_time_slot") // AM, PM, or specific time
 
   // Scheduled slot (after booking)
-  scheduledDate           DateTime? @map("scheduled_date")
-  scheduledStartTime      DateTime? @map("scheduled_start_time")
-  scheduledEndTime        DateTime? @map("scheduled_end_time")
+  scheduledDate      DateTime? @map("scheduled_date")
+  scheduledStartTime DateTime? @map("scheduled_start_time")
+  scheduledEndTime   DateTime? @map("scheduled_end_time")
 
   // External sales references (v2.0)
-  externalSalesOrderId    String?  @map("external_sales_order_id")
-  externalProjectId       String?  @map("external_project_id")
-  externalLeadId          String?  @map("external_lead_id")
-  externalSystemSource    String?  @map("external_system_source") @db.VarChar(50)
+  externalSalesOrderId String? @map("external_sales_order_id")
+  externalProjectId    String? @map("external_project_id")
+  externalLeadId       String? @map("external_lead_id")
+  externalSystemSource String? @map("external_system_source") @db.VarChar(50)
 
   // ============================================================================
   // Financial Totals (v2.1) - Aggregated from line items
   // ============================================================================
-  
-  currency                String   @default("EUR") @db.VarChar(3)
-  
+
+  currency String @default("EUR") @db.VarChar(3)
+
   // Customer totals (what customer pays)
-  totalAmountCustomer     Decimal? @map("total_amount_customer") @db.Decimal(12, 2)
+  totalAmountCustomer        Decimal? @map("total_amount_customer") @db.Decimal(12, 2)
   totalAmountCustomerExclTax Decimal? @map("total_amount_customer_excl_tax") @db.Decimal(12, 2)
-  totalTaxCustomer        Decimal? @map("total_tax_customer") @db.Decimal(12, 2)
-  totalDiscountCustomer   Decimal? @map("total_discount_customer") @db.Decimal(12, 2)
-  
+  totalTaxCustomer           Decimal? @map("total_tax_customer") @db.Decimal(12, 2)
+  totalDiscountCustomer      Decimal? @map("total_discount_customer") @db.Decimal(12, 2)
+
   // Provider totals (what we pay provider)
-  totalAmountProvider     Decimal? @map("total_amount_provider") @db.Decimal(12, 2)
+  totalAmountProvider        Decimal? @map("total_amount_provider") @db.Decimal(12, 2)
   totalAmountProviderExclTax Decimal? @map("total_amount_provider_excl_tax") @db.Decimal(12, 2)
-  totalTaxProvider        Decimal? @map("total_tax_provider") @db.Decimal(12, 2)
-  
+  totalTaxProvider           Decimal? @map("total_tax_provider") @db.Decimal(12, 2)
+
   // Margin
-  totalMargin             Decimal? @map("total_margin") @db.Decimal(12, 2)
-  marginPercent           Decimal? @map("margin_percent") @db.Decimal(5, 4)
-  
+  totalMargin   Decimal? @map("total_margin") @db.Decimal(12, 2)
+  marginPercent Decimal? @map("margin_percent") @db.Decimal(5, 4)
+
   // Payment tracking
-  paymentStatus           PaymentStatus? @map("payment_status")
-  paymentMethod           String?  @map("payment_method") @db.VarChar(50)
-  paymentReference        String?  @map("payment_reference") @db.VarChar(100)
-  paidAmount              Decimal? @map("paid_amount") @db.Decimal(12, 2)
-  paidAt                  DateTime? @map("paid_at")
-  
+  paymentStatus    PaymentStatus? @map("payment_status")
+  paymentMethod    String?        @map("payment_method") @db.VarChar(50)
+  paymentReference String?        @map("payment_reference") @db.VarChar(100)
+  paidAmount       Decimal?       @map("paid_amount") @db.Decimal(12, 2)
+  paidAt           DateTime?      @map("paid_at")
+
   // ============================================================================
   // Delivery Context (v2.1)
   // ============================================================================
-  
+
   productDeliveryStatus   DeliveryStatus? @map("product_delivery_status")
-  earliestDeliveryDate    DateTime? @map("earliest_delivery_date")
-  latestDeliveryDate      DateTime? @map("latest_delivery_date")
-  allProductsDelivered    Boolean  @default(false) @map("all_products_delivered")
-  deliveryBlocksExecution Boolean  @default(false) @map("delivery_blocks_execution")
+  earliestDeliveryDate    DateTime?       @map("earliest_delivery_date")
+  latestDeliveryDate      DateTime?       @map("latest_delivery_date")
+  allProductsDelivered    Boolean         @default(false) @map("all_products_delivered")
+  deliveryBlocksExecution Boolean         @default(false) @map("delivery_blocks_execution")
 
   // Sales potential (TV/Quotation only - v2.0)
   salesPotential          SalesPotential? @map("sales_potential")
-  salesPotentialScore     Decimal?  @map("sales_potential_score") @db.Decimal(5, 2) // 0-100
-  salesPotentialUpdatedAt DateTime? @map("sales_potential_updated_at")
-  salesPreEstimationId    String?   @map("sales_pre_estimation_id")
-  salesPreEstimationValue Decimal?  @map("sales_pre_estimation_value") @db.Decimal(10, 2)
-  salesmanNotes           String?   @map("salesman_notes") @db.Text
+  salesPotentialScore     Decimal?        @map("sales_potential_score") @db.Decimal(5, 2) // 0-100
+  salesPotentialUpdatedAt DateTime?       @map("sales_potential_updated_at")
+  salesPreEstimationId    String?         @map("sales_pre_estimation_id")
+  salesPreEstimationValue Decimal?        @map("sales_pre_estimation_value") @db.Decimal(10, 2)
+  salesmanNotes           String?         @map("salesman_notes") @db.Text
 
   // Risk assessment (v2.0)
-  riskLevel               RiskLevel @default(LOW) @map("risk_level")
-  riskScore               Decimal?  @map("risk_score") @db.Decimal(5, 2) // 0-100
-  riskAssessedAt          DateTime? @map("risk_assessed_at")
-  riskAcknowledgedBy      String?   @map("risk_acknowledged_by")
-  riskAcknowledgedAt      DateTime? @map("risk_acknowledged_at")
+  riskLevel          RiskLevel @default(LOW) @map("risk_level")
+  riskScore          Decimal?  @map("risk_score") @db.Decimal(5, 2) // 0-100
+  riskAssessedAt     DateTime? @map("risk_assessed_at")
+  riskAcknowledgedBy String?   @map("risk_acknowledged_by")
+  riskAcknowledgedAt DateTime? @map("risk_acknowledged_at")
 
   // State machine
-  state                   ServiceOrderState @default(CREATED)
-  stateChangedAt          DateTime @default(now()) @map("state_changed_at")
+  state          ServiceOrderState @default(CREATED)
+  stateChangedAt DateTime          @default(now()) @map("state_changed_at")
 
   // Relations
-  project                 Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  service                 ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  assignedProvider        Provider? @relation(fields: [assignedProviderId], references: [id], onDelete: SetNull)
-  assignedWorkTeam        WorkTeam? @relation(fields: [assignedWorkTeamId], references: [id], onDelete: SetNull)
-  salesSystem             SalesSystem? @relation(fields: [salesSystemId], references: [id], onDelete: SetNull)
-  store                   Store?    @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  dependencies            ServiceOrderDependency[] @relation("DependentOrder")
-  dependents              ServiceOrderDependency[] @relation("BlockedOrder")
-  buffers                 ServiceOrderBuffer[]
-  assignments             Assignment[]
-  bookings                Booking[]
-  riskFactors             ServiceOrderRiskFactor[]
-  contracts               Contract[]
-  tasks                   Task[]
-  workCompletionForms     WorkCompletionForm[]
-  lineItems               ServiceOrderLineItem[]
-  contacts                ServiceOrderContact[]
+  project             Project?                 @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  service             ServiceCatalog           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  assignedProvider    Provider?                @relation(fields: [assignedProviderId], references: [id], onDelete: SetNull)
+  assignedWorkTeam    WorkTeam?                @relation(fields: [assignedWorkTeamId], references: [id], onDelete: SetNull)
+  salesSystem         SalesSystem?             @relation(fields: [salesSystemId], references: [id], onDelete: SetNull)
+  store               Store?                   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  dependencies        ServiceOrderDependency[] @relation("DependentOrder")
+  dependents          ServiceOrderDependency[] @relation("BlockedOrder")
+  buffers             ServiceOrderBuffer[]
+  assignments         Assignment[]
+  bookings            Booking[]
+  riskFactors         ServiceOrderRiskFactor[]
+  contracts           Contract[]
+  tasks               Task[]
+  workCompletionForms WorkCompletionForm[]
+  lineItems           ServiceOrderLineItem[]
+  contacts            ServiceOrderContact[]
+
+  // Chat/Messaging (Phase 3)
+  conversation ServiceOrderConversation?
 
   // Offline sync (v2.0 - Phase 3)
-  version                 Int      @default(1) // For optimistic locking and conflict detection
-  lastModifiedBy          String?  @map("last_modified_by") @db.VarChar(100)
+  version        Int     @default(1) // For optimistic locking and conflict detection
+  lastModifiedBy String? @map("last_modified_by") @db.VarChar(100)
 
   // Audit
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
-  createdBy               String?  @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
 
   @@index([projectId])
   @@index([serviceId])
@@ -1790,9 +1802,9 @@ model ServiceOrder {
 }
 
 enum ServiceUrgency {
-  URGENT    // 24-72h response window
-  STANDARD  // 3-7 days response window  
-  LOW       // 7+ days, flexible scheduling
+  URGENT // 24-72h response window
+  STANDARD // 3-7 days response window  
+  LOW // 7+ days, flexible scheduling
 }
 
 enum ServiceOrderState {
@@ -1818,50 +1830,50 @@ enum SalesPotential {
 // ============================================================================
 
 enum SalesChannel {
-  IN_STORE      // Walk-in at physical store
-  ONLINE        // E-commerce website
-  MOBILE_APP    // Mobile application
-  PHONE         // Call center
-  PARTNER       // Partner/affiliate
-  B2B           // Business to business
+  IN_STORE // Walk-in at physical store
+  ONLINE // E-commerce website
+  MOBILE_APP // Mobile application
+  PHONE // Call center
+  PARTNER // Partner/affiliate
+  B2B // Business to business
 }
 
 enum PaymentStatus {
-  PENDING       // Not yet paid
-  PARTIAL       // Partially paid
-  PAID          // Fully paid
-  REFUNDED      // Refunded
-  CANCELLED     // Payment cancelled
+  PENDING // Not yet paid
+  PARTIAL // Partially paid
+  PAID // Fully paid
+  REFUNDED // Refunded
+  CANCELLED // Payment cancelled
 }
 
 enum DeliveryStatus {
-  PENDING       // Not yet shipped
-  SHIPPED       // In transit
-  DELIVERED     // Delivered to customer
-  PARTIAL       // Partially delivered
-  RETURNED      // Returned
-  CANCELLED     // Cancelled
+  PENDING // Not yet shipped
+  SHIPPED // In transit
+  DELIVERED // Delivered to customer
+  PARTIAL // Partially delivered
+  RETURNED // Returned
+  CANCELLED // Cancelled
 }
 
 enum LineItemType {
-  PRODUCT       // Physical product (HVAC unit, faucet, etc.)
-  SERVICE       // Service (installation, maintenance, etc.)
+  PRODUCT // Physical product (HVAC unit, faucet, etc.)
+  SERVICE // Service (installation, maintenance, etc.)
 }
 
 enum LineExecutionStatus {
-  PENDING       // Not started
-  IN_PROGRESS   // Being executed
-  COMPLETED     // Fully executed
-  PARTIAL       // Partially executed
-  SKIPPED       // Skipped (with reason)
-  CANCELLED     // Cancelled
+  PENDING // Not started
+  IN_PROGRESS // Being executed
+  COMPLETED // Fully executed
+  PARTIAL // Partially executed
+  SKIPPED // Skipped (with reason)
+  CANCELLED // Cancelled
 }
 
 enum ContactType {
-  CUSTOMER      // End customer
-  SITE_CONTACT  // Person at service location
-  BILLING       // Billing contact
-  EMERGENCY     // Emergency contact
+  CUSTOMER // End customer
+  SITE_CONTACT // Person at service location
+  BILLING // Billing contact
+  EMERGENCY // Emergency contact
 }
 
 enum ContactMethod {
@@ -1878,74 +1890,74 @@ enum ContactMethod {
 
 // Line items for products and services within a service order
 model ServiceOrderLineItem {
-  id                    String   @id @default(uuid())
-  serviceOrderId        String   @map("service_order_id")
-  
+  id             String @id @default(uuid())
+  serviceOrderId String @map("service_order_id")
+
   // Line identification
-  lineNumber            Int      @map("line_number") // 1, 2, 3...
-  externalLineId        String?  @map("external_line_id") @db.VarChar(100)
-  
+  lineNumber     Int     @map("line_number") // 1, 2, 3...
+  externalLineId String? @map("external_line_id") @db.VarChar(100)
+
   // Item type discrimination
-  lineType              LineItemType @map("line_type")
-  
+  lineType LineItemType @map("line_type")
+
   // Item reference
-  sku                   String   @db.VarChar(100) // Product SKU or Service code
-  externalSku           String?  @map("external_sku") @db.VarChar(100)
-  name                  String   @db.VarChar(500)
-  description           String?  @db.Text
-  
+  sku         String  @db.VarChar(100) // Product SKU or Service code
+  externalSku String? @map("external_sku") @db.VarChar(100)
+  name        String  @db.VarChar(500)
+  description String? @db.Text
+
   // Product-specific (only for PRODUCT type)
-  productCategory       String?  @map("product_category") @db.VarChar(100)
-  productBrand          String?  @map("product_brand") @db.VarChar(100)
-  productModel          String?  @map("product_model") @db.VarChar(255)
-  
+  productCategory String? @map("product_category") @db.VarChar(100)
+  productBrand    String? @map("product_brand") @db.VarChar(100)
+  productModel    String? @map("product_model") @db.VarChar(255)
+
   // Service-specific (only for SERVICE type)
-  serviceId             String?  @map("service_id")
-  
+  serviceId String? @map("service_id")
+
   // Quantities
-  quantity              Decimal  @db.Decimal(10, 3)
-  unitOfMeasure         String   @default("UNIT") @map("unit_of_measure") @db.VarChar(20)
-  
+  quantity      Decimal @db.Decimal(10, 3)
+  unitOfMeasure String  @default("UNIT") @map("unit_of_measure") @db.VarChar(20)
+
   // Customer pricing (what customer pays)
-  unitPriceCustomer     Decimal  @map("unit_price_customer") @db.Decimal(12, 4)
-  taxRateCustomer       Decimal  @map("tax_rate_customer") @db.Decimal(5, 4) // 0.2100 = 21%
-  discountPercent       Decimal  @default(0) @map("discount_percent") @db.Decimal(5, 4)
-  discountAmount        Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
-  lineTotalCustomer     Decimal  @map("line_total_customer") @db.Decimal(12, 2)
+  unitPriceCustomer        Decimal @map("unit_price_customer") @db.Decimal(12, 4)
+  taxRateCustomer          Decimal @map("tax_rate_customer") @db.Decimal(5, 4) // 0.2100 = 21%
+  discountPercent          Decimal @default(0) @map("discount_percent") @db.Decimal(5, 4)
+  discountAmount           Decimal @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  lineTotalCustomer        Decimal @map("line_total_customer") @db.Decimal(12, 2)
   lineTotalCustomerExclTax Decimal @map("line_total_customer_excl_tax") @db.Decimal(12, 2)
-  lineTaxAmountCustomer Decimal  @map("line_tax_amount_customer") @db.Decimal(12, 2)
-  
+  lineTaxAmountCustomer    Decimal @map("line_tax_amount_customer") @db.Decimal(12, 2)
+
   // Provider pricing (what we pay provider)
-  unitPriceProvider     Decimal? @map("unit_price_provider") @db.Decimal(12, 4)
-  taxRateProvider       Decimal? @map("tax_rate_provider") @db.Decimal(5, 4)
-  lineTotalProvider     Decimal? @map("line_total_provider") @db.Decimal(12, 2)
+  unitPriceProvider        Decimal? @map("unit_price_provider") @db.Decimal(12, 4)
+  taxRateProvider          Decimal? @map("tax_rate_provider") @db.Decimal(5, 4)
+  lineTotalProvider        Decimal? @map("line_total_provider") @db.Decimal(12, 2)
   lineTotalProviderExclTax Decimal? @map("line_total_provider_excl_tax") @db.Decimal(12, 2)
-  lineTaxAmountProvider Decimal? @map("line_tax_amount_provider") @db.Decimal(12, 2)
-  
+  lineTaxAmountProvider    Decimal? @map("line_tax_amount_provider") @db.Decimal(12, 2)
+
   // Margin tracking
-  marginAmount          Decimal? @map("margin_amount") @db.Decimal(12, 2)
-  marginPercent         Decimal? @map("margin_percent") @db.Decimal(5, 4)
-  
+  marginAmount  Decimal? @map("margin_amount") @db.Decimal(12, 2)
+  marginPercent Decimal? @map("margin_percent") @db.Decimal(5, 4)
+
   // Delivery tracking (for PRODUCT type)
-  deliveryStatus        DeliveryStatus? @map("delivery_status")
-  expectedDeliveryDate  DateTime? @map("expected_delivery_date")
-  actualDeliveryDate    DateTime? @map("actual_delivery_date")
-  deliveryReference     String?  @map("delivery_reference") @db.VarChar(100)
-  deliveryNotes         String?  @map("delivery_notes") @db.Text
-  
+  deliveryStatus       DeliveryStatus? @map("delivery_status")
+  expectedDeliveryDate DateTime?       @map("expected_delivery_date")
+  actualDeliveryDate   DateTime?       @map("actual_delivery_date")
+  deliveryReference    String?         @map("delivery_reference") @db.VarChar(100)
+  deliveryNotes        String?         @map("delivery_notes") @db.Text
+
   // Execution tracking (for SERVICE type)
-  executionStatus       LineExecutionStatus? @map("execution_status")
-  executedAt            DateTime? @map("executed_at")
-  executedQuantity      Decimal? @map("executed_quantity") @db.Decimal(10, 3)
-  
+  executionStatus  LineExecutionStatus? @map("execution_status")
+  executedAt       DateTime?            @map("executed_at")
+  executedQuantity Decimal?             @map("executed_quantity") @db.Decimal(10, 3)
+
   // Relations
-  serviceOrder          ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  service               ServiceCatalog? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  
+  serviceOrder ServiceOrder    @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  service      ServiceCatalog? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
   // Audit
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@unique([serviceOrderId, lineNumber])
   @@index([serviceOrderId])
   @@index([sku])
@@ -1956,65 +1968,65 @@ model ServiceOrderLineItem {
 
 // Multiple customer contacts per service order
 model ServiceOrderContact {
-  id                String   @id @default(uuid())
-  serviceOrderId    String   @map("service_order_id")
-  
+  id             String @id @default(uuid())
+  serviceOrderId String @map("service_order_id")
+
   // Contact details
-  contactType       ContactType @map("contact_type")
-  isPrimary         Boolean  @default(false) @map("is_primary")
-  
+  contactType ContactType @map("contact_type")
+  isPrimary   Boolean     @default(false) @map("is_primary")
+
   // Personal info
-  firstName         String   @map("first_name") @db.VarChar(100)
-  lastName          String   @map("last_name") @db.VarChar(100)
-  title             String?  @db.VarChar(20)
-  
+  firstName String  @map("first_name") @db.VarChar(100)
+  lastName  String  @map("last_name") @db.VarChar(100)
+  title     String? @db.VarChar(20)
+
   // Contact methods
-  email             String?  @db.VarChar(255)
-  phone             String?  @db.VarChar(50)
-  mobile            String?  @db.VarChar(50)
-  whatsapp          String?  @db.VarChar(50)
-  
+  email    String? @db.VarChar(255)
+  phone    String? @db.VarChar(50)
+  mobile   String? @db.VarChar(50)
+  whatsapp String? @db.VarChar(50)
+
   // Preferences
   preferredMethod   ContactMethod? @map("preferred_method")
-  preferredLanguage String?  @map("preferred_language") @db.VarChar(5)
-  doNotCall         Boolean  @default(false) @map("do_not_call")
-  doNotEmail        Boolean  @default(false) @map("do_not_email")
-  
+  preferredLanguage String?        @map("preferred_language") @db.VarChar(5)
+  doNotCall         Boolean        @default(false) @map("do_not_call")
+  doNotEmail        Boolean        @default(false) @map("do_not_email")
+
   // Availability
-  availabilityNotes String?  @map("availability_notes") @db.Text
-  
+  availabilityNotes String? @map("availability_notes") @db.Text
+
   // Relations
-  serviceOrder      ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
   // Audit
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([serviceOrderId])
   @@index([serviceOrderId, isPrimary])
   @@map("service_order_contacts")
 }
 
 model ServiceOrderDependency {
-  id                 String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // The service order that depends on another
-  dependentOrderId   String   @map("dependent_order_id")
+  dependentOrderId String @map("dependent_order_id")
 
   // The service order that must be completed first
-  blocksOrderId      String   @map("blocks_order_id")
+  blocksOrderId String @map("blocks_order_id")
 
   // Dependency type
-  dependencyType     DependencyType @map("dependency_type")
+  dependencyType DependencyType @map("dependency_type")
 
   // Static buffer between dependent services (in days)
-  staticBufferDays   Int      @default(0) @map("static_buffer_days")
+  staticBufferDays Int @default(0) @map("static_buffer_days")
 
   // Relations
-  dependentOrder     ServiceOrder @relation("DependentOrder", fields: [dependentOrderId], references: [id], onDelete: Cascade)
-  blockedOrder       ServiceOrder @relation("BlockedOrder", fields: [blocksOrderId], references: [id], onDelete: Cascade)
+  dependentOrder ServiceOrder @relation("DependentOrder", fields: [dependentOrderId], references: [id], onDelete: Cascade)
+  blockedOrder   ServiceOrder @relation("BlockedOrder", fields: [blocksOrderId], references: [id], onDelete: Cascade)
 
-  createdAt          DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([dependentOrderId, blocksOrderId])
   @@index([dependentOrderId])
@@ -2023,29 +2035,29 @@ model ServiceOrderDependency {
 }
 
 enum DependencyType {
-  REQUIRES_COMPLETION  // Must finish first
-  REQUIRES_VALIDATION  // Must be validated first
-  TV_OUTCOME          // Installation blocked by Technical Visit outcome
+  REQUIRES_COMPLETION // Must finish first
+  REQUIRES_VALIDATION // Must be validated first
+  TV_OUTCOME // Installation blocked by Technical Visit outcome
 }
 
 model ServiceOrderBuffer {
-  id                       String       @id @default(uuid())
-  serviceOrderId           String       @map("service_order_id")
+  id             String @id @default(uuid())
+  serviceOrderId String @map("service_order_id")
 
   // Travel buffer (PRD-compliant: fixed minutes before/after job)
   // Applied when work team has multiple jobs in one day
-  travelBufferMinutesStart Int          @default(0) @map("travel_buffer_minutes_start")
-  travelBufferMinutesEnd   Int          @default(0) @map("travel_buffer_minutes_end")
+  travelBufferMinutesStart Int @default(0) @map("travel_buffer_minutes_start")
+  travelBufferMinutesEnd   Int @default(0) @map("travel_buffer_minutes_end")
 
   // Reason for transparency
-  reason                   String       @db.Text
-  appliedAt                DateTime     @default(now()) @map("applied_at")
+  reason    String   @db.Text
+  appliedAt DateTime @default(now()) @map("applied_at")
 
   // Configuration reference
-  configRef                String?      @map("config_ref") // Reference to CalendarConfig
+  configRef String? @map("config_ref") // Reference to CalendarConfig
 
   // Relations
-  serviceOrder             ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
 
   @@unique([serviceOrderId])
   @@index([serviceOrderId])
@@ -2053,20 +2065,20 @@ model ServiceOrderBuffer {
 }
 
 model ServiceOrderRiskFactor {
-  id             String   @id @default(uuid())
-  serviceOrderId String   @map("service_order_id")
+  id             String @id @default(uuid())
+  serviceOrderId String @map("service_order_id")
 
   // Risk factor details
-  factorType     RiskFactorType @map("factor_type")
-  factorScore    Decimal  @map("factor_score") @db.Decimal(5, 2) // Contribution to risk score
-  description    String   @db.Text
+  factorType  RiskFactorType @map("factor_type")
+  factorScore Decimal        @map("factor_score") @db.Decimal(5, 2) // Contribution to risk score
+  description String         @db.Text
 
   // Detection
-  detectedAt     DateTime @default(now()) @map("detected_at")
-  detectedBy     String   @map("detected_by") @db.VarChar(50) // SYSTEM, USER_EMAIL
+  detectedAt DateTime @default(now()) @map("detected_at")
+  detectedBy String   @map("detected_by") @db.VarChar(50) // SYSTEM, USER_EMAIL
 
   // Relations
-  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
 
   @@index([serviceOrderId])
   @@map("service_order_risk_factors")
@@ -2086,44 +2098,44 @@ enum RiskFactorType {
 // ============================================================================
 
 model Assignment {
-  id                      String   @id @default(uuid())
-  serviceOrderId          String   @map("service_order_id")
-  providerId              String   @map("provider_id")
-  workTeamId              String?  @map("work_team_id")
+  id             String  @id @default(uuid())
+  serviceOrderId String  @map("service_order_id")
+  providerId     String  @map("provider_id")
+  workTeamId     String? @map("work_team_id")
 
   // Assignment metadata
-  assignmentMode          AssignmentMode @map("assignment_mode")
-  assignmentMethod        String   @map("assignment_method") @db.VarChar(50) // DIRECT, OFFER, BROADCAST, AUTO
+  assignmentMode   AssignmentMode @map("assignment_mode")
+  assignmentMethod String         @map("assignment_method") @db.VarChar(50) // DIRECT, OFFER, BROADCAST, AUTO
 
   // Assignment funnel
-  funnelExecutionId       String?  @map("funnel_execution_id") // Link to funnel audit
-  providerRank            Int?     @map("provider_rank") // Rank in candidate list
-  providerScore           Decimal? @map("provider_score") @db.Decimal(5, 2)
-  scoreBreakdown          Json?    @map("score_breakdown") // Detailed scoring
+  funnelExecutionId String?  @map("funnel_execution_id") // Link to funnel audit
+  providerRank      Int?     @map("provider_rank") // Rank in candidate list
+  providerScore     Decimal? @map("provider_score") @db.Decimal(5, 2)
+  scoreBreakdown    Json?    @map("score_breakdown") // Detailed scoring
 
   // State
-  state                   AssignmentState @default(PENDING)
-  stateChangedAt          DateTime @default(now()) @map("state_changed_at")
+  state          AssignmentState @default(PENDING)
+  stateChangedAt DateTime        @default(now()) @map("state_changed_at")
 
   // Provider response
-  acceptedAt              DateTime? @map("accepted_at")
-  rejectedAt              DateTime? @map("rejected_at")
-  rejectionReason         String?   @map("rejection_reason") @db.Text
+  acceptedAt      DateTime? @map("accepted_at")
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
 
   // Date negotiation (up to 3 rounds)
-  negotiationRound        Int      @default(0) @map("negotiation_round")
-  proposedDate            DateTime? @map("proposed_date")
-  counterproposalDate     DateTime? @map("counterproposal_date")
+  negotiationRound    Int       @default(0) @map("negotiation_round")
+  proposedDate        DateTime? @map("proposed_date")
+  counterproposalDate DateTime? @map("counterproposal_date")
 
   // Relations
-  serviceOrder            ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  provider                Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  workTeam                WorkTeam? @relation(fields: [workTeamId], references: [id], onDelete: SetNull)
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  provider     Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workTeam     WorkTeam?    @relation(fields: [workTeamId], references: [id], onDelete: SetNull)
 
   // Audit
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
-  createdBy               String?  @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
 
   @@index([serviceOrderId])
   @@index([providerId])
@@ -2134,10 +2146,10 @@ model Assignment {
 }
 
 enum AssignmentMode {
-  DIRECT        // Operator selects specific provider
-  OFFER         // Send offer, wait for acceptance
-  BROADCAST     // Send to multiple providers
-  AUTO_ACCEPT   // Auto-accept (ES/IT only)
+  DIRECT // Operator selects specific provider
+  OFFER // Send offer, wait for acceptance
+  BROADCAST // Send to multiple providers
+  AUTO_ACCEPT // Auto-accept (ES/IT only)
 }
 
 enum AssignmentState {
@@ -2150,22 +2162,22 @@ enum AssignmentState {
 }
 
 model AssignmentFunnelExecution {
-  id                       String   @id @default(uuid())
-  serviceOrderId           String   @map("service_order_id")
+  id             String @id @default(uuid())
+  serviceOrderId String @map("service_order_id")
 
   // Funnel input
-  requestedDate            DateTime @map("requested_date")
-  requestedSlot            String?  @map("requested_slot")
+  requestedDate DateTime @map("requested_date")
+  requestedSlot String?  @map("requested_slot")
 
   // Funnel results
-  totalProvidersEvaluated  Int      @map("total_providers_evaluated")
-  eligibleProviders        Int      @map("eligible_providers")
-  funnelSteps              Json     @map("funnel_steps") // Array of funnel step audits
+  totalProvidersEvaluated Int  @map("total_providers_evaluated")
+  eligibleProviders       Int  @map("eligible_providers")
+  funnelSteps             Json @map("funnel_steps") // Array of funnel step audits
 
   // Execution metadata
-  executionTimeMs          Int      @map("execution_time_ms")
-  executedAt               DateTime @default(now()) @map("executed_at")
-  executedBy               String   @map("executed_by") @db.VarChar(100)
+  executionTimeMs Int      @map("execution_time_ms")
+  executedAt      DateTime @default(now()) @map("executed_at")
+  executedBy      String   @map("executed_by") @db.VarChar(100)
 
   @@index([serviceOrderId])
   @@index([executedAt])
@@ -2177,49 +2189,49 @@ model AssignmentFunnelExecution {
 // ============================================================================
 
 model Booking {
-  id               String   @id @default(uuid())
-  serviceOrderId   String   @map("service_order_id")
-  providerId       String   @map("provider_id")
-  workTeamId       String   @map("work_team_id")
+  id             String @id @default(uuid())
+  serviceOrderId String @map("service_order_id")
+  providerId     String @map("provider_id")
+  workTeamId     String @map("work_team_id")
 
   // Booking slot
-  bookingDate      DateTime @map("booking_date") @db.Date
-  startSlot        Int      @map("start_slot") // 0-95 (15-min slots)
-  endSlot          Int      @map("end_slot")   // 0-95
-  durationMinutes  Int      @map("duration_minutes")
+  bookingDate     DateTime @map("booking_date") @db.Date
+  startSlot       Int      @map("start_slot") // 0-95 (15-min slots)
+  endSlot         Int      @map("end_slot") // 0-95
+  durationMinutes Int      @map("duration_minutes")
 
   // Shift info
-  shift            ShiftCode?
-  maySpanShifts    Boolean   @default(false) @map("may_span_shifts")
-  maySpanDays      Boolean   @default(false) @map("may_span_days")
-  slotSpan         Json?     @map("slot_span") // [{date, startSlot, endSlot}] for multi-day
+  shift         ShiftCode?
+  maySpanShifts Boolean    @default(false) @map("may_span_shifts")
+  maySpanDays   Boolean    @default(false) @map("may_span_days")
+  slotSpan      Json?      @map("slot_span") // [{date, startSlot, endSlot}] for multi-day
 
   // Travel buffers applied
-  travelBufferBefore Int     @default(0) @map("travel_buffer_before")
-  travelBufferAfter  Int     @default(0) @map("travel_buffer_after")
+  travelBufferBefore Int @default(0) @map("travel_buffer_before")
+  travelBufferAfter  Int @default(0) @map("travel_buffer_after")
 
   // Booking type
-  bookingType      BookingType @map("booking_type")
+  bookingType BookingType @map("booking_type")
 
   // Pre-booking (temporary hold)
-  expiresAt        DateTime? @map("expires_at")
-  holdReference    String?   @unique @map("hold_reference") // For idempotency
+  expiresAt     DateTime? @map("expires_at")
+  holdReference String?   @unique @map("hold_reference") // For idempotency
 
   // Status
-  status           BookingStatus @default(PRE_BOOKED)
-  confirmedAt      DateTime? @map("confirmed_at")
-  cancelledAt      DateTime? @map("cancelled_at")
-  cancellationReason String? @map("cancellation_reason") @db.Text
+  status             BookingStatus @default(PRE_BOOKED)
+  confirmedAt        DateTime?     @map("confirmed_at")
+  cancelledAt        DateTime?     @map("cancelled_at")
+  cancellationReason String?       @map("cancellation_reason") @db.Text
 
   // Relations
-  serviceOrder     ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  provider         Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  workTeam         WorkTeam @relation(fields: [workTeamId], references: [id], onDelete: Restrict)
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  provider     Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workTeam     WorkTeam     @relation(fields: [workTeamId], references: [id], onDelete: Restrict)
 
   // Audit
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  createdBy        String?  @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
 
   @@unique([workTeamId, bookingDate, startSlot, endSlot])
   @@index([serviceOrderId])
@@ -2231,22 +2243,22 @@ model Booking {
 }
 
 enum ShiftCode {
-  M   // Morning
-  A   // Afternoon
-  E   // Evening
+  M // Morning
+  A // Afternoon
+  E // Evening
 }
 
 enum BookingType {
-  SERVICE_ORDER   // Regular service order booking
-  EXTERNAL_BLOCK  // Manual block (vacation, maintenance)
-  STORE_CLOSURE   // Store/provider closure
+  SERVICE_ORDER // Regular service order booking
+  EXTERNAL_BLOCK // Manual block (vacation, maintenance)
+  STORE_CLOSURE // Store/provider closure
 }
 
 enum BookingStatus {
-  PRE_BOOKED      // Temporary hold (48h TTL)
-  CONFIRMED       // Confirmed booking
-  CANCELLED       // Cancelled
-  EXPIRED         // Pre-booking expired
+  PRE_BOOKED // Temporary hold (48h TTL)
+  CONFIRMED // Confirmed booking
+  CANCELLED // Cancelled
+  EXPIRED // Pre-booking expired
 }
 
 // ============================================================================
@@ -2254,45 +2266,45 @@ enum BookingStatus {
 // ============================================================================
 
 model CalendarConfig {
-  id                         String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Multi-tenancy
-  countryCode                String   @map("country_code") @db.VarChar(3)
-  businessUnit               String   @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Working days (0=Sunday, 1=Monday, ..., 6=Saturday)
-  workingDays                Json     @map("working_days") // [1,2,3,4,5] for Mon-Fri
-  timezone                   String   @db.VarChar(50) // Europe/Madrid, Europe/Paris
+  workingDays Json   @map("working_days") // [1,2,3,4,5] for Mon-Fri
+  timezone    String @db.VarChar(50) // Europe/Madrid, Europe/Paris
 
   // Shift definitions
-  morningShiftStart          String   @map("morning_shift_start") @db.VarChar(5) // "08:00"
-  morningShiftEnd            String   @map("morning_shift_end") @db.VarChar(5)   // "14:00"
-  afternoonShiftStart        String   @map("afternoon_shift_start") @db.VarChar(5) // "14:00"
-  afternoonShiftEnd          String   @map("afternoon_shift_end") @db.VarChar(5) // "20:00"
-  eveningShiftStart          String?  @map("evening_shift_start") @db.VarChar(5)  // "20:00" (optional)
-  eveningShiftEnd            String?  @map("evening_shift_end") @db.VarChar(5)    // "22:00"
+  morningShiftStart   String  @map("morning_shift_start") @db.VarChar(5) // "08:00"
+  morningShiftEnd     String  @map("morning_shift_end") @db.VarChar(5) // "14:00"
+  afternoonShiftStart String  @map("afternoon_shift_start") @db.VarChar(5) // "14:00"
+  afternoonShiftEnd   String  @map("afternoon_shift_end") @db.VarChar(5) // "20:00"
+  eveningShiftStart   String? @map("evening_shift_start") @db.VarChar(5) // "20:00" (optional)
+  eveningShiftEnd     String? @map("evening_shift_end") @db.VarChar(5) // "22:00"
 
   // PRD-compliant buffer configuration (BR-5)
   // Global buffer: Block bookings within N non-working days from today
-  globalBufferNonWorkingDays Int      @default(0) @map("global_buffer_non_working_days")
+  globalBufferNonWorkingDays Int @default(0) @map("global_buffer_non_working_days")
   // Static buffer: Block bookings within N non-working days from deliveryDate
-  staticBufferNonWorkingDays Int      @default(0) @map("static_buffer_non_working_days")
+  staticBufferNonWorkingDays Int @default(0) @map("static_buffer_non_working_days")
   // Travel buffer: Fixed minutes added before/after each job
-  travelBufferMinutes        Int      @default(0) @map("travel_buffer_minutes")
+  travelBufferMinutes        Int @default(0) @map("travel_buffer_minutes")
 
   // Cross-day jobs allowed
-  crossDayAllowed            Boolean  @default(false) @map("cross_day_allowed")
+  crossDayAllowed Boolean @default(false) @map("cross_day_allowed")
 
   // Holiday region code for Nager.Date API (supports regional holidays)
-  holidayRegion              String?  @map("holiday_region") @db.VarChar(10) // e.g., "MD" for Madrid
+  holidayRegion String? @map("holiday_region") @db.VarChar(10) // e.g., "MD" for Madrid
 
   // Providers using this config as default
-  providerWorkingSchedules   ProviderWorkingSchedule[]
+  providerWorkingSchedules ProviderWorkingSchedule[]
 
   // Audit
-  createdAt                  DateTime @default(now()) @map("created_at")
-  updatedAt                  DateTime @updatedAt @map("updated_at")
-  createdBy                  String?  @map("created_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
 
   @@unique([countryCode, businessUnit])
   @@index([countryCode, businessUnit])
@@ -2304,19 +2316,19 @@ model CalendarConfig {
 // ============================================================================
 
 model Holiday {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Multi-tenancy
-  countryCode String   @map("country_code") @db.VarChar(3)
+  countryCode String @map("country_code") @db.VarChar(3)
 
   // Holiday details
-  date        DateTime @db.Date
-  name        String   @db.VarChar(255)
-  isNational  Boolean  @default(true) @map("is_national")
-  regions     Json?    // Array of region codes if regional
+  date       DateTime @db.Date
+  name       String   @db.VarChar(255)
+  isNational Boolean  @default(true) @map("is_national")
+  regions    Json? // Array of region codes if regional
 
   // Relations
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([countryCode, date])
   @@index([countryCode, date])
@@ -2328,39 +2340,39 @@ model Holiday {
 // ============================================================================
 
 model TechnicalVisitOutcome {
-  id                        String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // TV Service Order (CONFIRMATION_TV or QUOTATION_TV type)
-  tvServiceOrderId          String   @unique @map("tv_service_order_id")
+  tvServiceOrderId String @unique @map("tv_service_order_id")
 
   // Linked Installation Order (if any)
-  linkedInstallationOrderId String?  @map("linked_installation_order_id")
+  linkedInstallationOrderId String? @map("linked_installation_order_id")
 
   // Outcome (YES / YES-BUT / NO)
-  outcome                   TvOutcome
+  outcome TvOutcome
 
   // Modifications (required for YES-BUT, optional for others)
-  modifications             Json?    // Array of {description: string, extraDurationMin?: number, reason?: string}
+  modifications Json? // Array of {description: string, extraDurationMin?: number, reason?: string}
 
   // Technician notes
-  technicianNotes           String?  @map("technician_notes") @db.Text
+  technicianNotes String? @map("technician_notes") @db.Text
 
   // Sales scope change tracking (for YES-BUT outcomes)
-  scopeChangeRequested      Boolean  @default(false) @map("scope_change_requested")
-  scopeChangeRequestedAt    DateTime? @map("scope_change_requested_at")
-  scopeChangeApproved       Boolean? @map("scope_change_approved")
-  scopeChangeApprovedAt     DateTime? @map("scope_change_approved_at")
-  scopeChangeApprovedBy     String?  @map("scope_change_approved_by") @db.VarChar(100)
+  scopeChangeRequested   Boolean   @default(false) @map("scope_change_requested")
+  scopeChangeRequestedAt DateTime? @map("scope_change_requested_at")
+  scopeChangeApproved    Boolean?  @map("scope_change_approved")
+  scopeChangeApprovedAt  DateTime? @map("scope_change_approved_at")
+  scopeChangeApprovedBy  String?   @map("scope_change_approved_by") @db.VarChar(100)
 
   // Installation blocking status
-  installationBlocked       Boolean  @default(false) @map("installation_blocked")
-  installationUnblockedAt   DateTime? @map("installation_unblocked_at")
+  installationBlocked     Boolean   @default(false) @map("installation_blocked")
+  installationUnblockedAt DateTime? @map("installation_unblocked_at")
 
   // Audit
-  recordedAt                DateTime @default(now()) @map("recorded_at")
-  recordedBy                String   @map("recorded_by") @db.VarChar(100) // Technician user ID or email
-  createdAt                 DateTime @default(now()) @map("created_at")
-  updatedAt                 DateTime @updatedAt @map("updated_at")
+  recordedAt DateTime @default(now()) @map("recorded_at")
+  recordedBy String   @map("recorded_by") @db.VarChar(100) // Technician user ID or email
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@index([tvServiceOrderId])
   @@index([linkedInstallationOrderId])
@@ -2370,9 +2382,9 @@ model TechnicalVisitOutcome {
 }
 
 enum TvOutcome {
-  YES      // Installation can proceed as planned
-  YES_BUT  // Installation can proceed with modifications (scope change)
-  NO       // Installation cannot proceed (cancel or major scope change)
+  YES // Installation can proceed as planned
+  YES_BUT // Installation can proceed with modifications (scope change)
+  NO // Installation cannot proceed (cancel or major scope change)
 }
 
 // ============================================================================
@@ -2380,52 +2392,52 @@ enum TvOutcome {
 // ============================================================================
 
 model Task {
-  id                  String        @id @default(uuid())
-  taskType            TaskType      @map("task_type")
-  priority            TaskPriority
-  status              TaskStatus    @default(OPEN)
-  serviceOrderId      String        @map("service_order_id")
-  context             Json          // Task-type-specific context data
+  id             String       @id @default(uuid())
+  taskType       TaskType     @map("task_type")
+  priority       TaskPriority
+  status         TaskStatus   @default(OPEN)
+  serviceOrderId String       @map("service_order_id")
+  context        Json // Task-type-specific context data
 
   // Assignment
-  assignedTo          String?       @map("assigned_to")
-  assignedBy          String?       @map("assigned_by") // User ID or 'SYSTEM'
-  assignedAt          DateTime?     @map("assigned_at")
+  assignedTo String?   @map("assigned_to")
+  assignedBy String?   @map("assigned_by") // User ID or 'SYSTEM'
+  assignedAt DateTime? @map("assigned_at")
 
   // SLA Tracking
-  createdAt           DateTime      @default(now()) @map("created_at")
-  slaDeadline         DateTime      @map("sla_deadline")
-  slaPaused           Boolean       @default(false) @map("sla_paused")
-  slaPausedAt         DateTime?     @map("sla_paused_at")
-  slaPauseReason      String?       @map("sla_pause_reason") @db.Text
-  totalPausedMinutes  Int           @default(0) @map("total_paused_minutes")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  slaDeadline        DateTime  @map("sla_deadline")
+  slaPaused          Boolean   @default(false) @map("sla_paused")
+  slaPausedAt        DateTime? @map("sla_paused_at")
+  slaPauseReason     String?   @map("sla_pause_reason") @db.Text
+  totalPausedMinutes Int       @default(0) @map("total_paused_minutes")
 
   // Escalation
-  escalationLevel     Int           @default(0) @map("escalation_level")
-  escalatedAt         DateTime?     @map("escalated_at")
+  escalationLevel Int       @default(0) @map("escalation_level")
+  escalatedAt     DateTime? @map("escalated_at")
 
   // Completion
-  startedAt           DateTime?     @map("started_at")
-  completedAt         DateTime?     @map("completed_at")
-  completedBy         String?       @map("completed_by")
-  resolutionNotes     String?       @map("resolution_notes") @db.Text
-  resolutionTime      Int?          @map("resolution_time") // Minutes
-  withinSLA           Boolean?      @map("within_sla")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  completedBy     String?   @map("completed_by")
+  resolutionNotes String?   @map("resolution_notes") @db.Text
+  resolutionTime  Int?      @map("resolution_time") // Minutes
+  withinSLA       Boolean?  @map("within_sla")
 
   // Cancellation
-  cancelledAt         DateTime?     @map("cancelled_at")
-  cancelledBy         String?       @map("cancelled_by")
-  cancellationReason  String?       @map("cancellation_reason") @db.Text
+  cancelledAt        DateTime? @map("cancelled_at")
+  cancelledBy        String?   @map("cancelled_by")
+  cancellationReason String?   @map("cancellation_reason") @db.Text
 
   // Metadata
-  countryCode         String        @map("country_code") @db.VarChar(3)
-  businessUnit        String        @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Relations
-  serviceOrder        ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  auditLogs           TaskAuditLog[]
+  serviceOrder ServiceOrder   @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  auditLogs    TaskAuditLog[]
 
-  updatedAt           DateTime      @updatedAt @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([serviceOrderId])
   @@index([assignedTo])
@@ -2453,11 +2465,11 @@ enum TaskType {
 }
 
 enum TaskPriority {
-  CRITICAL  // 2 hours SLA
-  URGENT    // 4 hours SLA
-  HIGH      // 8 hours SLA
-  MEDIUM    // 16 hours SLA
-  LOW       // 40 hours SLA
+  CRITICAL // 2 hours SLA
+  URGENT // 4 hours SLA
+  HIGH // 8 hours SLA
+  MEDIUM // 16 hours SLA
+  LOW // 40 hours SLA
 }
 
 enum TaskStatus {
@@ -2474,11 +2486,11 @@ model TaskAuditLog {
   action      String   @db.VarChar(50) // CREATED, ASSIGNED, STARTED, UPDATED, COMPLETED, CANCELLED, ESCALATED
   performedBy String   @map("performed_by") @db.VarChar(100) // User ID or 'SYSTEM'
   performedAt DateTime @default(now()) @map("performed_at")
-  changes     Json?    // Before/after state
+  changes     Json? // Before/after state
   notes       String?  @db.Text
 
   // Relations
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([performedAt])
@@ -2490,79 +2502,79 @@ model TaskAuditLog {
 // ============================================================================
 
 model WorkCompletionForm {
-  id              String   @id @default(uuid())
-  wcfNumber       String   @unique @map("wcf_number") @db.VarChar(30)
-  version         Int      @default(1)
+  id        String @id @default(uuid())
+  wcfNumber String @unique @map("wcf_number") @db.VarChar(30)
+  version   Int    @default(1)
 
   // Relations
-  serviceOrderId  String   @map("service_order_id")
-  contractId      String?  @map("contract_id")
+  serviceOrderId String  @map("service_order_id")
+  contractId     String? @map("contract_id")
 
   // Multi-tenancy
-  countryCode     String   @map("country_code") @db.VarChar(3)
-  businessUnit    String   @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Parties (simplified as JSON for v1)
-  customerInfo    Json     @map("customer_info")    // {id, name, email, phone, address}
-  technicianInfo  Json     @map("technician_info")  // {id, name, license, certifications}
-  providerInfo    Json     @map("provider_info")    // {id, name, license}
+  customerInfo   Json @map("customer_info") // {id, name, email, phone, address}
+  technicianInfo Json @map("technician_info") // {id, name, license, certifications}
+  providerInfo   Json @map("provider_info") // {id, name, license}
 
   // Service execution details
   serviceDate     DateTime @map("service_date")
   serviceLocation Json     @map("service_location") // Address object
 
   // Work performed (core fields + JSON for details)
-  workSummary     String   @map("work_summary") @db.Text
-  workDetails     Json     @map("work_details")     // {description, tasksCompleted, issuesFound, issuesResolved}
+  workSummary String @map("work_summary") @db.Text
+  workDetails Json   @map("work_details") // {description, tasksCompleted, issuesFound, issuesResolved}
 
   // Totals (for quick access)
-  totalLaborHours Decimal  @map("total_labor_hours") @db.Decimal(6, 2)
-  totalMaterials  Int      @default(0) @map("total_materials")
-  totalEquipment  Int      @default(0) @map("total_equipment")
+  totalLaborHours Decimal @map("total_labor_hours") @db.Decimal(6, 2)
+  totalMaterials  Int     @default(0) @map("total_materials")
+  totalEquipment  Int     @default(0) @map("total_equipment")
 
   // Pricing summary
-  pricingSummary  Json?    @map("pricing_summary")  // {laborCost, materialsCost, equipmentCost, subtotal, tax, total, etc.}
+  pricingSummary Json? @map("pricing_summary") // {laborCost, materialsCost, equipmentCost, subtotal, tax, total, etc.}
 
   // Customer acceptance
-  customerAccepted       Boolean?  @map("customer_accepted")
-  customerAcceptedAt     DateTime? @map("customer_accepted_at")
-  customerSatisfactionRating Int?  @map("customer_satisfaction_rating") // 1-5
-  customerFeedback       String?   @map("customer_feedback") @db.Text
-  customerConcerns       Json?     @map("customer_concerns") // Array of concerns
-  disputedItems          Json?     @map("disputed_items")    // Array of disputed items
-  refusalReason          String?   @map("refusal_reason") @db.Text
+  customerAccepted           Boolean?  @map("customer_accepted")
+  customerAcceptedAt         DateTime? @map("customer_accepted_at")
+  customerSatisfactionRating Int?      @map("customer_satisfaction_rating") // 1-5
+  customerFeedback           String?   @map("customer_feedback") @db.Text
+  customerConcerns           Json?     @map("customer_concerns") // Array of concerns
+  disputedItems              Json?     @map("disputed_items") // Array of disputed items
+  refusalReason              String?   @map("refusal_reason") @db.Text
 
   // PDF document storage (GCS URLs)
-  pdfUrl          String?  @map("pdf_url") @db.VarChar(500)
-  pdfGcsPath      String?  @map("pdf_gcs_path") @db.VarChar(500)
-  thumbnailUrl    String?  @map("thumbnail_url") @db.VarChar(500)
+  pdfUrl       String? @map("pdf_url") @db.VarChar(500)
+  pdfGcsPath   String? @map("pdf_gcs_path") @db.VarChar(500)
+  thumbnailUrl String? @map("thumbnail_url") @db.VarChar(500)
 
   // Warranty & follow-up
-  warrantyInfo    Json?    @map("warranty_info")    // {period, terms, coverage}
+  warrantyInfo     Json?   @map("warranty_info") // {period, terms, coverage}
   followUpRequired Boolean @default(false) @map("follow_up_required")
-  followUpActions Json?    @map("follow_up_actions") // Array of follow-up actions
+  followUpActions  Json?   @map("follow_up_actions") // Array of follow-up actions
 
   // Status tracking
-  status          WcfStatus @default(DRAFT)
-  submittedAt     DateTime? @map("submitted_at")
-  approvedAt      DateTime? @map("approved_at")
-  approvedBy      String?   @map("approved_by") @db.VarChar(100)
+  status      WcfStatus @default(DRAFT)
+  submittedAt DateTime? @map("submitted_at")
+  approvedAt  DateTime? @map("approved_at")
+  approvedBy  String?   @map("approved_by") @db.VarChar(100)
 
   // Relations
-  serviceOrder    ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  contract        Contract?    @relation(fields: [contractId], references: [id], onDelete: SetNull)
-  materials       WcfMaterial[]
-  equipment       WcfEquipment[]
-  labor           WcfLabor[]
-  photos          WcfPhoto[]
-  qualityChecks   WcfQualityCheck[]
-  signatures      WcfSignature[]
+  serviceOrder  ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  contract      Contract?         @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  materials     WcfMaterial[]
+  equipment     WcfEquipment[]
+  labor         WcfLabor[]
+  photos        WcfPhoto[]
+  qualityChecks WcfQualityCheck[]
+  signatures    WcfSignature[]
 
   // Audit
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  createdBy       String?  @map("created_by") @db.VarChar(100)
-  updatedBy       String?  @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.VarChar(100)
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
 
   @@index([serviceOrderId])
   @@index([contractId])
@@ -2574,77 +2586,77 @@ model WorkCompletionForm {
 }
 
 enum WcfStatus {
-  DRAFT           // Being created/edited
+  DRAFT // Being created/edited
   PENDING_SIGNATURE // Awaiting customer signature
-  SIGNED          // Customer has signed
-  APPROVED        // Approved by back-office
-  REJECTED        // Rejected (with disputes)
-  FINALIZED       // Final version, immutable
+  SIGNED // Customer has signed
+  APPROVED // Approved by back-office
+  REJECTED // Rejected (with disputes)
+  FINALIZED // Final version, immutable
 }
 
 model WcfMaterial {
-  id              String   @id @default(uuid())
-  wcfId           String   @map("wcf_id")
+  id    String @id @default(uuid())
+  wcfId String @map("wcf_id")
 
   // Material details
-  materialCode    String?  @map("material_code") @db.VarChar(50)
-  description     String   @db.VarChar(500)
-  category        String   @db.VarChar(100)
-  quantity        Decimal  @db.Decimal(10, 2)
-  unit            String   @db.VarChar(20)
+  materialCode String? @map("material_code") @db.VarChar(50)
+  description  String  @db.VarChar(500)
+  category     String  @db.VarChar(100)
+  quantity     Decimal @db.Decimal(10, 2)
+  unit         String  @db.VarChar(20)
 
   // Pricing
-  unitPrice       Decimal  @map("unit_price") @db.Decimal(10, 2)
-  totalPrice      Decimal  @map("total_price") @db.Decimal(10, 2)
-  currency        String   @default("EUR") @db.VarChar(3)
+  unitPrice  Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice Decimal @map("total_price") @db.Decimal(10, 2)
+  currency   String  @default("EUR") @db.VarChar(3)
 
   // Additional info
-  serialNumbers   Json?    @map("serial_numbers") // Array of serial numbers
-  warrantyMonths  Int?     @map("warranty_months")
-  suppliedBy      String   @map("supplied_by") @db.VarChar(50) // CUSTOMER, SERVICE_PROVIDER, THIRD_PARTY
-  billable        Boolean  @default(true)
-  approved        Boolean  @default(false)
+  serialNumbers  Json?   @map("serial_numbers") // Array of serial numbers
+  warrantyMonths Int?    @map("warranty_months")
+  suppliedBy     String  @map("supplied_by") @db.VarChar(50) // CUSTOMER, SERVICE_PROVIDER, THIRD_PARTY
+  billable       Boolean @default(true)
+  approved       Boolean @default(false)
 
   // Relations
-  wcf             WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
+  wcf WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([wcfId])
   @@map("wcf_materials")
 }
 
 model WcfEquipment {
-  id              String   @id @default(uuid())
-  wcfId           String   @map("wcf_id")
+  id    String @id @default(uuid())
+  wcfId String @map("wcf_id")
 
   // Equipment details
-  equipmentType   String   @map("equipment_type") @db.VarChar(100)
-  make            String   @db.VarChar(100)
-  model           String   @db.VarChar(100)
-  serialNumber    String   @map("serial_number") @db.VarChar(100)
-  description     String   @db.VarChar(500)
-  location        String   @db.VarChar(255)
-  condition       EquipmentCondition
+  equipmentType String             @map("equipment_type") @db.VarChar(100)
+  make          String             @db.VarChar(100)
+  model         String             @db.VarChar(100)
+  serialNumber  String             @map("serial_number") @db.VarChar(100)
+  description   String             @db.VarChar(500)
+  location      String             @db.VarChar(255)
+  condition     EquipmentCondition
 
   // Dates
   installationDate DateTime? @map("installation_date")
-  removalDate     DateTime? @map("removal_date")
+  removalDate      DateTime? @map("removal_date")
 
   // Pricing
-  unitPrice       Decimal?  @map("unit_price") @db.Decimal(10, 2)
-  totalPrice      Decimal?  @map("total_price") @db.Decimal(10, 2)
-  currency        String    @default("EUR") @db.VarChar(3)
-  billable        Boolean   @default(true)
+  unitPrice  Decimal? @map("unit_price") @db.Decimal(10, 2)
+  totalPrice Decimal? @map("total_price") @db.Decimal(10, 2)
+  currency   String   @default("EUR") @db.VarChar(3)
+  billable   Boolean  @default(true)
 
   // Warranty
-  warrantyInfo    Json?     @map("warranty_info")
+  warrantyInfo Json? @map("warranty_info")
 
   // Relations
-  wcf             WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
-  photos          WcfPhoto[] @relation("EquipmentPhotos")
+  wcf    WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
+  photos WcfPhoto[]         @relation("EquipmentPhotos")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([wcfId])
   @@map("wcf_equipment")
@@ -2661,34 +2673,34 @@ enum EquipmentCondition {
 }
 
 model WcfLabor {
-  id              String   @id @default(uuid())
-  wcfId           String   @map("wcf_id")
+  id    String @id @default(uuid())
+  wcfId String @map("wcf_id")
 
   // Technician
-  technicianId    String   @map("technician_id")
-  technicianName  String   @map("technician_name") @db.VarChar(255)
-  role            String   @db.VarChar(100)
+  technicianId   String @map("technician_id")
+  technicianName String @map("technician_name") @db.VarChar(255)
+  role           String @db.VarChar(100)
 
   // Time tracking
-  startTime       DateTime @map("start_time")
-  endTime         DateTime @map("end_time")
-  breakMinutes    Int?     @map("break_minutes")
-  totalMinutes    Int      @map("total_minutes")
-  netMinutes      Int      @map("net_minutes")
+  startTime    DateTime @map("start_time")
+  endTime      DateTime @map("end_time")
+  breakMinutes Int?     @map("break_minutes")
+  totalMinutes Int      @map("total_minutes")
+  netMinutes   Int      @map("net_minutes")
 
   // Pricing
-  hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(10, 2)
-  totalCost       Decimal? @map("total_cost") @db.Decimal(10, 2)
-  overtimeHours   Decimal? @map("overtime_hours") @db.Decimal(6, 2)
-  overtimeRate    Decimal? @map("overtime_rate") @db.Decimal(10, 2)
-  currency        String   @default("EUR") @db.VarChar(3)
-  billable        Boolean  @default(true)
-  approved        Boolean  @default(false)
+  hourlyRate    Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  totalCost     Decimal? @map("total_cost") @db.Decimal(10, 2)
+  overtimeHours Decimal? @map("overtime_hours") @db.Decimal(6, 2)
+  overtimeRate  Decimal? @map("overtime_rate") @db.Decimal(10, 2)
+  currency      String   @default("EUR") @db.VarChar(3)
+  billable      Boolean  @default(true)
+  approved      Boolean  @default(false)
 
   // Relations
-  wcf             WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
+  wcf WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([wcfId])
   @@index([technicianId])
@@ -2696,35 +2708,35 @@ model WcfLabor {
 }
 
 model WcfPhoto {
-  id              String   @id @default(uuid())
-  wcfId           String   @map("wcf_id")
-  equipmentId     String?  @map("equipment_id")
+  id          String  @id @default(uuid())
+  wcfId       String  @map("wcf_id")
+  equipmentId String? @map("equipment_id")
 
   // Photo metadata
-  photoType       WcfPhotoType @map("photo_type")
-  caption         String?  @db.VarChar(500)
-  sequence        Int      // Order in the gallery
+  photoType WcfPhotoType @map("photo_type")
+  caption   String?      @db.VarChar(500)
+  sequence  Int // Order in the gallery
 
   // GCS storage
-  photoUrl        String   @map("photo_url") @db.VarChar(500)
-  photoGcsPath    String   @map("photo_gcs_path") @db.VarChar(500)
-  thumbnailUrl    String?  @map("thumbnail_url") @db.VarChar(500)
+  photoUrl     String  @map("photo_url") @db.VarChar(500)
+  photoGcsPath String  @map("photo_gcs_path") @db.VarChar(500)
+  thumbnailUrl String? @map("thumbnail_url") @db.VarChar(500)
 
   // File metadata
   originalFilename String? @map("original_filename") @db.VarChar(255)
-  contentType     String   @map("content_type") @db.VarChar(100)
-  fileSize        Int      @map("file_size") // bytes
+  contentType      String  @map("content_type") @db.VarChar(100)
+  fileSize         Int     @map("file_size") // bytes
 
   // Capture metadata
-  capturedAt      DateTime @map("captured_at")
-  capturedBy      String?  @map("captured_by") @db.VarChar(100)
-  location        Json?    // {lat, lng, address}
+  capturedAt DateTime @map("captured_at")
+  capturedBy String?  @map("captured_by") @db.VarChar(100)
+  location   Json? // {lat, lng, address}
 
   // Relations
-  wcf             WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
-  equipment       WcfEquipment?      @relation("EquipmentPhotos", fields: [equipmentId], references: [id], onDelete: SetNull)
+  wcf       WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
+  equipment WcfEquipment?      @relation("EquipmentPhotos", fields: [equipmentId], references: [id], onDelete: SetNull)
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([wcfId])
   @@index([equipmentId])
@@ -2745,65 +2757,65 @@ enum WcfPhotoType {
 }
 
 model WcfQualityCheck {
-  id              String   @id @default(uuid())
-  wcfId           String   @map("wcf_id")
+  id    String @id @default(uuid())
+  wcfId String @map("wcf_id")
 
   // Check details
-  checkType       String   @map("check_type") @db.VarChar(100)
-  description     String   @db.VarChar(500)
-  passed          Boolean
+  checkType   String  @map("check_type") @db.VarChar(100)
+  description String  @db.VarChar(500)
+  passed      Boolean
 
   // Measurements
-  measuredValue   String?  @map("measured_value") @db.VarChar(255)
-  expectedValue   String?  @map("expected_value") @db.VarChar(255)
-  unit            String?  @db.VarChar(50)
+  measuredValue String? @map("measured_value") @db.VarChar(255)
+  expectedValue String? @map("expected_value") @db.VarChar(255)
+  unit          String? @db.VarChar(50)
 
   // Execution
-  performedBy     String   @map("performed_by") @db.VarChar(100)
-  performedAt     DateTime @map("performed_at")
-  notes           String?  @db.Text
+  performedBy String   @map("performed_by") @db.VarChar(100)
+  performedAt DateTime @map("performed_at")
+  notes       String?  @db.Text
 
   // Relations
-  wcf             WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
+  wcf WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([wcfId])
   @@map("wcf_quality_checks")
 }
 
 model WcfSignature {
-  id              String   @id @default(uuid())
-  wcfId           String   @map("wcf_id")
+  id    String @id @default(uuid())
+  wcfId String @map("wcf_id")
 
   // Signer details
-  signerType      WcfSignerType @map("signer_type")
-  signerName      String   @map("signer_name") @db.VarChar(255)
-  signerEmail     String?  @map("signer_email")
-  signerPhone     String?  @map("signer_phone")
-  signerRole      String?  @map("signer_role") @db.VarChar(100)
+  signerType  WcfSignerType @map("signer_type")
+  signerName  String        @map("signer_name") @db.VarChar(255)
+  signerEmail String?       @map("signer_email")
+  signerPhone String?       @map("signer_phone")
+  signerRole  String?       @map("signer_role") @db.VarChar(100)
 
   // Signature data
-  signatureMethod SignatureMethod @map("signature_method")
-  signatureDataUrl String? @map("signature_data_url") @db.Text // Base64 for simple signatures
-  signatureGcsPath String? @map("signature_gcs_path") @db.VarChar(500) // GCS path for large signatures
+  signatureMethod  SignatureMethod @map("signature_method")
+  signatureDataUrl String?         @map("signature_data_url") @db.Text // Base64 for simple signatures
+  signatureGcsPath String?         @map("signature_gcs_path") @db.VarChar(500) // GCS path for large signatures
 
   // E-signature integration
   eSignatureProvider String? @map("e_signature_provider") @db.VarChar(50) // DOCUSIGN, ADOBE_SIGN, etc.
   eSignatureId       String? @map("e_signature_id") @db.VarChar(255)
 
   // Verification
-  status          SignatureStatus @default(REQUESTED)
-  signedAt        DateTime? @map("signed_at")
-  ipAddress       String?   @map("ip_address") @db.VarChar(45)
-  userAgent       String?   @map("user_agent") @db.VarChar(500)
-  evidence        Json?     // Additional verification data
+  status    SignatureStatus @default(REQUESTED)
+  signedAt  DateTime?       @map("signed_at")
+  ipAddress String?         @map("ip_address") @db.VarChar(45)
+  userAgent String?         @map("user_agent") @db.VarChar(500)
+  evidence  Json? // Additional verification data
 
   // Relations
-  wcf             WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
+  wcf WorkCompletionForm @relation(fields: [wcfId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([wcfId])
   @@index([signerType])
@@ -2824,37 +2836,37 @@ enum WcfSignerType {
 
 // Notification templates for emails, SMS, and push notifications
 model NotificationTemplate {
-  id              String   @id @default(uuid())
-  code            String   @unique @db.VarChar(100) // ORDER_ASSIGNED, TECH_ON_WAY, WCF_READY
-  name            String   @db.VarChar(255)
-  description     String?  @db.Text
+  id          String  @id @default(uuid())
+  code        String  @unique @db.VarChar(100) // ORDER_ASSIGNED, TECH_ON_WAY, WCF_READY
+  name        String  @db.VarChar(255)
+  description String? @db.Text
 
   // Template type
-  channel         NotificationChannelType @map("channel")
-  eventType       String   @map("event_type") @db.VarChar(100) // order.assigned, execution.checkin
+  channel   NotificationChannelType @map("channel")
+  eventType String                  @map("event_type") @db.VarChar(100) // order.assigned, execution.checkin
 
   // Multi-tenancy
-  countryCode     String?  @map("country_code") @db.VarChar(3) // NULL = all countries
-  businessUnit    String?  @map("business_unit") @db.VarChar(50) // NULL = all BUs
+  countryCode  String? @map("country_code") @db.VarChar(3) // NULL = all countries
+  businessUnit String? @map("business_unit") @db.VarChar(50) // NULL = all BUs
 
   // Template content (multi-language)
-  translations    NotificationTranslation[]
+  translations NotificationTranslation[]
 
   // Template configuration
-  priority        NotificationPriority @default(NORMAL)
-  retryEnabled    Boolean  @default(true) @map("retry_enabled")
-  maxRetries      Int      @default(3) @map("max_retries")
+  priority     NotificationPriority @default(NORMAL)
+  retryEnabled Boolean              @default(true) @map("retry_enabled")
+  maxRetries   Int                  @default(3) @map("max_retries")
 
   // Status
-  isActive        Boolean  @default(true) @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
   // Relations
-  notifications   Notification[]
+  notifications Notification[]
 
   // Audit
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  createdBy       String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
 
   @@index([channel])
   @@index([eventType])
@@ -2865,22 +2877,22 @@ model NotificationTemplate {
 
 // Multi-language template translations
 model NotificationTranslation {
-  id              String   @id @default(uuid())
-  templateId      String   @map("template_id")
-  language        String   @db.VarChar(5) // es, fr, it, pl, en
+  id         String @id @default(uuid())
+  templateId String @map("template_id")
+  language   String @db.VarChar(5) // es, fr, it, pl, en
 
   // Content
-  subject         String?  @db.VarChar(500) // For email
-  bodyTemplate    String   @map("body_template") @db.Text // Handlebars template
+  subject      String? @db.VarChar(500) // For email
+  bodyTemplate String  @map("body_template") @db.Text // Handlebars template
 
   // SMS/Push specific
-  shortMessage    String?  @map("short_message") @db.VarChar(160) // For SMS
+  shortMessage String? @map("short_message") @db.VarChar(160) // For SMS
 
   // Relations
-  template        NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([templateId, language])
   @@index([templateId])
@@ -2890,28 +2902,28 @@ model NotificationTranslation {
 
 // User notification preferences (opt-in/opt-out)
 model NotificationPreference {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
   // Preferences by channel
-  emailEnabled    Boolean  @default(true) @map("email_enabled")
-  smsEnabled      Boolean  @default(true) @map("sms_enabled")
-  pushEnabled     Boolean  @default(true) @map("push_enabled")
+  emailEnabled Boolean @default(true) @map("email_enabled")
+  smsEnabled   Boolean @default(true) @map("sms_enabled")
+  pushEnabled  Boolean @default(true) @map("push_enabled")
 
   // Preferences by event type
-  eventPreferences Json    @map("event_preferences") // { "order.assigned": { email: true, sms: false }, ... }
+  eventPreferences Json @map("event_preferences") // { "order.assigned": { email: true, sms: false }, ... }
 
   // Quiet hours
-  quietHoursEnabled Boolean @default(false) @map("quiet_hours_enabled")
-  quietHoursStart   String? @map("quiet_hours_start") @db.VarChar(5) // HH:MM
-  quietHoursEnd     String? @map("quiet_hours_end") @db.VarChar(5) // HH:MM
+  quietHoursEnabled  Boolean @default(false) @map("quiet_hours_enabled")
+  quietHoursStart    String? @map("quiet_hours_start") @db.VarChar(5) // HH:MM
+  quietHoursEnd      String? @map("quiet_hours_end") @db.VarChar(5) // HH:MM
   quietHoursTimezone String? @map("quiet_hours_timezone") @db.VarChar(50)
 
   // Relations
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId])
   @@index([userId])
@@ -2920,61 +2932,61 @@ model NotificationPreference {
 
 // Notification log
 model Notification {
-  id              String   @id @default(uuid())
-  templateId      String?  @map("template_id")
+  id         String  @id @default(uuid())
+  templateId String? @map("template_id")
 
   // Recipient
-  recipientId     String?  @map("recipient_id") // User ID (optional)
-  recipientEmail  String?  @map("recipient_email")
-  recipientPhone  String?  @map("recipient_phone")
-  recipientName   String?  @map("recipient_name") @db.VarChar(255)
+  recipientId    String? @map("recipient_id") // User ID (optional)
+  recipientEmail String? @map("recipient_email")
+  recipientPhone String? @map("recipient_phone")
+  recipientName  String? @map("recipient_name") @db.VarChar(255)
 
   // Notification details
-  channel         NotificationChannelType
-  eventType       String   @map("event_type") @db.VarChar(100)
-  priority        NotificationPriority @default(NORMAL)
-  language        String   @default("en") @db.VarChar(5)
+  channel   NotificationChannelType
+  eventType String                  @map("event_type") @db.VarChar(100)
+  priority  NotificationPriority    @default(NORMAL)
+  language  String                  @default("en") @db.VarChar(5)
 
   // Content
-  subject         String?  @db.VarChar(500)
-  body            String   @db.Text
-  variables       Json?    // Template variables used
+  subject   String? @db.VarChar(500)
+  body      String  @db.Text
+  variables Json? // Template variables used
 
   // Status
-  status          NotificationStatusType @default(PENDING)
-  errorMessage    String?  @map("error_message") @db.Text
-  errorCode       String?  @map("error_code") @db.VarChar(100)
+  status       NotificationStatusType @default(PENDING)
+  errorMessage String?                @map("error_message") @db.Text
+  errorCode    String?                @map("error_code") @db.VarChar(100)
 
   // Delivery tracking
-  sentAt          DateTime? @map("sent_at")
-  deliveredAt     DateTime? @map("delivered_at")
-  readAt          DateTime? @map("read_at")
-  clickedAt       DateTime? @map("clicked_at")
+  sentAt      DateTime? @map("sent_at")
+  deliveredAt DateTime? @map("delivered_at")
+  readAt      DateTime? @map("read_at")
+  clickedAt   DateTime? @map("clicked_at")
 
   // Provider tracking
   providerMessageId String? @map("provider_message_id") @db.VarChar(255) // Twilio/SendGrid ID
   providerResponse  Json?   @map("provider_response")
 
   // Retry tracking
-  retryCount      Int      @default(0) @map("retry_count")
-  lastRetryAt     DateTime? @map("last_retry_at")
-  nextRetryAt     DateTime? @map("next_retry_at")
+  retryCount  Int       @default(0) @map("retry_count")
+  lastRetryAt DateTime? @map("last_retry_at")
+  nextRetryAt DateTime? @map("next_retry_at")
 
   // Context
-  contextType     String?  @map("context_type") @db.VarChar(100) // service_order, assignment, contract
-  contextId       String?  @map("context_id") // ID of the related entity
-  metadata        Json?    // Additional context
+  contextType String? @map("context_type") @db.VarChar(100) // service_order, assignment, contract
+  contextId   String? @map("context_id") // ID of the related entity
+  metadata    Json? // Additional context
 
   // Multi-tenancy
-  countryCode     String?  @map("country_code") @db.VarChar(3)
-  businessUnit    String?  @map("business_unit") @db.VarChar(50)
+  countryCode  String? @map("country_code") @db.VarChar(3)
+  businessUnit String? @map("business_unit") @db.VarChar(50)
 
   // Relations
-  template        NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  template NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   // Audit
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([recipientId])
   @@index([recipientEmail])
@@ -2990,21 +3002,21 @@ model Notification {
 
 // Notification delivery webhooks (for tracking delivery status)
 model NotificationWebhook {
-  id              String   @id @default(uuid())
-  notificationId  String   @map("notification_id")
+  id             String @id @default(uuid())
+  notificationId String @map("notification_id")
 
   // Webhook details
-  provider        String   @db.VarChar(50) // twilio, sendgrid
-  event           String   @db.VarChar(100) // delivered, bounced, opened, clicked
+  provider String @db.VarChar(50) // twilio, sendgrid
+  event    String @db.VarChar(100) // delivered, bounced, opened, clicked
 
   // Payload
-  payload         Json
+  payload Json
 
   // Processing
-  processed       Boolean  @default(false)
-  processedAt     DateTime? @map("processed_at")
+  processed   Boolean   @default(false)
+  processedAt DateTime? @map("processed_at")
 
-  receivedAt      DateTime @default(now()) @map("received_at")
+  receivedAt DateTime @default(now()) @map("received_at")
 
   @@index([notificationId])
   @@index([provider])
@@ -3044,43 +3056,43 @@ enum NotificationPriority {
 
 // Track sync state per device for offline mobile app synchronization
 model DeviceSync {
-  id                  String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Device identification
-  deviceId            String   @unique @map("device_id") @db.VarChar(100)
-  devicePlatform      String?  @map("device_platform") @db.VarChar(20) // iOS, Android
-  deviceModel         String?  @map("device_model") @db.VarChar(100)
-  appVersion          String?  @map("app_version") @db.VarChar(20)
+  deviceId       String  @unique @map("device_id") @db.VarChar(100)
+  devicePlatform String? @map("device_platform") @db.VarChar(20) // iOS, Android
+  deviceModel    String? @map("device_model") @db.VarChar(100)
+  appVersion     String? @map("app_version") @db.VarChar(20)
 
   // User association
-  userId              String   @map("user_id")
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Sync state
-  syncToken           String   @unique @map("sync_token") @db.VarChar(100) // JWT-based token
-  lastSyncAt          DateTime @map("last_sync_at")
+  syncToken            String   @unique @map("sync_token") @db.VarChar(100) // JWT-based token
+  lastSyncAt           DateTime @map("last_sync_at")
   lastSuccessfulSyncAt DateTime @map("last_successful_sync_at")
-  consecutiveFailures Int      @default(0) @map("consecutive_failures")
+  consecutiveFailures  Int      @default(0) @map("consecutive_failures")
 
   // Sync statistics
-  totalSyncOperations Int      @default(0) @map("total_sync_operations")
-  totalConflicts      Int      @default(0) @map("total_conflicts")
-  pendingUploadCount  Int      @default(0) @map("pending_upload_count")
-  pendingUploadBytes  BigInt   @default(0) @map("pending_upload_bytes")
+  totalSyncOperations Int    @default(0) @map("total_sync_operations")
+  totalConflicts      Int    @default(0) @map("total_conflicts")
+  pendingUploadCount  Int    @default(0) @map("pending_upload_count")
+  pendingUploadBytes  BigInt @default(0) @map("pending_upload_bytes")
 
   // Multi-tenancy
-  countryCode         String   @map("country_code") @db.VarChar(3)
-  businessUnit        String   @map("business_unit") @db.VarChar(50)
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
 
   // Device status
-  isActive            Boolean  @default(true) @map("is_active")
-  lastActivityAt      DateTime @default(now()) @map("last_activity_at")
+  isActive       Boolean  @default(true) @map("is_active")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at")
 
   // Relations
-  syncOperations      SyncOperation[]
+  syncOperations SyncOperation[]
 
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([deviceId])
@@ -3092,37 +3104,37 @@ model DeviceSync {
 
 // Audit log for all sync operations (create, update, conflict resolution)
 model SyncOperation {
-  id                  String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Device sync reference
-  deviceSyncId        String   @map("device_sync_id")
-  deviceSync          DeviceSync @relation(fields: [deviceSyncId], references: [id], onDelete: Cascade)
+  deviceSyncId String     @map("device_sync_id")
+  deviceSync   DeviceSync @relation(fields: [deviceSyncId], references: [id], onDelete: Cascade)
 
   // Operation details
-  operationType       SyncOperationType @map("operation_type")
-  entityType          String   @map("entity_type") @db.VarChar(50) // service_order, check_in, check_out, media
-  entityId            String?  @map("entity_id") @db.VarChar(100)
+  operationType SyncOperationType @map("operation_type")
+  entityType    String            @map("entity_type") @db.VarChar(50) // service_order, check_in, check_out, media
+  entityId      String?           @map("entity_id") @db.VarChar(100)
 
   // Operation data
-  clientVersion       Int?     @map("client_version")
-  serverVersion       Int?     @map("server_version")
-  operation           String   @db.VarChar(20) // create, update, delete
-  changedFields       Json?    @map("changed_fields") // Array of field names
+  clientVersion Int?   @map("client_version")
+  serverVersion Int?   @map("server_version")
+  operation     String @db.VarChar(20) // create, update, delete
+  changedFields Json?  @map("changed_fields") // Array of field names
 
   // Conflict resolution
-  conflictDetected    Boolean  @default(false) @map("conflict_detected")
-  conflictResolution  ConflictResolution? @map("conflict_resolution")
-  conflictDetails     Json?    @map("conflict_details")
+  conflictDetected   Boolean             @default(false) @map("conflict_detected")
+  conflictResolution ConflictResolution? @map("conflict_resolution")
+  conflictDetails    Json?               @map("conflict_details")
 
   // Sync metadata
-  syncToken           String   @map("sync_token") @db.VarChar(100)
-  processingTimeMs    Int?     @map("processing_time_ms")
+  syncToken        String @map("sync_token") @db.VarChar(100)
+  processingTimeMs Int?   @map("processing_time_ms")
 
   // Result
-  status              SyncOperationStatus
-  errorMessage    String?  @map("error_message") @db.Text
+  status       SyncOperationStatus
+  errorMessage String?             @map("error_message") @db.Text
 
-  createdAt           DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([deviceSyncId])
   @@index([operationType])
@@ -3135,28 +3147,28 @@ model SyncOperation {
 }
 
 enum SyncOperationType {
-  DELTA_SYNC          // Regular delta synchronization
-  INITIAL_SYNC        // First-time sync for new device
-  FULL_SYNC           // Complete resync (after long offline)
-  BATCH_UPLOAD        // Batch media upload
+  DELTA_SYNC // Regular delta synchronization
+  INITIAL_SYNC // First-time sync for new device
+  FULL_SYNC // Complete resync (after long offline)
+  BATCH_UPLOAD // Batch media upload
   CONFLICT_RESOLUTION // Manual conflict resolution
 }
 
 enum SyncOperationStatus {
-  PENDING             // Queued for processing
-  PROCESSING          // Currently being processed
-  SUCCESS             // Completed successfully
-  FAILED              // Failed with error
-  CONFLICT            // Conflict detected, needs resolution
-  PARTIAL             // Partially successful (some ops failed)
+  PENDING // Queued for processing
+  PROCESSING // Currently being processed
+  SUCCESS // Completed successfully
+  FAILED // Failed with error
+  CONFLICT // Conflict detected, needs resolution
+  PARTIAL // Partially successful (some ops failed)
 }
 
 enum ConflictResolution {
-  SERVER_WINS         // Server data kept, client discarded
-  CLIENT_WINS         // Client data applied, server overwritten
-  MERGED              // Fields merged intelligently
-  LAST_WRITE_WINS     // Timestamp-based resolution
-  MANUAL              // Requires manual intervention
+  SERVER_WINS // Server data kept, client discarded
+  CLIENT_WINS // Client data applied, server overwritten
+  MERGED // Fields merged intelligently
+  LAST_WRITE_WINS // Timestamp-based resolution
+  MANUAL // Requires manual intervention
 }
 
 // ============================================================================
@@ -3164,27 +3176,27 @@ enum ConflictResolution {
 // ============================================================================
 
 model ServiceOrderCheckIn {
-  id                String   @id @default(uuid())
-  serviceOrderId    String   @map("service_order_id")
-  providerId        String   @map("provider_id")
-  workTeamId        String?  @map("work_team_id")
-  technicianUserId  String   @map("technician_user_id")
+  id               String  @id @default(uuid())
+  serviceOrderId   String  @map("service_order_id")
+  providerId       String  @map("provider_id")
+  workTeamId       String? @map("work_team_id")
+  technicianUserId String  @map("technician_user_id")
 
   // Location
-  lat               Float
-  lng               Float
-  accuracy          Float?
+  lat      Float
+  lng      Float
+  accuracy Float?
 
   // Timing
-  occurredAt        DateTime @map("occurred_at")
-  notes             String?  @db.Text
+  occurredAt DateTime @map("occurred_at")
+  notes      String?  @db.Text
 
   // Relations
   // serviceOrder      ServiceOrder @relation(fields: [serviceOrderId], references: [id])
   // provider          Provider     @relation(fields: [providerId], references: [id])
   // technician        User         @relation(fields: [technicianUserId], references: [id])
 
-  createdAt         DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([serviceOrderId])
   @@index([technicianUserId])
@@ -3192,9 +3204,9 @@ model ServiceOrderCheckIn {
 }
 
 model ServiceOrderCheckOut {
-  id                String   @id @default(uuid())
-  serviceOrderId    String   @map("service_order_id")
-  technicianUserId  String   @map("technician_user_id")
+  id               String @id @default(uuid())
+  serviceOrderId   String @map("service_order_id")
+  technicianUserId String @map("technician_user_id")
 
   // Timing
   occurredAt        DateTime @map("occurred_at")
@@ -3203,28 +3215,198 @@ model ServiceOrderCheckOut {
   travelTimeMinutes Int      @default(0) @map("travel_time_minutes")
 
   // Calculated metrics
-  totalHours        Decimal  @map("total_hours") @db.Decimal(10, 2)
-  billableHours     Decimal  @map("billable_hours") @db.Decimal(10, 2)
-  regularHours      Decimal  @map("regular_hours") @db.Decimal(10, 2)
-  overtimeHours     Decimal  @map("overtime_hours") @db.Decimal(10, 2)
-  isMultiDay        Boolean  @default(false) @map("is_multi_day")
+  totalHours    Decimal @map("total_hours") @db.Decimal(10, 2)
+  billableHours Decimal @map("billable_hours") @db.Decimal(10, 2)
+  regularHours  Decimal @map("regular_hours") @db.Decimal(10, 2)
+  overtimeHours Decimal @map("overtime_hours") @db.Decimal(10, 2)
+  isMultiDay    Boolean @default(false) @map("is_multi_day")
 
   // Completion details
-  completionStatus  String   @map("completion_status") @db.VarChar(50)
-  workSummary       Json?    @map("work_summary")
-  materialsUsed     Json?    @map("materials_used")
-  
-  // Signatures & Location
-  customerSignature Json?    @map("customer_signature")
-  technicianSignature Json?  @map("technician_signature")
-  location          Json?    @map("location")
-  
-  notes             String?  @db.Text
-  warnings          Json?    @map("warnings")
+  completionStatus String @map("completion_status") @db.VarChar(50)
+  workSummary      Json?  @map("work_summary")
+  materialsUsed    Json?  @map("materials_used")
 
-  createdAt         DateTime @default(now()) @map("created_at")
+  // Signatures & Location
+  customerSignature   Json? @map("customer_signature")
+  technicianSignature Json? @map("technician_signature")
+  location            Json? @map("location")
+
+  notes    String? @db.Text
+  warnings Json?   @map("warnings")
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([serviceOrderId])
   @@index([technicianUserId])
   @@map("service_order_check_outs")
+}
+
+// ============================================================================
+// SERVICE ORDER CONVERSATIONS (Multi-party Chat)
+// ============================================================================
+// Enables communication between: Customer, Operator, WorkTeam, Provider Manager
+// Each service order has ONE conversation thread with all parties
+
+model ServiceOrderConversation {
+  id             String @id @default(uuid())
+  serviceOrderId String @unique @map("service_order_id")
+
+  // Multi-tenancy
+  countryCode  String @map("country_code") @db.VarChar(3)
+  businessUnit String @map("business_unit") @db.VarChar(50)
+
+  // Conversation status
+  status ConversationStatus @default(ACTIVE)
+
+  // Participants tracking (for quick access)
+  participantIds Json @map("participant_ids") // Array of user IDs
+
+  // Unread counts (per participant - stored as JSON for flexibility)
+  unreadCounts Json? @map("unread_counts") // {userId: count}
+
+  // Last activity
+  lastMessageAt      DateTime? @map("last_message_at")
+  lastMessagePreview String?   @map("last_message_preview") @db.VarChar(200)
+
+  // Relations
+  serviceOrder ServiceOrder              @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  messages     ServiceOrderMessage[]
+  participants ConversationParticipant[]
+
+  // Audit
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([serviceOrderId])
+  @@index([lastMessageAt])
+  @@index([countryCode, businessUnit])
+  @@map("service_order_conversations")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+  CLOSED
+}
+
+model ConversationParticipant {
+  id             String @id @default(uuid())
+  conversationId String @map("conversation_id")
+
+  // Participant identity
+  userId        String? @map("user_id") // For internal users (operators, workteam, provider managers)
+  customerEmail String? @map("customer_email") // For external customers (no user account)
+  customerPhone String? @map("customer_phone")
+
+  // Role in conversation
+  participantType ParticipantType @map("participant_type")
+  displayName     String          @map("display_name") @db.VarChar(255)
+
+  // Optional context
+  workTeamId String? @map("work_team_id")
+  providerId String? @map("provider_id")
+
+  // Participation status
+  isActive Boolean   @default(true) @map("is_active")
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  leftAt   DateTime? @map("left_at")
+
+  // Last read tracking
+  lastReadAt        DateTime? @map("last_read_at")
+  lastReadMessageId String?   @map("last_read_message_id")
+
+  // Notification preferences for this conversation
+  notificationsEnabled Boolean @default(true) @map("notifications_enabled")
+
+  // Relations
+  conversation ServiceOrderConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workTeam     WorkTeam?                @relation(fields: [workTeamId], references: [id], onDelete: SetNull)
+  provider     Provider?                @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  messages     ServiceOrderMessage[]
+
+  // Audit
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([conversationId, userId])
+  @@unique([conversationId, customerEmail])
+  @@index([conversationId])
+  @@index([userId])
+  @@index([workTeamId])
+  @@index([providerId])
+  @@map("conversation_participants")
+}
+
+enum ParticipantType {
+  CUSTOMER // End customer
+  OPERATOR // Control tower operator
+  WORK_TEAM // Field technician/workteam
+  PROVIDER_MANAGER // Provider company manager
+  SYSTEM // Automated messages
+}
+
+model ServiceOrderMessage {
+  id             String @id @default(uuid())
+  conversationId String @map("conversation_id")
+  participantId  String @map("participant_id")
+
+  // Message content
+  messageType MessageType @default(TEXT) @map("message_type")
+  content     String      @db.Text
+
+  // Attachments
+  attachments Json? // [{type, url, name, size}]
+
+  // Reply context
+  replyToMessageId String? @map("reply_to_message_id")
+
+  // Message status
+  status MessageStatus @default(SENT)
+
+  // Delivery tracking (for each participant)
+  deliveryStatus Json? @map("delivery_status") // {userId: {delivered: true, read: true, timestamp}}
+
+  // Edit history
+  isEdited        Boolean   @default(false) @map("is_edited")
+  editedAt        DateTime? @map("edited_at")
+  originalContent String?   @map("original_content") @db.Text
+
+  // Soft delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  // Relations
+  conversation ServiceOrderConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  participant  ConversationParticipant  @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  replyTo      ServiceOrderMessage?     @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies      ServiceOrderMessage[]    @relation("MessageReplies")
+
+  // Audit
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([conversationId])
+  @@index([participantId])
+  @@index([createdAt])
+  @@index([replyToMessageId])
+  @@map("service_order_messages")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  VOICE
+  LOCATION
+  SYSTEM // Automated system messages (status updates, etc.)
+}
+
+enum MessageStatus {
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
 }

@@ -1,3 +1,8 @@
+/**
+ * Yellow Grid Mobile - Login Screen
+ * Modern login with platform branding
+ */
+
 import React, { useState } from 'react';
 import {
   View,
@@ -11,14 +16,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuthStore } from '@store/auth.store';
-import type { AuthStackScreenProps } from '@navigation/types';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../store/auth.store';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing } from '../../theme/spacing';
+import type { AuthStackScreenProps } from '../../navigation/types';
 
 type Props = AuthStackScreenProps<'Login'>;
 
 const LoginScreen: React.FC<Props> = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading, error } = useAuthStore();
 
   const handleLogin = async () => {
@@ -30,7 +41,8 @@ const LoginScreen: React.FC<Props> = () => {
     try {
       await login({ email, password });
     } catch (err) {
-      Alert.alert('Login Failed', error || 'An error occurred during login');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';
+      Alert.alert('Login Failed', error || errorMessage);
     }
   };
 
@@ -40,55 +52,100 @@ const LoginScreen: React.FC<Props> = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Yellow Grid</Text>
-            <Text style={styles.subtitle}>Field Service Management</Text>
+        <LinearGradient
+          colors={[colors.primary[600], colors.primary[800]]}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.logoContainer}>
+            <View style={styles.logoIcon}>
+              <Ionicons name="grid" size={40} color={colors.primary[600]} />
+            </View>
+            <Text style={styles.logoText}>Yellow Grid</Text>
+            <Text style={styles.tagline}>Field Service Platform</Text>
           </View>
+        </LinearGradient>
+
+        <View style={styles.formContainer}>
+          <Text style={styles.welcomeText}>Welcome back</Text>
+          <Text style={styles.instructionText}>Sign in to continue</Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              editable={!isLoading}
-            />
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color={colors.gray[400]} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email address"
+                placeholderTextColor={colors.gray[400]}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                editable={!isLoading}
+              />
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password"
-              editable={!isLoading}
-            />
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.gray[400]} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor={colors.gray[400]}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={colors.gray[400]}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color={colors.danger[500]} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
+              activeOpacity={0.8}
             >
               {isLoading ? (
-                <ActivityIndicator color="#ffffff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <>
+                  <Text style={styles.buttonText}>Sign In</Text>
+                  <Ionicons name="arrow-forward" size={20} color={colors.white} />
+                </>
               )}
             </TouchableOpacity>
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              For support, contact your administrator
-            </Text>
-          </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Need help? Contact your administrator
+          </Text>
+          <Text style={styles.versionText}>v2.0.0</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -98,72 +155,144 @@ const LoginScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  header: {
+  headerGradient: {
+    paddingTop: 80,
+    paddingBottom: 80,
     alignItems: 'center',
-    marginBottom: 48,
+    borderBottomLeftRadius: spacing['2xl'],
+    borderBottomRightRadius: spacing['2xl'],
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 8,
+  logoContainer: {
+    alignItems: 'center',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
+  logoIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: typography.fontSize['3xl'],
+    fontWeight: typography.fontWeight.bold as '700',
+    color: colors.white,
+  },
+  tagline: {
+    fontSize: typography.fontSize.base,
+    color: colors.primary[100],
+    marginTop: spacing.xs,
+  },
+  formContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing['2xl'],
+  },
+  welcomeText: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold as '700',
+    color: colors.gray[900],
+  },
+  instructionText: {
+    fontSize: typography.fontSize.base,
+    color: colors.gray[500],
+    marginTop: spacing.xs,
+    marginBottom: spacing.xl,
   },
   form: {
-    gap: 16,
+    gap: spacing.md,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray[50],
+    borderRadius: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    paddingHorizontal: spacing.md,
+  },
+  inputIcon: {
+    marginRight: spacing.sm,
   },
   input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    backgroundColor: '#F9F9F9',
+    flex: 1,
+    height: 52,
+    fontSize: typography.fontSize.base,
+    color: colors.gray[900],
   },
-  button: {
-    height: 50,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    justifyContent: 'center',
+  eyeButton: {
+    padding: spacing.sm,
+  },
+  errorContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    backgroundColor: colors.danger[50],
+    padding: spacing.md,
+    borderRadius: spacing.md,
   },
   errorText: {
-    color: '#FF3B30',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
+    color: colors.danger[700],
+    fontSize: typography.fontSize.sm,
+    marginLeft: spacing.sm,
+    flex: 1,
+  },
+  button: {
+    flexDirection: 'row',
+    height: 52,
+    backgroundColor: colors.primary[600],
+    borderRadius: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+    shadowColor: colors.primary[600],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonDisabled: {
+    backgroundColor: colors.gray[300],
+    shadowOpacity: 0,
+  },
+  buttonText: {
+    color: colors.white,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold as '600',
+  },
+  forgotPassword: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  forgotPasswordText: {
+    color: colors.primary[600],
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium as '500',
   },
   footer: {
-    marginTop: 48,
+    paddingVertical: spacing.xl,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
-    color: '#999999',
+    fontSize: typography.fontSize.sm,
+    color: colors.gray[500],
     textAlign: 'center',
+  },
+  versionText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.gray[400],
+    marginTop: spacing.xs,
   },
 });
 

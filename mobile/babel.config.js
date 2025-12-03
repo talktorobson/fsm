@@ -21,6 +21,7 @@ module.exports = function (api) {
             '@utils': './src/utils',
             '@config': './src/config',
             '@database': './src/database',
+            '@theme': './src/theme',
           },
         },
       ],

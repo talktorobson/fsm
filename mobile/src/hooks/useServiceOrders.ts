@@ -13,7 +13,11 @@ export const useAssignedServiceOrders = () => {
     queryFn: async () => {
       setLoading(true);
       try {
-        const orders = await apiService.get<ServiceOrder[]>('/service-orders/assigned');
+        // Use query params to filter for orders assigned to current user
+        const response = await apiService.get<{ data: ServiceOrder[]; meta: { total: number } }>(
+          '/service-orders?take=50'
+        );
+        const orders = response.data || [];
         setServiceOrders(orders);
         setError(null);
         return orders;

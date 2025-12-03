@@ -15,7 +15,9 @@
       "@types/*": ["src/types/*"],
       "@utils/*": ["src/utils/*"],
       "@config/*": ["src/config/*"],
-      "@database/*": ["src/database/*"]
+      "@database/*": ["src/database/*"],
+      "@theme": ["src/theme/index"],
+      "@theme/*": ["src/theme/*"]
     },
     "resolveJsonModule": true,
     "esModuleInterop": true,

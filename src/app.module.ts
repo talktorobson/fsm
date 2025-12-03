@@ -26,6 +26,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PerformanceModule } from './modules/performance/performance.module';
 import { SalesIntegrationModule } from './modules/sales-integration/sales-integration.module';
 import { CustomerPortalModule } from './modules/customer-portal/customer-portal.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 // Controllers
 import { AppController } from './app.controller';
@@ -94,6 +95,9 @@ import { AppController } from './app.controller';
 
     // Customer facing modules
     CustomerPortalModule,
+
+    // Chat/Messaging module (Phase 3)
+    ChatModule,
   ],
   controllers: [AppController],
 })

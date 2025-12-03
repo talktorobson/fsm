@@ -108,7 +108,10 @@ export class ServiceOrdersService {
     state?: ServiceOrderState;
     urgency?: string;
     assignedProviderId?: string;
+    assignedWorkTeamId?: string;
     projectId?: string;
+    scheduledFrom?: string;
+    scheduledTo?: string;
   }): Promise<{ data: ServiceOrder[]; total: number }> {
     const { skip = 0, take = 50, ...filters } = params;
 
@@ -134,8 +137,23 @@ export class ServiceOrdersService {
       where.assignedProviderId = filters.assignedProviderId;
     }
 
+    if (filters.assignedWorkTeamId) {
+      where.assignedWorkTeamId = filters.assignedWorkTeamId;
+    }
+
     if (filters.projectId) {
       where.projectId = filters.projectId;
+    }
+
+    // Date range filtering for scheduled date
+    if (filters.scheduledFrom || filters.scheduledTo) {
+      where.scheduledDate = {};
+      if (filters.scheduledFrom) {
+        where.scheduledDate.gte = new Date(filters.scheduledFrom);
+      }
+      if (filters.scheduledTo) {
+        where.scheduledDate.lte = new Date(filters.scheduledTo);
+      }
     }
 
     const [data, total] = await Promise.all([
