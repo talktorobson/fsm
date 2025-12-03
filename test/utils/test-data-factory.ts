@@ -88,28 +88,9 @@ export class TestDataFactory {
     });
   }
 
-  /**
-   * Create a test technician
-   */
-  async createTechnician(workTeamId: string, overrides: any = {}) {
-    const defaults = {
-      workTeamId,
-      firstName: faker.person.firstName(),
-      lastName: faker.person.lastName(),
-      email: faker.internet.email().toLowerCase(),
-      phone: faker.phone.number('+34#########'),
-      status: 'ACTIVE',
-      skills: ['INSTALLATION', 'REPAIR'],
-      certifications: ['CERT_A'],
-      deviceId: faker.string.uuid(),
-      countryCode: 'ES',
-      businessUnit: 'LM_ES',
-    };
-
-    return this.prisma.technician.create({
-      data: { ...defaults, ...overrides },
-    });
-  }
+  // NOTE: createTechnician method removed per legal requirement
+  // Platform operates at WorkTeam level only to avoid co-employer liability
+  // See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
 
   /**
    * Create a test project

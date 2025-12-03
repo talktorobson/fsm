@@ -541,8 +541,12 @@ Rapid Execution → WCF → Invoice
 | `WorkTeamCalendar` | Team calendar with inheritance | WorkTeam → Calendar (1:1, optional) |
 | `PlannedAbsence` | Vacation, sick leave, closures | WorkTeamCalendar → Absences |
 | `DedicatedWorkingDay` | Special working day overrides | WorkTeamCalendar → Special days |
-| `TechnicianCertification` | Certification tracking with expiry | Technician → Certifications |
+| `WorkTeamCertification` | Certification tracking with expiry | WorkTeam → Certifications (team-level) |
 | `ProviderStoreAssignment` | N:M Provider↔Store mapping | PRIMARY/BACKUP/OVERFLOW types |
+
+> **Legal Note**: Individual technicians are NOT tracked by this platform to avoid co-employer liability.
+> The Work Team is the atomic unit for assignments, scheduling, and certifications.
+> See: `docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md`
 
 #### New Enums Added (7 enums):
 

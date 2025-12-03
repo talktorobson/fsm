@@ -571,9 +571,12 @@ model WorkTeam {
   shifts      Json? // [{code:"M", startLocal:"08:00", endLocal:"13:00"}]
 
   // Relations
-  provider    Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  technicians Technician[]
-  users       User[]
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  users    User[]
+
+  // Work Team Certifications (NOTE: Certifications are at the team level, not individual)
+  // This design avoids co-employer liability by not tracking individual technicians
+  certifications WorkTeamCertification[]
 
   // Zone assignments (subset of provider's zones)
   zoneAssignments WorkTeamZoneAssignment[]
@@ -786,47 +789,16 @@ model DedicatedWorkingDay {
 }
 
 // ============================================================================
-// TECHNICIAN (Enhanced)
+// WORK TEAM CERTIFICATION
 // ============================================================================
+// NOTE: Certifications are tracked at the Work Team level, NOT individual technician level.
+// This is a deliberate design decision to avoid co-employer liability under EU/French labor law.
+// The platform does not track, manage, or register individual technicians.
+// See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
 
-model Technician {
+model WorkTeamCertification {
   id         String @id @default(uuid())
   workTeamId String @map("work_team_id")
-
-  // Identification
-  externalId String? @unique @map("external_id")
-  firstName  String  @map("first_name") @db.VarChar(255)
-  lastName   String  @map("last_name") @db.VarChar(255)
-
-  // Contact
-  email String?
-  phone String
-
-  // Status
-  isActive   Boolean @default(true) @map("is_active")
-  isTeamLead Boolean @default(false) @map("is_team_lead")
-
-  // Certifications
-  certifications TechnicianCertification[]
-
-  // Relations
-  workTeam WorkTeam @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
-
-  // Audit
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([workTeamId])
-  @@map("technicians")
-}
-
-// ============================================================================
-// TECHNICIAN CERTIFICATION
-// ============================================================================
-
-model TechnicianCertification {
-  id           String @id @default(uuid())
-  technicianId String @map("technician_id")
 
   // Certification details
   certificationType CertificationType @map("certification_type")
@@ -838,7 +810,7 @@ model TechnicianCertification {
   issuedAt  DateTime  @map("issued_at") @db.Date
   expiresAt DateTime? @map("expires_at") @db.Date
 
-  // Skills covered
+  // Skills covered by this certification
   coveredSpecialtyIds Json @map("covered_specialty_ids") // String[]
 
   // Document
@@ -850,16 +822,16 @@ model TechnicianCertification {
   verifiedBy String?   @map("verified_by") @db.VarChar(100)
 
   // Relations
-  technician Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  workTeam WorkTeam @relation(fields: [workTeamId], references: [id], onDelete: Cascade)
 
   // Audit
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([technicianId])
+  @@index([workTeamId])
   @@index([expiresAt])
   @@index([certificationType])
-  @@map("technician_certifications")
+  @@map("work_team_certifications")
 }
 
 enum CertificationType {

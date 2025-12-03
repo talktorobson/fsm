@@ -20,8 +20,6 @@ import {
   QueryProvidersDto,
   CreateWorkTeamDto,
   UpdateWorkTeamDto,
-  CreateTechnicianDto,
-  UpdateTechnicianDto,
   CreateProviderWorkingScheduleDto,
   CreateInterventionZoneDto,
   UpdateInterventionZoneDto,
@@ -243,103 +241,13 @@ export class ProvidersController {
   @ApiOperation({ summary: 'Delete work team' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Work team successfully deleted' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Work team not found' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Cannot delete work team with technicians' })
   async removeWorkTeam(@Param('workTeamId') workTeamId: string, @CurrentUser() user: CurrentUserPayload) {
     return this.providersService.removeWorkTeam(workTeamId, user.userId, user.countryCode);
   }
 
-  // ============================================================================
-  // TECHNICIAN ENDPOINTS
-  // ============================================================================
-
-  /**
-   * Creates a technician for a work team.
-   *
-   * @param workTeamId - The work team ID.
-   * @param dto - The technician creation data.
-   * @param user - The current authenticated user.
-   * @returns {Promise<TechnicianResponseDto>} The created technician.
-   */
-  @Post('work-teams/:workTeamId/technicians')
-  @Roles('ADMIN', 'PROVIDER_MANAGER')
-  @ApiOperation({ summary: 'Create technician for work team' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Technician successfully created' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Work team not found' })
-  async createTechnician(
-    @Param('workTeamId') workTeamId: string,
-    @Body() dto: CreateTechnicianDto,
-    @CurrentUser() user: CurrentUserPayload,
-  ) {
-    return this.providersService.createTechnician(workTeamId, dto, user.userId, user.countryCode);
-  }
-
-  /**
-   * Retrieves all technicians for a work team.
-   *
-   * @param workTeamId - The work team ID.
-   * @param user - The current authenticated user.
-   * @returns {Promise<TechnicianResponseDto[]>} A list of technicians.
-   */
-  @Get('work-teams/:workTeamId/technicians')
-  @ApiOperation({ summary: 'Get all technicians for work team' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'List of technicians' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Work team not found' })
-  async findAllTechnicians(@Param('workTeamId') workTeamId: string, @CurrentUser() user: CurrentUserPayload) {
-    return this.providersService.findAllTechnicians(workTeamId, user.countryCode);
-  }
-
-  /**
-   * Retrieves a specific technician by ID.
-   *
-   * @param technicianId - The technician ID.
-   * @param user - The current authenticated user.
-   * @returns {Promise<TechnicianResponseDto>} The technician details.
-   */
-  @Get('technicians/:technicianId')
-  @ApiOperation({ summary: 'Get technician by ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Technician details' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Technician not found' })
-  async findOneTechnician(@Param('technicianId') technicianId: string, @CurrentUser() user: CurrentUserPayload) {
-    return this.providersService.findOneTechnician(technicianId, user.countryCode);
-  }
-
-  /**
-   * Updates a technician.
-   *
-   * @param technicianId - The technician ID.
-   * @param dto - The update data.
-   * @param user - The current authenticated user.
-   * @returns {Promise<TechnicianResponseDto>} The updated technician.
-   */
-  @Put('technicians/:technicianId')
-  @Roles('ADMIN', 'PROVIDER_MANAGER')
-  @ApiOperation({ summary: 'Update technician' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Technician successfully updated' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Technician not found' })
-  async updateTechnician(
-    @Param('technicianId') technicianId: string,
-    @Body() dto: UpdateTechnicianDto,
-    @CurrentUser() user: CurrentUserPayload,
-  ) {
-    return this.providersService.updateTechnician(technicianId, dto, user.userId, user.countryCode);
-  }
-
-  /**
-   * Deletes a technician.
-   *
-   * @param technicianId - The technician ID.
-   * @param user - The current authenticated user.
-   * @returns {Promise<void>}
-   */
-  @Delete('technicians/:technicianId')
-  @Roles('ADMIN', 'PROVIDER_MANAGER')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete technician' })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Technician successfully deleted' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Technician not found' })
-  async removeTechnician(@Param('technicianId') technicianId: string, @CurrentUser() user: CurrentUserPayload) {
-    return this.providersService.removeTechnician(technicianId, user.userId, user.countryCode);
-  }
+  // NOTE: Individual technician CRUD endpoints removed per legal requirement
+  // Platform operates at WorkTeam level only to avoid co-employer liability
+  // See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
 
   // ============================================================================
   // PROVIDER WORKING SCHEDULE ENDPOINTS

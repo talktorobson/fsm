@@ -564,10 +564,12 @@ export interface DedicatedWorkingDay {
   updatedAt: ISODateString;
 }
 
-// Technician Certification
-export interface TechnicianCertification {
+// Work Team Certification
+// NOTE: Certifications are tracked at the Work Team level, not individual technician level.
+// This is a deliberate design decision to avoid co-employer liability.
+export interface WorkTeamCertification {
   id: UUID;
-  technicianId: UUID;
+  workTeamId: UUID;
   certificationType: CertificationType;
   certificationName: string;
   issuedBy?: string;
@@ -579,22 +581,9 @@ export interface TechnicianCertification {
   updatedAt: ISODateString;
 }
 
-// Technician
-export interface Technician {
-  id: UUID;
-  workTeamId: UUID;
-  externalId?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  isTeamLead: boolean;
-  certifications?: TechnicianCertification[];
-  createdAt: ISODateString;
-  updatedAt: ISODateString;
-}
-
 // Work Team
+// NOTE: Individual technicians are NOT tracked by this platform to avoid co-employer liability.
+// The Work Team is the atomic unit for assignments, scheduling, and certifications.
 export interface WorkTeam {
   id: UUID;
   providerId: UUID;
@@ -610,7 +599,7 @@ export interface WorkTeam {
   postalCodes: string[];
   workingDays: string[];
   shifts: Array<{ code: string; startLocal: string; endLocal: string }>;
-  technicians?: Technician[];
+  certifications?: WorkTeamCertification[];
   calendar?: WorkTeamCalendar;
   zoneAssignments?: WorkTeamZoneAssignment[];
   plannedAbsences?: PlannedAbsence[];

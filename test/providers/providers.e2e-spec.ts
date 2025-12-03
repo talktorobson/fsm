@@ -13,7 +13,6 @@ describe('Provider Management API (E2E)', () => {
   let adminUser: any;
   let testProvider: any;
   let testWorkTeam: any;
-  let testTechnician: any;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -35,7 +34,6 @@ describe('Provider Management API (E2E)', () => {
     factory = new TestDataFactory(prisma);
 
     // Clean previous test data
-    await prisma.technician.deleteMany({ where: { email: { contains: '@test.com' } } });
     await prisma.workTeam.deleteMany({ where: { name: { startsWith: 'Test' } } });
     await prisma.provider.deleteMany({ where: { email: { contains: '@test.com' } } });
     await prisma.user.deleteMany({ where: { email: { contains: '@test.com' } } });
@@ -67,9 +65,6 @@ describe('Provider Management API (E2E)', () => {
 
   afterAll(async () => {
     // Cleanup test data
-    if (testTechnician) {
-      await prisma.technician.delete({ where: { id: testTechnician.id } }).catch(() => {});
-    }
     if (testWorkTeam) {
       await prisma.workTeam.delete({ where: { id: testWorkTeam.id } }).catch(() => {});
     }
@@ -501,136 +496,12 @@ describe('Provider Management API (E2E)', () => {
     });
   });
 
-  // ============================================================================
-  // TECHNICIAN TESTS
-  // ============================================================================
-
-  describe('POST /api/v1/providers/work-teams/:workTeamId/technicians - Create Technician', () => {
-    it('should create technician successfully', async () => {
-      const createDto = {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: randomEmail('technician'),
-        phone: randomPhone(),
-        skills: ['INSTALLATION', 'REPAIR'],
-        certifications: ['CERT_A', 'CERT_B'],
-        countryCode: 'ES',
-        businessUnit: 'LM_ES',
-      };
-
-      const response = await authenticatedRequest(
-        app,
-        'post',
-        `/api/v1/providers/work-teams/${testWorkTeam.id}/technicians`,
-        adminToken,
-      )
-        .send(createDto)
-        .expect(201);
-
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.firstName).toBe(createDto.firstName);
-      expect(response.body.lastName).toBe(createDto.lastName);
-      expect(response.body.workTeamId).toBe(testWorkTeam.id);
-      expect(response.body.status).toBe('ACTIVE');
-
-      testTechnician = response.body;
-    });
-
-    it('should reject technician with duplicate email', async () => {
-      const createDto = {
-        firstName: 'Jane',
-        lastName: 'Doe',
-        email: testTechnician.email, // Duplicate
-        phone: randomPhone(),
-        skills: ['INSTALLATION'],
-        certifications: ['CERT_A'],
-        countryCode: 'ES',
-        businessUnit: 'LM_ES',
-      };
-
-      await authenticatedRequest(
-        app,
-        'post',
-        `/api/v1/providers/work-teams/${testWorkTeam.id}/technicians`,
-        adminToken,
-      )
-        .send(createDto)
-        .expect(409);
-    });
-  });
-
-  describe('GET /api/v1/providers/work-teams/:workTeamId/technicians - List Technicians', () => {
-    it('should list all technicians for work team', async () => {
-      const response = await authenticatedRequest(
-        app,
-        'get',
-        `/api/v1/providers/work-teams/${testWorkTeam.id}/technicians`,
-        adminToken,
-      ).expect(200);
-
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
-      expect(response.body.some((t: any) => t.id === testTechnician.id)).toBe(true);
-    });
-  });
-
-  describe('GET /api/v1/providers/technicians/:technicianId - Get Technician by ID', () => {
-    it('should retrieve technician by ID', async () => {
-      const response = await authenticatedRequest(
-        app,
-        'get',
-        `/api/v1/providers/technicians/${testTechnician.id}`,
-        adminToken,
-      ).expect(200);
-
-      expect(response.body.id).toBe(testTechnician.id);
-      expect(response.body.firstName).toBe(testTechnician.firstName);
-      expect(response.body.email).toBe(testTechnician.email);
-    });
-  });
-
-  describe('PUT /api/v1/providers/technicians/:technicianId - Update Technician', () => {
-    it('should update technician successfully', async () => {
-      const updateDto = {
-        firstName: 'Updated John',
-        skills: ['INSTALLATION', 'REPAIR', 'MAINTENANCE'],
-      };
-
-      const response = await authenticatedRequest(
-        app,
-        'put',
-        `/api/v1/providers/technicians/${testTechnician.id}`,
-        adminToken,
-      )
-        .send(updateDto)
-        .expect(200);
-
-      expect(response.body.firstName).toBe(updateDto.firstName);
-      expect(response.body.skills).toEqual(updateDto.skills);
-    });
-  });
-
-  describe('DELETE /api/v1/providers/technicians/:technicianId - Delete Technician', () => {
-    it('should delete technician successfully', async () => {
-      await authenticatedRequest(
-        app,
-        'delete',
-        `/api/v1/providers/technicians/${testTechnician.id}`,
-        adminToken,
-      ).expect(204);
-
-      // Verify deletion
-      const dbTechnician = await prisma.technician.findUnique({
-        where: { id: testTechnician.id },
-      });
-
-      expect(dbTechnician).toBeNull();
-      testTechnician = null; // Prevent double cleanup
-    });
-  });
+  // NOTE: Individual technician tests removed per legal requirement
+  // Platform operates at WorkTeam level only to avoid co-employer liability
+  // See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
 
   describe('DELETE /api/v1/providers/work-teams/:workTeamId - Delete Work Team', () => {
-    it('should delete work team successfully after technicians removed', async () => {
+    it('should delete work team successfully', async () => {
       await authenticatedRequest(app, 'delete', `/api/v1/providers/work-teams/${testWorkTeam.id}`, adminToken)
         .expect(204);
 

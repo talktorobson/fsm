@@ -42,7 +42,6 @@ describe('Assignments API (E2E)', () => {
     await prisma.assignment.deleteMany({});
     await prisma.serviceOrder.deleteMany({});
     await prisma.project.deleteMany({});
-    await prisma.technician.deleteMany({});
     await prisma.workTeam.deleteMany({});
     await prisma.provider.deleteMany({ where: { email: { contains: '@test.com' } } });
 
@@ -90,7 +89,6 @@ describe('Assignments API (E2E)', () => {
     await prisma.assignment.deleteMany({});
     await prisma.serviceOrder.deleteMany({});
     await prisma.project.deleteMany({});
-    await prisma.technician.deleteMany({});
     await prisma.workTeam.deleteMany({});
     await prisma.provider.deleteMany({
       where: { id: { in: [testProvider1.id, testProvider2.id, testProvider3.id] } },

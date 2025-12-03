@@ -126,9 +126,13 @@ EOSQL'
 - **ProviderWorkingSchedule**: 1:1 with Provider - working days, shifts (morning/afternoon/evening), lunch breaks, capacity limits
 - **InterventionZone**: Geographic coverage (PRIMARY/SECONDARY/OVERFLOW) with postal codes, GeoJSON boundaries
 - **ServicePriorityConfig**: Provider service preferences (P1=Always Accept, P2=Bundle Only, OPT_OUT)
-- **WorkTeam**: Teams under providers with zone assignments and calendar inheritance
+- **WorkTeam**: Teams under providers with zone assignments and calendar inheritance (atomic unit - no individual technician tracking)
 - **WorkTeamCalendar**: Team-level calendar overrides with planned absences and dedicated working days
-- **TechnicianCertification**: Certification tracking with expiry dates
+- **WorkTeamCertification**: Certification tracking with expiry dates (at team level, not individual)
+
+### Legal Note: Work Teams vs Technicians
+
+The platform intentionally operates at the **Work Team level** only, not tracking individual technicians. This avoids co-employer liability under EU/French labor law. See `docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md` for details.
 
 ### Service Orders
 - **ServiceOrder**: Core entity with `urgency` field (URGENT, STANDARD, LOW) for response time requirements

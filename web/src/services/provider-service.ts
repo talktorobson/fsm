@@ -2,6 +2,10 @@
  * Provider Service
  * API calls for provider management
  * Enhanced with AHS business rules support
+ * 
+ * NOTE: Individual technician management is NOT provided by this service.
+ * Platform operates at WorkTeam level only to avoid co-employer liability.
+ * See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
  */
 
 import apiClient from './api-client';
@@ -12,7 +16,6 @@ import {
   InterventionZone,
   ServicePriorityConfig,
   WorkTeam,
-  Technician,
   ProviderTypeEnum,
   RiskLevel,
   ZoneType,
@@ -75,15 +78,6 @@ interface CreateWorkTeamDto {
   postalCodes: string[];
   workingDays: string[];
   shifts: Array<{ code: string; startLocal: string; endLocal: string }>;
-}
-
-interface CreateTechnicianDto {
-  externalId?: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  isTeamLead?: boolean;
 }
 
 interface CreateWorkingScheduleDto {
@@ -207,48 +201,9 @@ class ProviderService {
     await apiClient.delete(`/providers/work-teams/${workTeamId}`);
   }
 
-  // ============================================================================
-  // TECHNICIAN CRUD
-  // ============================================================================
-
-  /**
-   * Get all technicians for a work team
-   */
-  async getTechnicians(workTeamId: string): Promise<Technician[]> {
-    const response = await apiClient.get<ApiResponse<Technician[]>>(`/providers/work-teams/${workTeamId}/technicians`);
-    return response.data.data;
-  }
-
-  /**
-   * Get technician by ID
-   */
-  async getTechnicianById(technicianId: string): Promise<Technician> {
-    const response = await apiClient.get<ApiResponse<Technician>>(`/providers/technicians/${technicianId}`);
-    return response.data.data;
-  }
-
-  /**
-   * Create technician
-   */
-  async createTechnician(workTeamId: string, data: CreateTechnicianDto): Promise<Technician> {
-    const response = await apiClient.post<ApiResponse<Technician>>(`/providers/work-teams/${workTeamId}/technicians`, data);
-    return response.data.data;
-  }
-
-  /**
-   * Update technician
-   */
-  async updateTechnician(technicianId: string, data: Partial<CreateTechnicianDto>): Promise<Technician> {
-    const response = await apiClient.put<ApiResponse<Technician>>(`/providers/technicians/${technicianId}`, data);
-    return response.data.data;
-  }
-
-  /**
-   * Delete technician
-   */
-  async deleteTechnician(technicianId: string): Promise<void> {
-    await apiClient.delete(`/providers/technicians/${technicianId}`);
-  }
+  // NOTE: Individual technician CRUD methods removed per legal requirement
+  // Platform operates at WorkTeam level only to avoid co-employer liability
+  // See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
 
   // ============================================================================
   // PROVIDER WORKING SCHEDULE

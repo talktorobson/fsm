@@ -1710,30 +1710,16 @@ async function main() {
       }
     }
 
-    // Create Technician for each team
-    const existingTech = await prisma.technician.findFirst({
+    // Create Work Team Certification (NOTE: certifications at team level, not individual)
+    // This avoids co-employer liability - see docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
+    const existingCert = await prisma.workTeamCertification.findFirst({
       where: { workTeamId: team.id }
     });
 
-    if (!existingTech) {
-      const technicianData = {
-        workTeamId: team.id,
-        firstName: ['Juan', 'Pierre', 'Marco', 'Manuel'][Math.floor(Math.random() * 4)],
-        lastName: ['García', 'Dupont', 'Rossi', 'Silva'][Math.floor(Math.random() * 4)],
-        email: `tech${Date.now()}@example.com`,
-        phone: '+34600000000',
-        isActive: true,
-        isTeamLead: true,
-      };
-
-      const technician = await prisma.technician.create({
-        data: technicianData,
-      });
-
-      // Create certification for technician
-      await prisma.technicianCertification.create({
+    if (!existingCert) {
+      await prisma.workTeamCertification.create({
         data: {
-          technicianId: technician.id,
+          workTeamId: team.id,
           certificationType: CertificationType.HVAC_CERTIFICATION,
           certificateName: 'HVAC Installation Certification',
           certificateNumber: `HVAC-${Date.now()}`,
@@ -1769,7 +1755,7 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Created/Verified ${workTeams.length} work teams with calendars, technicians, and certifications`);
+  console.log(`✅ Created/Verified ${workTeams.length} work teams with calendars and certifications`);
 
   // Create Service Orders & Bookings for Heatmap/Calendar
   // We'll create orders around the major cities - focusing on France for demo

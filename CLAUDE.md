@@ -64,14 +64,18 @@ Provider (legal entity)
 ├── InterventionZone[] (1:N)          # Geographic coverage areas
 ├── ServicePriorityConfig[] (1:N)     # Service preferences (P1/P2/OPT_OUT)
 ├── ProviderStoreAssignment[] (N:M)   # Store coverage
-└── WorkTeam[] (1:N)                  # Field units
+└── WorkTeam[] (1:N)                  # Field units (ATOMIC - no individual tracking)
     ├── WorkTeamZoneAssignment[] (N:M)  # Zone assignments
     ├── WorkTeamCalendar (1:1)          # Calendar with inheritance
     │   ├── PlannedAbsence[]            # Vacation, sick leave
     │   └── DedicatedWorkingDay[]       # Extra capacity days
-    ├── Technician[] (1:N)              # Team members
-    └── TechnicianCertification[] (1:N) # Cert tracking
+    └── WorkTeamCertification[] (1:N)   # Team-level certifications
 ```
+
+### ⚠️ Legal Note: Work Teams vs Technicians
+The platform intentionally operates at the **Work Team level** only.
+Individual technicians are NOT tracked to avoid co-employer liability under EU/French labor law.
+See: `docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md`
 
 ### Key Enums
 ```typescript

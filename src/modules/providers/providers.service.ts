@@ -6,8 +6,6 @@ import {
   QueryProvidersDto,
   CreateWorkTeamDto,
   UpdateWorkTeamDto,
-  CreateTechnicianDto,
-  UpdateTechnicianDto,
   CreateProviderWorkingScheduleDto,
   CreateInterventionZoneDto,
   UpdateInterventionZoneDto,
@@ -16,9 +14,11 @@ import {
 } from './dto';
 
 /**
- * Service for managing providers, work teams, and technicians.
+ * Service for managing providers and work teams.
  *
- * Handles logic for CRUD operations, schedule management, and coverage zones.
+ * NOTE: Individual technician management is intentionally NOT provided.
+ * Platform operates at WorkTeam level only to avoid co-employer liability.
+ * See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
  */
 @Injectable()
 export class ProvidersService {
@@ -77,7 +77,7 @@ export class ProvidersService {
       include: {
         workTeams: {
           include: {
-            technicians: true,
+            certifications: true,
             calendar: true,
             zoneAssignments: {
               include: {
@@ -147,7 +147,7 @@ export class ProvidersService {
         include: {
           workTeams: {
             include: {
-              technicians: true,
+              certifications: true,
               calendar: true,
             },
           },
@@ -211,11 +211,7 @@ export class ProvidersService {
       include: {
         workTeams: {
           include: {
-            technicians: {
-              include: {
-                certifications: true,
-              },
-            },
+            certifications: true,
             calendar: true,
             zoneAssignments: {
               include: {
@@ -319,7 +315,7 @@ export class ProvidersService {
       include: {
         workTeams: {
           include: {
-            technicians: true,
+            certifications: true,
             calendar: true,
           },
         },
@@ -440,7 +436,7 @@ export class ProvidersService {
         shifts: dto.shifts ? (dto.shifts as unknown as any) : undefined,
       },
       include: {
-        technicians: true,
+        certifications: true,
         provider: true,
         calendar: true,
         zoneAssignments: {
@@ -483,11 +479,7 @@ export class ProvidersService {
         providerId,
       },
       include: {
-        technicians: {
-          include: {
-            certifications: true,
-          },
-        },
+        certifications: true,
         calendar: true,
         zoneAssignments: {
           include: {
@@ -518,11 +510,7 @@ export class ProvidersService {
         countryCode: currentUserCountry,
       },
       include: {
-        technicians: {
-          include: {
-            certifications: true,
-          },
-        },
+        certifications: true,
         provider: {
           include: {
             workingSchedule: true,
@@ -604,11 +592,7 @@ export class ProvidersService {
         shifts: dto.shifts ? (dto.shifts as unknown as any) : undefined,
       },
       include: {
-        technicians: {
-          include: {
-            certifications: true,
-          },
-        },
+        certifications: true,
         provider: true,
         calendar: true,
         zoneAssignments: {
@@ -631,7 +615,6 @@ export class ProvidersService {
    * @param currentUserCountry - The country code of the current user.
    * @returns {Promise<{ message: string }>} A confirmation message.
    * @throws {NotFoundException} If the work team is not found.
-   * @throws {ForbiddenException} If the work team has associated technicians.
    */
   async removeWorkTeam(workTeamId: string, currentUserId: string, currentUserCountry: string) {
     const existing = await this.prisma.workTeam.findFirst({
@@ -639,18 +622,10 @@ export class ProvidersService {
         id: workTeamId,
         countryCode: currentUserCountry,
       },
-      include: {
-        technicians: true,
-      },
     });
 
     if (!existing) {
       throw new NotFoundException('Work team not found');
-    }
-
-    // Check if work team has technicians
-    if (existing.technicians.length > 0) {
-      throw new ForbiddenException('Cannot delete work team with existing technicians. Delete technicians first.');
     }
 
     await this.prisma.workTeam.delete({
@@ -661,204 +636,9 @@ export class ProvidersService {
     return { message: 'Work team successfully deleted' };
   }
 
-  // ============================================================================
-  // TECHNICIAN CRUD
-  // ============================================================================
-
-  /**
-   * Creates a technician.
-   *
-   * @param workTeamId - The work team ID.
-   * @param dto - The technician creation data.
-   * @param currentUserId - The ID of the user creating the technician.
-   * @param currentUserCountry - The country code of the current user.
-   * @returns {Promise<TechnicianResponseDto>} The created technician.
-   * @throws {NotFoundException} If the work team is not found.
-   */
-  async createTechnician(
-    workTeamId: string,
-    dto: CreateTechnicianDto,
-    currentUserId: string,
-    currentUserCountry: string,
-  ) {
-    // Verify work team exists and belongs to current tenant
-    const workTeam = await this.prisma.workTeam.findFirst({
-      where: {
-        id: workTeamId,
-        countryCode: currentUserCountry,
-      },
-    });
-
-    if (!workTeam) {
-      throw new NotFoundException('Work team not found');
-    }
-
-    const technician = await this.prisma.technician.create({
-      data: {
-        workTeamId,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        phone: dto.phone,
-      },
-      include: {
-        workTeam: {
-          include: {
-            provider: true,
-          },
-        },
-      },
-    });
-
-    this.logger.log(`Technician created: ${technician.firstName} ${technician.lastName} (${technician.id}) for work team ${workTeamId} by ${currentUserId}`);
-    return technician;
-  }
-
-  /**
-   * Retrieves all technicians for a work team.
-   *
-   * @param workTeamId - The work team ID.
-   * @param currentUserCountry - The country code of the current user.
-   * @returns {Promise<TechnicianResponseDto[]>} A list of technicians.
-   * @throws {NotFoundException} If the work team is not found.
-   */
-  async findAllTechnicians(workTeamId: string, currentUserCountry: string) {
-    // Verify work team exists and belongs to current tenant
-    const workTeam = await this.prisma.workTeam.findFirst({
-      where: {
-        id: workTeamId,
-        countryCode: currentUserCountry,
-      },
-    });
-
-    if (!workTeam) {
-      throw new NotFoundException('Work team not found');
-    }
-
-    const technicians = await this.prisma.technician.findMany({
-      where: {
-        workTeamId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return technicians;
-  }
-
-  /**
-   * Retrieves a technician by ID.
-   *
-   * @param technicianId - The technician ID.
-   * @param currentUserCountry - The country code of the current user.
-   * @returns {Promise<TechnicianResponseDto>} The technician details.
-   * @throws {NotFoundException} If the technician is not found.
-   */
-  async findOneTechnician(technicianId: string, currentUserCountry: string) {
-    const technician = await this.prisma.technician.findFirst({
-      where: {
-        id: technicianId,
-        workTeam: {
-          countryCode: currentUserCountry,
-        },
-      },
-      include: {
-        workTeam: {
-          include: {
-            provider: true,
-          },
-        },
-      },
-    });
-
-    if (!technician) {
-      throw new NotFoundException('Technician not found');
-    }
-
-    return technician;
-  }
-
-  /**
-   * Updates a technician.
-   *
-   * @param technicianId - The technician ID.
-   * @param dto - The update data.
-   * @param currentUserId - The ID of the user updating the technician.
-   * @param currentUserCountry - The country code of the current user.
-   * @returns {Promise<TechnicianResponseDto>} The updated technician.
-   * @throws {NotFoundException} If the technician is not found.
-   */
-  async updateTechnician(
-    technicianId: string,
-    dto: UpdateTechnicianDto,
-    currentUserId: string,
-    currentUserCountry: string,
-  ) {
-    const existing = await this.prisma.technician.findFirst({
-      where: {
-        id: technicianId,
-        workTeam: {
-          countryCode: currentUserCountry,
-        },
-      },
-    });
-
-    if (!existing) {
-      throw new NotFoundException('Technician not found');
-    }
-
-    const technician = await this.prisma.technician.update({
-      where: { id: technicianId },
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        phone: dto.phone,
-      },
-      include: {
-        workTeam: {
-          include: {
-            provider: true,
-          },
-        },
-      },
-    });
-
-    this.logger.log(`Technician updated: ${technician.firstName} ${technician.lastName} (${technician.id}) by ${currentUserId}`);
-    return technician;
-  }
-
-  /**
-   * Deletes a technician.
-   *
-   * @param technicianId - The technician ID.
-   * @param currentUserId - The ID of the user deleting the technician.
-   * @param currentUserCountry - The country code of the current user.
-   * @returns {Promise<{ message: string }>} A confirmation message.
-   * @throws {NotFoundException} If the technician is not found.
-   */
-  async removeTechnician(technicianId: string, currentUserId: string, currentUserCountry: string) {
-    const existing = await this.prisma.technician.findFirst({
-      where: {
-        id: technicianId,
-        workTeam: {
-          countryCode: currentUserCountry,
-        },
-      },
-    });
-
-    if (!existing) {
-      throw new NotFoundException('Technician not found');
-    }
-
-    await this.prisma.technician.delete({
-      where: { id: technicianId },
-    });
-
-    this.logger.log(`Technician deleted: ${existing.firstName} ${existing.lastName} (${technicianId}) by ${currentUserId}`);
-    return { message: 'Technician successfully deleted' };
-  }
+  // NOTE: Individual technician CRUD methods removed per legal requirement
+  // Platform operates at WorkTeam level only to avoid co-employer liability
+  // See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
 
   // ============================================================================
   // PROVIDER WORKING SCHEDULE CRUD
@@ -1540,11 +1320,13 @@ export class ProvidersService {
   }
 
   // ============================================================================
-  // CERTIFICATION METHODS
+  // CERTIFICATION METHODS (Work Team Level)
   // ============================================================================
+  // NOTE: Certifications are tracked at the Work Team level, not individual technician level.
+  // This is a deliberate design decision to avoid co-employer liability.
 
   /**
-   * Get all technician certifications with verification status
+   * Get all work team certifications with verification status
    * For PSM verification workflow
    */
   async getAllCertifications(
@@ -1562,21 +1344,15 @@ export class ProvidersService {
     const now = new Date();
 
     const where: any = {
-      technician: {
-        workTeam: {
-          countryCode: currentUserCountry,
-          businessUnit: currentUserBU,
-        },
+      workTeam: {
+        countryCode: currentUserCountry,
       },
     };
 
     if (providerId) {
-      where.technician = {
-        ...where.technician,
-        workTeam: {
-          ...where.technician.workTeam,
-          providerId,
-        },
+      where.workTeam = {
+        ...where.workTeam,
+        providerId,
       };
     }
 
@@ -1596,21 +1372,17 @@ export class ProvidersService {
     }
 
     const [certifications, total] = await Promise.all([
-      this.prisma.technicianCertification.findMany({
+      this.prisma.workTeamCertification.findMany({
         where,
         skip,
         take: limit,
         include: {
-          technician: {
+          workTeam: {
             include: {
-              workTeam: {
-                include: {
-                  provider: {
-                    select: {
-                      id: true,
-                      name: true,
-                    },
-                  },
+              provider: {
+                select: {
+                  id: true,
+                  name: true,
                 },
               },
             },
@@ -1618,7 +1390,7 @@ export class ProvidersService {
         },
         orderBy: [{ isVerified: 'asc' }, { expiresAt: 'asc' }, { createdAt: 'desc' }],
       }),
-      this.prisma.technicianCertification.count({ where }),
+      this.prisma.workTeamCertification.count({ where }),
     ]);
 
     // Transform to include computed status
@@ -1636,8 +1408,9 @@ export class ProvidersService {
       return {
         ...cert,
         status: computedStatus,
-        providerName: cert.technician.workTeam.provider.name,
-        providerId: cert.technician.workTeam.provider.id,
+        workTeamName: cert.workTeam.name,
+        providerName: cert.workTeam.provider.name,
+        providerId: cert.workTeam.provider.id,
       };
     });
 
@@ -1662,13 +1435,11 @@ export class ProvidersService {
     currentUserCountry: string,
     notes?: string,
   ) {
-    const certification = await this.prisma.technicianCertification.findFirst({
+    const certification = await this.prisma.workTeamCertification.findFirst({
       where: {
         id: certificationId,
-        technician: {
-          workTeam: {
-            countryCode: currentUserCountry,
-          },
+        workTeam: {
+          countryCode: currentUserCountry,
         },
       },
     });
@@ -1677,7 +1448,7 @@ export class ProvidersService {
       throw new NotFoundException('Certification not found');
     }
 
-    const updated = await this.prisma.technicianCertification.update({
+    const updated = await this.prisma.workTeamCertification.update({
       where: { id: certificationId },
       data: {
         isVerified: action === 'approve',
@@ -1685,16 +1456,12 @@ export class ProvidersService {
         verifiedBy: currentUserId,
       },
       include: {
-        technician: {
+        workTeam: {
           include: {
-            workTeam: {
-              include: {
-                provider: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
+            provider: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
