@@ -16,12 +16,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth.store';
+import { ProfileStackParamList } from '../../navigation/MainNavigator';
+
+type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
 interface SettingItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -59,6 +64,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
 
 const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const navigation = useNavigation<ProfileNavigationProp>();
 
   const showComingSoon = (feature: string) => {
     if (Platform.OS === 'web') {
@@ -162,14 +168,14 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.primary[600]}
               title="Personal Information"
               subtitle={user?.email}
-              onPress={() => showComingSoon('Personal Information')}
+              onPress={() => navigation.navigate('PersonalInfo')}
             />
             <View style={styles.divider} />
             <SettingItem
               icon="key"
               iconColor={colors.warning[600]}
               title="Change Password"
-              onPress={() => showComingSoon('Change Password')}
+              onPress={() => navigation.navigate('ChangePassword')}
             />
             <View style={styles.divider} />
             <SettingItem

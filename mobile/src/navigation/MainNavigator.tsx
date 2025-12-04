@@ -16,6 +16,8 @@ import OrdersListScreen from '../screens/orders/OrdersListScreen';
 import ServiceOrderDetailScreen from '../screens/orders/ServiceOrderDetailScreen';
 import AgendaScreen from '../screens/agenda/AgendaScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
+import PersonalInfoScreen from '../screens/profile/PersonalInfoScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
 
 // Types
@@ -29,6 +31,18 @@ export type OrdersStackParamList = {
   Checklist: { orderId: string; checklistId: string };
 };
 
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  ChangePassword: undefined;
+  PersonalInfo: undefined;
+  // Future screens will be added here:
+  // Availability: undefined;
+  // ServiceAreas: undefined;
+  // Certifications: undefined;
+  // NotificationSettings: undefined;
+  // LanguageSettings: undefined;
+};
+
 export type MainTabParamList = {
   Home: undefined;
   Orders: undefined;
@@ -38,6 +52,7 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const OrdersStack = createNativeStackNavigator<OrdersStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 // Orders Stack Navigator
 const OrdersNavigator = () => {
@@ -51,6 +66,21 @@ const OrdersNavigator = () => {
       <OrdersStack.Screen name="ServiceOrderDetail" component={ServiceOrderDetailScreen} />
       <OrdersStack.Screen name="Chat" component={ChatScreen} />
     </OrdersStack.Navigator>
+  );
+};
+
+// Profile Stack Navigator
+const ProfileNavigator = () => {
+  return (
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <ProfileStack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+    </ProfileStack.Navigator>
   );
 };
 
@@ -108,7 +138,7 @@ export const MainNavigator = () => {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileNavigator}
         options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
