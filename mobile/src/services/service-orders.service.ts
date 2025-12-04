@@ -8,7 +8,165 @@ import type {
   ServiceOrder,
   ServiceOrderState,
   Urgency,
+  TimeWindow,
 } from '../types/service-order';
+
+/**
+ * Maps API response to mobile app's ServiceOrder type
+ * The backend returns data in a different structure than what the mobile app expects
+ */
+function mapServiceOrder(apiOrder: Record<string, unknown>): ServiceOrder {
+  // Build scheduled time slot from start/end times
+  let scheduledTimeSlot: TimeWindow | undefined;
+  if (apiOrder.scheduledStartTime && apiOrder.scheduledEndTime) {
+    scheduledTimeSlot = {
+      start: apiOrder.scheduledStartTime as string,
+      end: apiOrder.scheduledEndTime as string,
+    };
+  }
+
+  // Extract customer info
+  const customerInfo = apiOrder.customerInfo as Record<string, unknown> | undefined;
+  const customerAddress = customerInfo?.address as Record<string, unknown> | undefined;
+
+  // Extract service address
+  const serviceAddress = apiOrder.serviceAddress as Record<string, unknown> | undefined;
+
+  // Build full address string
+  let fullAddress = '';
+  if (serviceAddress) {
+    const parts = [
+      serviceAddress.streetNumber,
+      serviceAddress.street,
+      serviceAddress.apartment,
+      serviceAddress.postalCode,
+      serviceAddress.city,
+    ].filter(Boolean);
+    fullAddress = parts.join(', ');
+  } else if (customerAddress) {
+    const parts = [
+      customerAddress.street,
+      customerAddress.postalCode,
+      customerAddress.city,
+    ].filter(Boolean);
+    fullAddress = parts.join(', ');
+  }
+
+  return {
+    id: apiOrder.id as string,
+    externalId: (apiOrder.externalServiceOrderId as string) || undefined,
+    projectId: apiOrder.projectId as string | undefined,
+    countryCode: apiOrder.countryCode as string,
+    businessUnit: apiOrder.businessUnit as string | undefined,
+    buCode: apiOrder.buCode as string | undefined,
+
+    // Map state to status (backend uses 'state', mobile expects 'status')
+    status: apiOrder.state as ServiceOrder['status'],
+    state: apiOrder.state as ServiceOrder['state'],
+    serviceType: apiOrder.serviceType as ServiceOrder['serviceType'],
+    urgency: apiOrder.urgency as Urgency,
+
+    // Scheduling
+    scheduledDate: apiOrder.scheduledDate as string | undefined,
+    scheduledTimeSlot,
+    estimatedDuration: apiOrder.estimatedDurationMinutes as number | undefined,
+
+    // Customer info - flatten for easy access
+    customerName: customerInfo?.name as string | undefined,
+    customerEmail: customerInfo?.email as string | undefined,
+    customerPhone: customerInfo?.phone as string | undefined,
+    customerAddress: fullAddress || undefined,
+    customerInfo: customerInfo ? {
+      name: customerInfo.name as string | undefined,
+      firstName: customerInfo.firstName as string | undefined,
+      lastName: customerInfo.lastName as string | undefined,
+      email: customerInfo.email as string | undefined,
+      phone: customerInfo.phone as string | undefined,
+      preferredContactMethod: customerInfo.preferredContactMethod as 'EMAIL' | 'PHONE' | 'SMS' | 'WHATSAPP' | undefined,
+      address: customerAddress ? {
+        street: customerAddress.street as string | undefined,
+        city: customerAddress.city as string | undefined,
+        postalCode: customerAddress.postalCode as string | undefined,
+        country: customerAddress.country as string | undefined,
+      } : undefined,
+    } : undefined,
+
+    // Service address with full details
+    serviceAddress: serviceAddress ? {
+      street: serviceAddress.street as string,
+      streetNumber: serviceAddress.streetNumber as string | undefined,
+      apartment: serviceAddress.apartment as string | undefined,
+      floor: serviceAddress.floor as string | undefined,
+      building: serviceAddress.building as string | undefined,
+      city: serviceAddress.city as string,
+      state: serviceAddress.state as string | undefined,
+      postalCode: serviceAddress.postalCode as string,
+      country: serviceAddress.country as string,
+      lat: serviceAddress.lat as number | undefined,
+      lng: serviceAddress.lng as number | undefined,
+      accessInstructions: serviceAddress.accessInstructions as string | undefined,
+      accessCode: serviceAddress.accessCode as string | undefined,
+      parkingInfo: serviceAddress.parkingInfo as string | undefined,
+    } : undefined,
+
+    // Financial info
+    totalAmountCustomer: apiOrder.totalAmountCustomer ? Number(apiOrder.totalAmountCustomer) : undefined,
+    totalAmountCustomerExclTax: apiOrder.totalAmountCustomerExclTax ? Number(apiOrder.totalAmountCustomerExclTax) : undefined,
+    totalTaxCustomer: apiOrder.totalTaxCustomer ? Number(apiOrder.totalTaxCustomer) : undefined,
+    totalAmountProvider: apiOrder.totalAmountProvider ? Number(apiOrder.totalAmountProvider) : undefined,
+    totalMargin: apiOrder.totalMargin ? Number(apiOrder.totalMargin) : undefined,
+    marginPercent: apiOrder.marginPercent ? Number(apiOrder.marginPercent) : undefined,
+    currency: apiOrder.currency as string | undefined,
+
+    // Sales context
+    salesOrderNumber: apiOrder.salesOrderNumber as string | undefined,
+    salesChannel: apiOrder.salesChannel as ServiceOrder['salesChannel'],
+    orderDate: apiOrder.orderDate as string | undefined,
+
+    // Extract nested relations
+    store: apiOrder.store ? {
+      id: (apiOrder.store as Record<string, unknown>).id as string,
+      code: (apiOrder.store as Record<string, unknown>).buCode as string,
+      name: (apiOrder.store as Record<string, unknown>).name as string,
+      buCode: (apiOrder.store as Record<string, unknown>).buCode as string,
+    } : undefined,
+    salesSystem: apiOrder.salesSystem ? {
+      code: (apiOrder.salesSystem as Record<string, unknown>).code as string,
+      name: (apiOrder.salesSystem as Record<string, unknown>).name as string,
+    } : undefined,
+
+    // Delivery
+    productDeliveryStatusEnum: apiOrder.productDeliveryStatus as ServiceOrder['productDeliveryStatusEnum'],
+    allProductsDelivered: apiOrder.allProductsDelivered as boolean | undefined,
+    earliestDeliveryDate: apiOrder.earliestDeliveryDate as string | undefined,
+    latestDeliveryDate: apiOrder.latestDeliveryDate as string | undefined,
+    deliveryBlocksExecution: apiOrder.deliveryBlocksExecution as boolean | undefined,
+
+    // Payment
+    paymentStatus: apiOrder.paymentStatus as ServiceOrder['paymentStatus'],
+
+    // Risk
+    riskLevel: apiOrder.riskLevel as ServiceOrder['riskLevel'],
+    riskScore: apiOrder.riskScore as number | undefined,
+    salesPotential: apiOrder.salesPotential as ServiceOrder['salesPotential'],
+
+    // Assignment
+    assignedProviderId: apiOrder.assignedProviderId as string | undefined,
+    assignedProviderName: apiOrder.assignedProvider 
+      ? (apiOrder.assignedProvider as Record<string, unknown>).name as string 
+      : undefined,
+    assignedWorkTeamId: apiOrder.assignedWorkTeamId as string | undefined,
+
+    // Line items count from _count
+    lineItems: apiOrder._count 
+      ? Array((apiOrder._count as Record<string, number>).lineItems || 0).fill({}) as ServiceOrder['lineItems']
+      : undefined,
+
+    // Metadata
+    createdAt: apiOrder.createdAt as string,
+    updatedAt: apiOrder.updatedAt as string,
+  };
+}
 
 export interface ServiceOrderListParams {
   page?: number;
@@ -73,6 +231,12 @@ export interface WCFData {
   photos: string[];
 }
 
+// API response shape from backend (different from mobile types)
+interface ApiServiceOrderListResponse {
+  data: Record<string, unknown>[];
+  total: number;
+}
+
 class ServiceOrdersService {
   /**
    * Get paginated list of service orders
@@ -98,10 +262,15 @@ class ServiceOrdersService {
     if (params.sortBy) queryParams.set('sortBy', params.sortBy);
     if (params.sortOrder) queryParams.set('sortOrder', params.sortOrder);
 
-    const response = await apiService.get<ServiceOrderListResponse>(
+    const response = await apiService.get<ApiServiceOrderListResponse>(
       `/service-orders?${queryParams.toString()}`
     );
-    return response;
+    
+    // Map API response to mobile app types
+    return {
+      data: (response.data || []).map(mapServiceOrder),
+      total: response.total,
+    };
   }
 
   /**
@@ -141,21 +310,24 @@ class ServiceOrdersService {
    * Get a single service order by ID
    */
   async getServiceOrder(id: string): Promise<ServiceOrder> {
-    return apiService.get<ServiceOrder>(`/service-orders/${id}`);
+    const response = await apiService.get<Record<string, unknown>>(`/service-orders/${id}`);
+    return mapServiceOrder(response);
   }
 
   /**
    * Check in to a service order (start execution)
    */
   async checkIn(orderId: string, data: CheckInData): Promise<ServiceOrder> {
-    return apiService.post<ServiceOrder>(`/service-orders/${orderId}/check-in`, data);
+    const response = await apiService.post<Record<string, unknown>>(`/service-orders/${orderId}/check-in`, data);
+    return mapServiceOrder(response);
   }
 
   /**
    * Check out from a service order (complete on-site work)
    */
   async checkOut(orderId: string, data: CheckOutData): Promise<ServiceOrder> {
-    return apiService.post<ServiceOrder>(`/service-orders/${orderId}/check-out`, data);
+    const response = await apiService.post<Record<string, unknown>>(`/service-orders/${orderId}/check-out`, data);
+    return mapServiceOrder(response);
   }
 
   /**
@@ -165,14 +337,16 @@ class ServiceOrdersService {
     orderId: string,
     data: ExecutionUpdate
   ): Promise<ServiceOrder> {
-    return apiService.patch<ServiceOrder>(`/service-orders/${orderId}/execution`, data);
+    const response = await apiService.patch<Record<string, unknown>>(`/service-orders/${orderId}/execution`, data);
+    return mapServiceOrder(response);
   }
 
   /**
    * Submit Work Closing Form
    */
   async submitWCF(orderId: string, data: WCFData): Promise<ServiceOrder> {
-    return apiService.post<ServiceOrder>(`/service-orders/${orderId}/wcf`, data);
+    const response = await apiService.post<Record<string, unknown>>(`/service-orders/${orderId}/wcf`, data);
+    return mapServiceOrder(response);
   }
 
   /**
@@ -244,7 +418,8 @@ class ServiceOrdersService {
    * Accept a service order assignment
    */
   async acceptOrder(orderId: string): Promise<ServiceOrder> {
-    return apiService.post<ServiceOrder>(`/service-orders/${orderId}/accept`);
+    const response = await apiService.post<Record<string, unknown>>(`/service-orders/${orderId}/accept`);
+    return mapServiceOrder(response);
   }
 
   /**
@@ -254,9 +429,10 @@ class ServiceOrdersService {
     orderId: string,
     reason: string
   ): Promise<ServiceOrder> {
-    return apiService.post<ServiceOrder>(`/service-orders/${orderId}/decline`, {
+    const response = await apiService.post<Record<string, unknown>>(`/service-orders/${orderId}/decline`, {
       reason,
     });
+    return mapServiceOrder(response);
   }
 
   /**
@@ -267,10 +443,11 @@ class ServiceOrdersService {
     proposedDate: string,
     reason: string
   ): Promise<ServiceOrder> {
-    return apiService.post<ServiceOrder>(`/service-orders/${orderId}/negotiate-date`, {
+    const response = await apiService.post<Record<string, unknown>>(`/service-orders/${orderId}/negotiate-date`, {
       proposedDate,
       reason,
     });
+    return mapServiceOrder(response);
   }
 
   /**
