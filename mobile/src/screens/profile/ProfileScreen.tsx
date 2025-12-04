@@ -60,6 +60,14 @@ const SettingItem: React.FC<SettingItemProps> = ({
 const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuthStore();
 
+  const showComingSoon = (feature: string) => {
+    if (Platform.OS === 'web') {
+      globalThis.alert(`${feature}\n\nThis feature is coming soon!`);
+    } else {
+      Alert.alert(feature, 'This feature is coming soon!', [{ text: 'OK' }]);
+    }
+  };
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       // Use browser confirm for web platform
@@ -129,7 +137,7 @@ const ProfileScreen: React.FC = () => {
                 <Text style={styles.avatarInitials}>{getInitials()}</Text>
               </View>
             )}
-            <TouchableOpacity style={styles.editAvatarButton}>
+            <TouchableOpacity style={styles.editAvatarButton} onPress={() => showComingSoon('Change Profile Photo')}>
               <Ionicons name="camera" size={14} color={colors.white} />
             </TouchableOpacity>
           </View>
@@ -154,14 +162,14 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.primary[600]}
               title="Personal Information"
               subtitle={user?.email}
-              onPress={() => {}}
+              onPress={() => showComingSoon('Personal Information')}
             />
             <View style={styles.divider} />
             <SettingItem
               icon="key"
               iconColor={colors.warning[600]}
               title="Change Password"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Change Password')}
             />
             <View style={styles.divider} />
             <SettingItem
@@ -169,7 +177,7 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.info[600]}
               title="Notifications"
               subtitle="Push, Email, SMS"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Notification Settings')}
             />
           </Card>
         </View>
@@ -183,14 +191,14 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.success[600]}
               title="Availability"
               subtitle="Set your working hours"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Availability Settings')}
             />
             <View style={styles.divider} />
             <SettingItem
               icon="location"
               iconColor={colors.danger[600]}
               title="Service Areas"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Service Areas')}
             />
             <View style={styles.divider} />
             <SettingItem
@@ -198,7 +206,7 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.primary[600]}
               title="Certifications"
               subtitle="View your certifications"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Certifications')}
             />
           </Card>
         </View>
@@ -212,7 +220,7 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.gray[600]}
               title="Language"
               subtitle="English"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Language Settings')}
             />
             <View style={styles.divider} />
             <SettingItem
@@ -220,6 +228,7 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.gray[800]}
               title="Dark Mode"
               showArrow={false}
+              onPress={() => showComingSoon('Dark Mode')}
               rightElement={
                 <View style={styles.togglePlaceholder}>
                   <Text style={styles.toggleText}>Off</Text>
@@ -232,7 +241,7 @@ const ProfileScreen: React.FC = () => {
               iconColor={colors.info[600]}
               title="Sync Data"
               subtitle="Last synced: Just now"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Sync Data')}
             />
           </Card>
         </View>
@@ -245,21 +254,21 @@ const ProfileScreen: React.FC = () => {
               icon="help-circle"
               iconColor={colors.primary[600]}
               title="Help & FAQ"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Help & FAQ')}
             />
             <View style={styles.divider} />
             <SettingItem
               icon="chatbubble"
               iconColor={colors.success[600]}
               title="Contact Support"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Contact Support')}
             />
             <View style={styles.divider} />
             <SettingItem
               icon="document-text"
               iconColor={colors.gray[600]}
               title="Terms & Privacy"
-              onPress={() => {}}
+              onPress={() => showComingSoon('Terms & Privacy')}
             />
           </Card>
         </View>
