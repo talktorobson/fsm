@@ -447,7 +447,9 @@ export default function ProviderDetailPage() {
                         {team.externalId && <span className="text-xs text-gray-400">{team.externalId}</span>}
                       </div>
                       <span className="text-xs text-gray-500">
-                        {team.technicians?.length || 0} technicians
+                        {team.minTechnicians && team.maxTechnicians 
+                          ? `${team.minTechnicians}-${team.maxTechnicians} members` 
+                          : `${team.maxTechnicians || '-'} max members`}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-4 text-sm mt-2">
@@ -464,13 +466,12 @@ export default function ProviderDetailPage() {
                         <span className="ml-2">{team.workingDays?.join(', ')}</span>
                       </div>
                     </div>
-                    {team.technicians && team.technicians.length > 0 && (
+                    {team.serviceTypes && team.serviceTypes.length > 0 && (
                       <div className="mt-3 pt-3 border-t">
                         <div className="flex flex-wrap gap-2">
-                          {team.technicians.map(tech => (
-                            <span key={tech.id} className={clsx('badge text-xs', tech.isTeamLead ? 'badge-primary' : 'badge-gray')}>
-                              {tech.firstName} {tech.lastName}
-                              {tech.isTeamLead && ' ★'}
+                          {team.serviceTypes.map(service => (
+                            <span key={service} className="badge badge-gray text-xs">
+                              {service}
                             </span>
                           ))}
                         </div>

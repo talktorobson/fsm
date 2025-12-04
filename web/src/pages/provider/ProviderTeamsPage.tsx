@@ -1,6 +1,10 @@
 /**
  * Provider Teams Page
- * Manage work teams and technicians
+ * Manage work teams
+ * 
+ * NOTE: Platform operates at WorkTeam level only (atomic unit).
+ * Individual technician tracking is not provided to avoid co-employer liability.
+ * See: docs/LEGAL_BOUNDARY_WORKTEAM_VS_TECHNICIAN.md
  */
 
 import { useState, useEffect } from 'react';
@@ -15,25 +19,13 @@ import {
   CheckCircle,
   ChevronRight,
   Settings,
-  User,
   AlertCircle,
   Loader2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { providerService } from '@/services/provider-service';
-import { WorkTeam, Technician, WorkTeamStatus } from '@/types';
-
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
-  available: { label: 'Available', color: 'text-green-700', bgColor: 'bg-green-100' },
-  on_job: { label: 'On Job', color: 'text-blue-700', bgColor: 'bg-blue-100' },
-  off_duty: { label: 'Off Duty', color: 'text-gray-700', bgColor: 'bg-gray-100' },
-  vacation: { label: 'On Vacation', color: 'text-orange-700', bgColor: 'bg-orange-100' },
-  ACTIVE: { label: 'Active', color: 'text-green-700', bgColor: 'bg-green-100' },
-  INACTIVE: { label: 'Inactive', color: 'text-gray-700', bgColor: 'bg-gray-100' },
-  ON_VACATION: { label: 'On Vacation', color: 'text-orange-700', bgColor: 'bg-orange-100' },
-  SUSPENDED: { label: 'Suspended', color: 'text-red-700', bgColor: 'bg-red-100' },
-};
+import { WorkTeam, WorkTeamStatus } from '@/types';
 
 const teamStatusConfig: Record<WorkTeamStatus, { label: string; color: string; bgColor: string }> = {
   ACTIVE: { label: 'Active', color: 'text-green-700', bgColor: 'bg-green-100' },
@@ -42,8 +34,12 @@ const teamStatusConfig: Record<WorkTeamStatus, { label: string; color: string; b
   SUSPENDED: { label: 'Suspended', color: 'text-red-700', bgColor: 'bg-red-100' },
 };
 
-function TeamCard({ team, technicians }: { team: WorkTeam; technicians: Technician[] }) {
-  const teamStatus = teamStatusConfig[team.status] || statusConfig.INACTIVE;
+function TeamCard({ team }: { team: WorkTeam }) {
+  const teamStatus = teamStatusConfig[team.status] || teamStatusConfig.INACTIVE;
+  // Platform operates at WorkTeam level - use min/max technicians as capacity indicator
+  const capacityRange = team.minTechnicians && team.maxTechnicians 
+    ? `${team.minTechnicians}-${team.maxTechnicians}` 
+    : team.maxTechnicians || '-';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -76,8 +72,8 @@ function TeamCard({ team, technicians }: { team: WorkTeam; technicians: Technici
       {/* Stats */}
       <div className="grid grid-cols-3 divide-x divide-gray-100 bg-gray-50 px-5 py-3">
         <div className="text-center">
-          <p className="text-xl font-bold text-gray-900">{technicians.length}</p>
-          <p className="text-xs text-gray-500">Members</p>
+          <p className="text-xl font-bold text-gray-900">{capacityRange}</p>
+          <p className="text-xs text-gray-500">Team Size</p>
         </div>
         <div className="text-center">
           <p className="text-xl font-bold text-gray-900">{team.maxDailyJobs}</p>
@@ -92,40 +88,27 @@ function TeamCard({ team, technicians }: { team: WorkTeam; technicians: Technici
         </div>
       </div>
 
-      {/* Members */}
+      {/* Team Info */}
       <div className="p-5">
-        <h4 className="text-sm font-medium text-gray-500 mb-3">Team Members</h4>
-        {technicians.length > 0 ? (
-          <div className="space-y-3">
-            {technicians.slice(0, 4).map(member => {
-              return (
-                <div key={member.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-gray-500" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{member.firstName} {member.lastName}</span>
-                        {member.isTeamLead && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Lead</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-500">{member.email || 'No email'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {technicians.length > 4 && (
-              <p className="text-sm text-gray-500 text-center">+{technicians.length - 4} more members</p>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 text-center py-2">No technicians assigned</p>
-        )}
+        <h4 className="text-sm font-medium text-gray-500 mb-3">Team Details</h4>
+        <div className="space-y-2">
+          {team.workingDays && team.workingDays.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-700">
+                Works: {team.workingDays.join(', ')}
+              </span>
+            </div>
+          )}
+          {team.serviceTypes && team.serviceTypes.length > 0 && (
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-700">
+                Services: {team.serviceTypes.slice(0, 2).join(', ')}{team.serviceTypes.length > 2 ? ` +${team.serviceTypes.length - 2}` : ''}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Actions */}
@@ -147,7 +130,6 @@ export default function ProviderTeamsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [, setShowAddModal] = useState(false);
   const [teams, setTeams] = useState<WorkTeam[]>([]);
-  const [teamTechnicians, setTeamTechnicians] = useState<Record<string, Technician[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,20 +148,6 @@ export default function ProviderTeamsPage() {
         // Fetch work teams for the provider
         const workTeams = await providerService.getWorkTeams(user.providerId);
         setTeams(workTeams);
-
-        // Fetch technicians for each team
-        const techniciansMap: Record<string, Technician[]> = {};
-        await Promise.all(
-          workTeams.map(async (team) => {
-            try {
-              const technicians = await providerService.getTechnicians(team.id);
-              techniciansMap[team.id] = technicians;
-            } catch {
-              techniciansMap[team.id] = [];
-            }
-          })
-        );
-        setTeamTechnicians(techniciansMap);
       } catch (err) {
         console.error('Failed to fetch teams:', err);
         setError('Failed to load teams. Please try again.');
@@ -194,17 +162,12 @@ export default function ProviderTeamsPage() {
   const filteredTeams = teams.filter(team => 
     team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     team.postalCodes?.some(code => code.includes(searchQuery)) ||
-    teamTechnicians[team.id]?.some(m => 
-      `${m.firstName} ${m.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    team.skills?.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const totalMembers = Object.values(teamTechnicians).reduce((sum, techs) => sum + techs.length, 0);
   const activeTeams = teams.filter(t => t.status === 'ACTIVE').length;
-  // Count technicians from active teams as "available"
-  const availableMembers = teams
-    .filter(t => t.status === 'ACTIVE')
-    .reduce((sum, team) => sum + (teamTechnicians[team.id]?.length || 0), 0);
+  // Calculate total capacity from max daily jobs
+  const totalCapacity = teams.reduce((sum, team) => sum + (team.maxDailyJobs || 0), 0);
 
   if (loading) {
     return (
@@ -232,7 +195,7 @@ export default function ProviderTeamsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Work Teams</h1>
-          <p className="text-gray-500 mt-1">Manage your teams and technicians</p>
+          <p className="text-gray-500 mt-1">Manage your work teams</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -259,11 +222,11 @@ export default function ProviderTeamsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <User className="w-5 h-5 text-blue-600" />
+              <Clock className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{totalMembers}</p>
-              <p className="text-sm text-gray-500">Total Members</p>
+              <p className="text-2xl font-bold text-gray-900">{totalCapacity}</p>
+              <p className="text-sm text-gray-500">Daily Capacity</p>
             </div>
           </div>
         </div>
@@ -281,11 +244,11 @@ export default function ProviderTeamsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-orange-600" />
+              <MapPin className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{availableMembers}</p>
-              <p className="text-sm text-gray-500">Available Now</p>
+              <p className="text-2xl font-bold text-gray-900">{teams.reduce((sum, t) => sum + (t.postalCodes?.length || 0), 0)}</p>
+              <p className="text-sm text-gray-500">Zones Covered</p>
             </div>
           </div>
         </div>
@@ -296,7 +259,7 @@ export default function ProviderTeamsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search teams or members..."
+          placeholder="Search teams or skills..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 pr-4 py-2.5 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -307,7 +270,7 @@ export default function ProviderTeamsPage() {
       {filteredTeams.length > 0 ? (
         <div className="grid md:grid-cols-2 gap-6">
           {filteredTeams.map(team => (
-            <TeamCard key={team.id} team={team} technicians={teamTechnicians[team.id] || []} />
+            <TeamCard key={team.id} team={team} />
           ))}
         </div>
       ) : (
