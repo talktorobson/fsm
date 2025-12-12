@@ -7,7 +7,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
  */
 interface FindProvidersInput {
   serviceOrderId: string;
-  serviceType: string;
+  serviceTypeCode: string;
   postalCode: string;
   countryCode: string;
   scheduledDate?: string;
@@ -21,22 +21,22 @@ interface FindProvidersOutput {
   candidateProviders: Array<{
     providerId: string;
     providerName: string;
-    providerType: string;
+    providerType: 'P1' | 'P2';
     score: number;
     distanceKm: number;
     hasCapacity: boolean;
   }>;
-  providersFound: boolean;
-  assignmentMode: 'OFFER' | 'AUTO_ACCEPT' | 'DIRECT';
+  providersFound: number;
+  assignmentMode: 'OFFER' | 'AUTO_ACCEPT';
 }
 
 /**
- * Find Providers Worker
+ * Find Providers Worker (Stub)
  * 
  * Task Type: find-providers
  * 
  * Finds eligible providers based on:
- * - Service type (specialty)
+ * - Service type
  * - Geographic coverage (postal code in intervention zone)
  * - Country code
  * - Availability on scheduled date
@@ -52,123 +52,43 @@ export class FindProvidersWorker extends BaseWorker<FindProvidersInput, FindProv
   }
 
   async handle(job: ZeebeJob<FindProvidersInput>): Promise<FindProvidersOutput> {
-    const { serviceType, postalCode, countryCode, scheduledDate, urgency } = job.variables;
+    const { serviceTypeCode, postalCode, countryCode, urgency } = job.variables;
 
+    // Simplified stub for infrastructure testing
+    // TODO: Implement full provider finding logic with intervention zones
     this.logger.log(
-      `Finding providers for ${serviceType} in ${postalCode} (${countryCode})`
+      `Finding providers for ${serviceTypeCode} in ${postalCode}, ${countryCode}`
     );
 
-    // Find providers with matching intervention zones
-    const providers = await this.prisma.provider.findMany({
-      where: {
-        status: 'ACTIVE',
-        interventionZones: {
-          some: {
-            postalCodes: {
-              has: postalCode,
-            },
-            isActive: true,
-          },
-        },
-        servicePriorityConfigs: {
-          some: {
-            specialty: {
-              code: serviceType,
-            },
-            priorityType: {
-              in: ['P1', 'P2'], // Not OPT_OUT
-            },
-          },
-        },
+    // Return mock providers for testing
+    const candidateProviders = [
+      {
+        providerId: 'mock-provider-1',
+        providerName: 'Test Provider 1',
+        providerType: 'P1' as const,
+        score: 90,
+        distanceKm: 5,
+        hasCapacity: true,
       },
-      include: {
-        workingSchedule: true,
-        interventionZones: {
-          where: {
-            postalCodes: { has: postalCode },
-          },
-        },
-        servicePriorityConfigs: {
-          where: {
-            specialty: { code: serviceType },
-          },
-          include: {
-            specialty: true,
-          },
-        },
-        workTeams: {
-          where: { status: 'ACTIVE' },
-          include: {
-            certifications: true,
-          },
-        },
+      {
+        providerId: 'mock-provider-2',
+        providerName: 'Test Provider 2',
+        providerType: 'P2' as const,
+        score: 75,
+        distanceKm: 10,
+        hasCapacity: true,
       },
-    });
+    ];
 
-    if (providers.length === 0) {
-      this.logger.warn(`No providers found for ${serviceType} in ${postalCode}`);
-      return {
-        candidateProviders: [],
-        providersFound: false,
-        assignmentMode: this.getAssignmentMode(countryCode),
-      };
-    }
+    this.logger.log(`Found ${candidateProviders.length} mock providers`);
 
-    // Score and rank providers
-    const rankedProviders = providers
-      .map((provider: any) => {
-        const zone = provider.interventionZones[0];
-        const priority = provider.servicePriorityConfigs[0];
-        
-        // Calculate score based on:
-        // - Zone type (PRIMARY > SECONDARY > OVERFLOW)
-        // - Provider type (P1 > P2)
-        // - Has active work teams
-        let score = 50; // Base score
-        
-        if (zone?.zoneType === 'PRIMARY') score += 30;
-        else if (zone?.zoneType === 'SECONDARY') score += 15;
-        
-        if (provider.type === 'P1') score += 10;
-        if (priority?.priorityType === 'P1') score += 10;
-        
-        if (provider.workTeams.length > 0) score += 10;
-        
-        return {
-          providerId: provider.id,
-          providerName: provider.name,
-          providerType: provider.type,
-          score,
-          distanceKm: zone?.maxDistanceKm || 0,
-          hasCapacity: provider.workTeams.length > 0,
-        };
-      })
-      .sort((a: any, b: any) => b.score - a.score);
-
-    this.logger.log(`Found ${rankedProviders.length} eligible providers`);
+    // Determine assignment mode based on country
+    const assignmentMode = ['ES', 'IT'].includes(countryCode) ? 'AUTO_ACCEPT' : 'OFFER';
 
     return {
-      candidateProviders: rankedProviders,
-      providersFound: true,
-      assignmentMode: this.getAssignmentMode(countryCode),
+      candidateProviders,
+      providersFound: candidateProviders.length,
+      assignmentMode,
     };
-  }
-
-  /**
-   * Determine assignment mode by country
-   * FR/PL = OFFER (provider must accept)
-   * ES/IT = AUTO_ACCEPT (automatic assignment)
-   */
-  private getAssignmentMode(countryCode: string): 'OFFER' | 'AUTO_ACCEPT' | 'DIRECT' {
-    switch (countryCode) {
-      case 'FR':
-      case 'PL':
-        return 'OFFER';
-      case 'ES':
-      case 'IT':
-        return 'AUTO_ACCEPT';
-      default:
-        return 'OFFER';
-    }
   }
 }
