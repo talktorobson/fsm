@@ -11,22 +11,14 @@ www.goexec.de, goexec.de {
         reverse_proxy api:3000
     }
 
-    # Camunda Operate - Process Monitoring UI
-    @operate {
-        path /camunda/operate /camunda/operate/*
-    }
-    handle @operate {
-        uri strip_prefix /camunda/operate
-        reverse_proxy 127.0.0.1:8081
+    # Camunda Operate - Process Monitoring UI (context path configured in container)
+    handle /camunda/operate* {
+        reverse_proxy operate:8080
     }
 
-    # Camunda Tasklist - Human Task UI
-    @tasklist {
-        path /camunda/tasklist /camunda/tasklist/*
-    }
-    handle @tasklist {
-        uri strip_prefix /camunda/tasklist
-        reverse_proxy 127.0.0.1:8082
+    # Camunda Tasklist - Human Task UI (context path configured in container)
+    handle /camunda/tasklist* {
+        reverse_proxy tasklist:8080
     }
 
     # Serve mobile app assets (Expo bundles accessed from /mobile/index.html)
@@ -64,22 +56,14 @@ www.goexec.de, goexec.de {
         reverse_proxy api:3000
     }
 
-    # Camunda Operate - Process Monitoring UI
-    @operate {
-        path /camunda/operate /camunda/operate/*
-    }
-    handle @operate {
-        uri strip_prefix /camunda/operate
-        reverse_proxy 127.0.0.1:8081
+    # Camunda Operate - Process Monitoring UI (context path configured in container)
+    handle /camunda/operate* {
+        reverse_proxy operate:8080
     }
 
-    # Camunda Tasklist - Human Task UI
-    @tasklist {
-        path /camunda/tasklist /camunda/tasklist/*
-    }
-    handle @tasklist {
-        uri strip_prefix /camunda/tasklist
-        reverse_proxy 127.0.0.1:8082
+    # Camunda Tasklist - Human Task UI (context path configured in container)
+    handle /camunda/tasklist* {
+        reverse_proxy tasklist:8080
     }
 
     # Serve mobile app assets
