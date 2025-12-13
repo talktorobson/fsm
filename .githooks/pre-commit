@@ -1,0 +1,28 @@
+#!/bin/sh
+# Pre-commit hook for Yellow Grid
+# Install: ln -sf ../../.githooks/pre-commit .git/hooks/pre-commit
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo "Running pre-commit checks..."
+
+# Check for console.log (except in test files)
+if git diff --cached --name-only | grep -E '\.ts$' | grep -v '\.spec\.ts$' | xargs grep -l 'console.log' 2>/dev/null; then
+    echo -e "${RED}Warning: console.log found in staged files${NC}"
+    echo "Consider removing before commit"
+fi
+
+# Quick type check on staged files
+echo "Type checking..."
+npx tsc --noEmit --skipLibCheck 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo -e "${RED}TypeScript errors found!${NC}"
+    echo "Run 'npm run typecheck' to see details"
+    exit 1
+fi
+
+echo -e "${GREEN}Pre-commit checks passed!${NC}"
+exit 0

@@ -25,13 +25,20 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e:staging": "./scripts/e2e-tests.sh",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "db:seed": "ts-node prisma/seed.ts"
+    "docker:up": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "db:seed": "ts-node prisma/seed.ts",
+    "db:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d postgres redis && sleep 3 && npx prisma migrate dev",
+    "deploy": "git push origin main",
+    "staging:status": "ssh -i deploy/vps_key root@135.181.96.93 'cd /root/yellow-grid/deploy && docker compose ps'",
+    "staging:logs": "ssh -i deploy/vps_key root@135.181.96.93 'cd /root/yellow-grid/deploy && docker compose logs -f api'",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.932.0",

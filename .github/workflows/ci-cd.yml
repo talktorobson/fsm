@@ -210,30 +210,26 @@ jobs:
           echo "- ⚙️ Operate: https://operate.goexec.de (requires DNS)" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================
-  # STAGE 5: E2E Tests on Staging (optional for now)
+  # STAGE 5: E2E Tests on Staging
   # ============================================================
   test-e2e:
     name: 🎭 E2E Tests
     runs-on: ubuntu-latest
     needs: [deploy-staging]
-    continue-on-error: true  # Don't block on E2E failures
+    continue-on-error: true  # Don't block on E2E failures (yet)
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      
-      - name: Run API E2E tests
+      - name: Run E2E Test Suite
         run: |
-          # Basic API tests using curl
-          echo "Testing API health..."
-          curl -sf https://goexec.de/api/v1/health || echo "Health check failed"
-          
-          echo "Testing login endpoint..."
-          curl -sf https://goexec.de/api/v1/auth/login \
-            -H "Content-Type: application/json" \
-            -d '{"email":"operator.fr@adeo.com","password":"Admin123!"}' || echo "Login test failed"
-          
-          echo "✅ Basic E2E tests completed"
+          chmod +x scripts/e2e-tests.sh
+          ./scripts/e2e-tests.sh
+        env:
+          BASE_URL: https://goexec.de
+      
+      - name: E2E Test Summary
+        if: always()
+        run: |
+          echo "## 🎭 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Target: https://goexec.de" >> $GITHUB_STEP_SUMMARY
