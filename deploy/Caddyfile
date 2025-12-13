@@ -2,117 +2,74 @@
     email talktorobson@gmail.com
 }
 
-# Camunda Operate on subdomain
+# ============================================================
+# STAGING ENVIRONMENT - Single VPS (135.181.96.93)
+# ============================================================
+
+# Camunda Operate - dedicated subdomain (avoids base href conflicts)
 operate.goexec.de {
     reverse_proxy operate:8080
 }
 
-# Camunda Tasklist on subdomain  
+# Camunda Tasklist - dedicated subdomain
 tasklist.goexec.de {
     reverse_proxy tasklist:8080
 }
 
-# Production domains - Let's Encrypt certificates
-www.goexec.de, goexec.de {
+# Staging domain (primary) + legacy domains
+staging.goexec.de, www.goexec.de, goexec.de {
     encode gzip
+    header X-Environment "staging"
 
-    # Proxy API requests to the backend
+    # API
     handle /api/* {
         reverse_proxy api:3000
     }
 
-    # Camunda Operate - Main UI
-    handle_path /camunda/operate* {
-        reverse_proxy operate:8080
-    }
-
-    # Camunda Tasklist - Main UI
-    handle_path /camunda/tasklist* {
-        reverse_proxy tasklist:8080
-    }
-
-    # Camunda assets (for base href="/" compatibility)
-    # These paths are requested when browser loads /camunda/operate/ with <base href="/">
-    handle /client-config.js {
-        reverse_proxy operate:8080
-    }
-    
-    handle /static/* {
-        reverse_proxy operate:8080
-    }
-    
-    handle /favicon.ico {
-        reverse_proxy operate:8080
-    }
-    
-    handle /locales/* {
-        reverse_proxy operate:8080
-    }
-
-    # Serve mobile app assets (Expo bundles accessed from /mobile/index.html)
+    # Mobile app assets
     handle /_expo/* {
         root * /srv/mobile
         try_files {path} =404
         file_server
     }
 
-    # Serve mobile app
+    # Mobile app
     handle_path /mobile/* {
         root * /srv/mobile
         try_files {path} /index.html
         file_server
     }
 
-    # Serve static files from /srv (SPA fallback)
-    # Explicitly exclude Camunda asset paths
-    @not_camunda_assets {
-        not path /client-config.js /static/* /favicon.ico /locales/*
-    }
-    handle @not_camunda_assets {
+    # Web SPA
+    handle {
         root * /srv
         try_files {path} /index.html
         file_server
     }
 }
 
-# IP fallback - Self-signed certificate for direct IP access
+# IP fallback - Self-signed certificate
 135.181.96.93 {
-    tls {
-        issuer internal
-    }
-    
+    tls internal
     encode gzip
+    header X-Environment "staging"
 
-    # Proxy API requests to the backend
     handle /api/* {
         reverse_proxy api:3000
     }
 
-    # Camunda Operate - Process Monitoring UI
-    handle_path /camunda/operate* {
-        reverse_proxy operate:8080
-    }
-
-    # Camunda Tasklist - Human Task UI
-    handle_path /camunda/tasklist* {
-        reverse_proxy tasklist:8080
-    }
-
-    # Serve mobile app assets
     handle /_expo/* {
         root * /srv/mobile
         try_files {path} =404
         file_server
     }
 
-    # Serve mobile app
     handle_path /mobile/* {
         root * /srv/mobile
         try_files {path} /index.html
         file_server
     }
 
-    # Serve static files from /srv
     handle {
         root * /srv
         try_files {path} /index.html
