@@ -12,12 +12,20 @@ www.goexec.de, goexec.de {
     }
 
     # Camunda Operate - Process Monitoring UI
-    handle_path /camunda/operate* {
+    @operate {
+        path /camunda/operate /camunda/operate/*
+    }
+    handle @operate {
+        uri strip_prefix /camunda/operate
         reverse_proxy 127.0.0.1:8081
     }
 
     # Camunda Tasklist - Human Task UI
-    handle_path /camunda/tasklist* {
+    @tasklist {
+        path /camunda/tasklist /camunda/tasklist/*
+    }
+    handle @tasklist {
+        uri strip_prefix /camunda/tasklist
         reverse_proxy 127.0.0.1:8082
     }
 
@@ -57,12 +65,20 @@ www.goexec.de, goexec.de {
     }
 
     # Camunda Operate - Process Monitoring UI
-    handle_path /camunda/operate* {
+    @operate {
+        path /camunda/operate /camunda/operate/*
+    }
+    handle @operate {
+        uri strip_prefix /camunda/operate
         reverse_proxy 127.0.0.1:8081
     }
 
     # Camunda Tasklist - Human Task UI
-    handle_path /camunda/tasklist* {
+    @tasklist {
+        path /camunda/tasklist /camunda/tasklist/*
+    }
+    handle @tasklist {
+        uri strip_prefix /camunda/tasklist
         reverse_proxy 127.0.0.1:8082
     }
 
