@@ -1,0 +1,97 @@
+# Local Development - Minimal Resources
+# Only run what you need locally, use staging for full stack
+# Usage: docker compose -f docker-compose.dev.yml up -d
+
+services:
+  # PostgreSQL - Essential
+  postgres:
+    image: postgres:15
+    container_name: dev-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yellow_grid
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis - Essential for sessions/cache
+  redis:
+    image: redis:7-alpine
+    container_name: dev-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────
+  # OPTIONAL: Camunda Stack (uses ~1.5GB RAM)
+  # Only start if you need workflow testing
+  # Usage: docker compose -f docker-compose.dev.yml --profile camunda up -d
+  # ─────────────────────────────────────────────────────────
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.1
+    container_name: dev-elasticsearch
+    profiles: ['camunda']
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+    ports:
+      - "9200:9200"
+    volumes:
+      - dev_elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:9200/_cluster/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  zeebe:
+    image: camunda/zeebe:8.5.0
+    container_name: dev-zeebe
+    profiles: ['camunda']
+    ports:
+      - "26500:26500"
+    environment:
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx256m
+    volumes:
+      - dev_zeebe_data:/usr/local/zeebe/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  operate:
+    image: camunda/operate:8.5.0
+    container_name: dev-operate
+    profiles: ['camunda']
+    ports:
+      - "8081:8080"
+    environment:
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx128m
+      - CAMUNDA_OPERATE_AUTH_TYPE=simple
+      - CAMUNDA_OPERATE_USERID=demo
+      - CAMUNDA_OPERATE_PASSWORD=demo
+    depends_on:
+      - zeebe
+      - elasticsearch
+
+volumes:
+  dev_postgres_data:
+  dev_elasticsearch_data:
+  dev_zeebe_data:
