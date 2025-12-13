@@ -53,8 +53,12 @@ www.goexec.de, goexec.de {
         file_server
     }
 
-    # Serve static files from /srv
-    handle {
+    # Serve static files from /srv (SPA fallback)
+    # Explicitly exclude Camunda asset paths
+    @not_camunda_assets {
+        not path /client-config.js /static/* /favicon.ico /locales/*
+    }
+    handle @not_camunda_assets {
         root * /srv
         try_files {path} /index.html
         file_server
