@@ -2,6 +2,16 @@
     email talktorobson@gmail.com
 }
 
+# Camunda Operate on subdomain
+operate.goexec.de {
+    reverse_proxy operate:8080
+}
+
+# Camunda Tasklist on subdomain  
+tasklist.goexec.de {
+    reverse_proxy tasklist:8080
+}
+
 # Production domains - Let's Encrypt certificates
 www.goexec.de, goexec.de {
     encode gzip
